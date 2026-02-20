@@ -8,6 +8,27 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// Light mode: very light parchment. Dark mode: warm dark.
+    private var parchmentColor: Color {
+        switch colorScheme {
+        case .dark:
+            return Color(red: 0.14, green: 0.12, blue: 0.10)
+        default:
+            return Color(red: 0.98, green: 0.96, blue: 0.91)
+        }
+    }
+
+    /// Light mode: warm dark ink. Dark mode: light cream.
+    private var inkColor: Color {
+        switch colorScheme {
+        case .dark:
+            return Color(red: 0.94, green: 0.92, blue: 0.87)
+        default:
+            return Color(red: 0.15, green: 0.13, blue: 0.12)
+        }
+    }
     @Query(filter: #Predicate<Source> { $0.deletedAt == nil },
            sort: [SortDescriptor(\.createdAt, order: .reverse)])
     private var sources: [Source]
@@ -84,6 +105,9 @@ struct ContentView: View {
                 .padding()
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .foregroundStyle(inkColor)
+        .background(parchmentColor)
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {
