@@ -2,8 +2,6 @@
 //  QuotationsApp.swift
 //  Quotations
 //
-//  Created by Russell McWhae on 2026-02-20.
-//
 
 import SwiftUI
 import SwiftData
@@ -12,7 +10,9 @@ import SwiftData
 struct QuotationsApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
-            Item.self,
+            Author.self,
+            Source.self,
+            Quotation.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
