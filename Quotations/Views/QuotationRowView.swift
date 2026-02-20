@@ -3,8 +3,11 @@
 //  Quotations
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
+
+/// System serif (e.g. New York) for quotation text.
+private let quotationFont = Font.system(.body, design: .serif)
 
 struct QuotationRowView: View {
     let quotation: Quotation
@@ -31,6 +34,7 @@ struct QuotationRowView: View {
             VStack(alignment: .leading, spacing: 4) {
                 if isEditing {
                     TextEditor(text: $editedContent)
+                        .font(quotationFont)
                         .frame(minHeight: 60)
                         .onSubmit { commitEdit() }
                 } else {
@@ -40,13 +44,16 @@ struct QuotationRowView: View {
                             isEditing = true
                         } label: {
                             HighlightMatch(text: quotation.content, query: searchQuery)
+                                .font(quotationFont)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .buttonStyle(.plain)
                     } else {
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             HighlightMatch(text: quotation.content, query: searchQuery)
+                                .font(quotationFont)
                             Text(pageText)
+                                .font(quotationFont)
                                 .foregroundStyle(.secondary)
                         }
                     }
