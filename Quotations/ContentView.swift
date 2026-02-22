@@ -50,7 +50,8 @@ struct ContentView: View {
             SearchBarView(
                 query: $searchState.query,
                 isSearching: searchState.isSearching,
-                isSearchFocused: $isSearchFocused
+                isSearchFocused: $isSearchFocused,
+                isFocused: isSearchFocused
             ) {
                 AnyView(
                     HStack(spacing: 8) {
@@ -105,11 +106,14 @@ struct ContentView: View {
                 .padding()
             }
         }
+        .padding(.top, 44)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(inkColor)
         .background(
             SidebarMaterialView()
+                .ignoresSafeArea()
         )
+        .ignoresSafeArea()
         #if os(macOS)
         .modifier(TransparentWindowModifier())
         #endif
@@ -122,6 +126,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showAuthorForm) {
             AuthorFormView()
+        }
+        .defaultFocus($isSearchFocused, false)
+        .onAppear {
+            DispatchQueue.main.async {
+                isSearchFocused = false
+            }
         }
         .onKeyPress(.init("f"), phases: .down) { press in
             if press.modifiers.contains(EventModifiers.command) {
