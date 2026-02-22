@@ -107,7 +107,12 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .foregroundStyle(inkColor)
-        .background(parchmentColor)
+        .background(
+            SidebarMaterialView()
+        )
+        #if os(macOS)
+        .modifier(TransparentWindowModifier())
+        #endif
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {
