@@ -62,6 +62,7 @@ struct SourceRowView: View {
                 quotationIdsFilter: quotationIdsFilter
             )
         }
+        .frame(maxWidth: 700, alignment: .leading)
         .padding()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }

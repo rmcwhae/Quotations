@@ -6,7 +6,8 @@
 import SwiftData
 import SwiftUI
 
-private let quotationFont = Font.system(.body, design: .serif)
+private let quotationFont = Font.system(size: 16, design: .serif)
+private let quotationLineSpacing: CGFloat = 6
 
 struct QuotationFormView: View {
     let source: Source
@@ -22,6 +23,7 @@ struct QuotationFormView: View {
         VStack(alignment: .leading, spacing: 12) {
             TextField("Quotation text", text: $content, axis: .vertical)
                 .font(quotationFont)
+                .lineSpacing(quotationLineSpacing)
                 .lineLimit(3...8)
                 .textFieldStyle(.roundedBorder)
 

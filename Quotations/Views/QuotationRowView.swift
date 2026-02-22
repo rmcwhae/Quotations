@@ -6,8 +6,10 @@
 import SwiftData
 import SwiftUI
 
-/// System serif (e.g. New York) for quotation text.
-private let quotationFont = Font.system(.body, design: .serif)
+/// System serif for quotation text (larger for readability).
+private let quotationFont = Font.system(size: 16, design: .serif)
+/// Line spacing ~1.4 (extra points between lines).
+private let quotationLineSpacing: CGFloat = 6
 
 struct QuotationRowView: View {
     let quotation: Quotation
@@ -35,6 +37,7 @@ struct QuotationRowView: View {
                 if isEditing {
                     TextEditor(text: $editedContent)
                         .font(quotationFont)
+                        .lineSpacing(quotationLineSpacing)
                         .frame(minHeight: 60)
                         .onSubmit { commitEdit() }
                 } else {
@@ -45,6 +48,7 @@ struct QuotationRowView: View {
                         } label: {
                             HighlightMatch(text: quotation.content, query: searchQuery)
                                 .font(quotationFont)
+                                .lineSpacing(quotationLineSpacing)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .buttonStyle(.plain)
@@ -52,6 +56,7 @@ struct QuotationRowView: View {
                         HStack(alignment: .firstTextBaseline, spacing: 4) {
                             HighlightMatch(text: quotation.content, query: searchQuery)
                                 .font(quotationFont)
+                                .lineSpacing(quotationLineSpacing)
                             Text(pageText)
                                 .font(quotationFont)
                                 .foregroundStyle(.secondary)

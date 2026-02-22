@@ -96,11 +96,15 @@ struct ContentView: View {
                     }
 
                     ForEach(filteredSources) { source in
-                        SourceRowView(
-                            source: source,
-                            searchQuery: searchState.query,
-                            quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds
-                        )
+                        HStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            SourceRowView(
+                                source: source,
+                                searchQuery: searchState.query,
+                                quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds
+                            )
+                            Spacer(minLength: 0)
+                        }
                     }
                 }
                 .padding()
