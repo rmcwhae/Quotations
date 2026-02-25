@@ -6,6 +6,38 @@
 import SwiftUI
 import SwiftData
 
+private struct DiamondDivider: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    /// Parchment-tinted color for the divider: warm tan (light) / warm dark brown (dark).
+    private var parchmentColor: Color {
+        switch colorScheme {
+        case .dark:
+            return Color(red: 0.35, green: 0.30, blue: 0.26)
+        default:
+            return Color(red: 0.72, green: 0.67, blue: 0.60)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Rectangle()
+                .fill(parchmentColor)
+                .frame(height: 1)
+                .frame(maxWidth: .infinity)
+            Image(systemName: "diamond.fill")
+                .font(.system(size: 6))
+                .foregroundStyle(parchmentColor)
+            Rectangle()
+                .fill(parchmentColor)
+                .frame(height: 1)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(.vertical, 10)
+        .opacity(0.5)
+    }
+}
+
 struct QuotationListView: View {
     let source: Source
     let searchQuery: String
@@ -33,14 +65,17 @@ struct QuotationListView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(displayedQuotations) { quotation in
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(displayedQuotations.enumerated()), id: \.element.id) { index, quotation in
                 QuotationRowView(
                     quotation: quotation,
                     searchQuery: searchQuery,
                     onEdit: saveQuotation,
                     onDelete: deleteQuotation
                 )
+                if index < displayedQuotations.count - 1 {
+                    DiamondDivider()
+                }
             }
         }
     }
