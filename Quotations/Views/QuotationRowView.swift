@@ -31,6 +31,9 @@ struct QuotationRowView: View {
         return ""
     }
 
+    /// Fixed width for the action column so text doesn't shift when toggling edit.
+    private let actionsColumnWidth: CGFloat = 88
+
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
@@ -38,6 +41,9 @@ struct QuotationRowView: View {
                     TextEditor(text: $editedContent)
                         .font(quotationFont)
                         .lineSpacing(quotationLineSpacing)
+                        .scrollContentBackground(.hidden)
+                        .padding(.horizontal, -4)
+                        .padding(.vertical, -4)
                         .frame(minHeight: 60)
                         .onSubmit { commitEdit() }
                 } else {
@@ -64,24 +70,15 @@ struct QuotationRowView: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-            if !pageText.isEmpty || isEditing {
-                HStack(spacing: 4) {
-                    if isEditing {
-                        Button("Save") {
-                            commitEdit()
-                        }
-                        .buttonStyle(.borderless)
-                    }
-                    Button {
-                        showDeleteConfirmation = true
-                    } label: {
-                        Image(systemName: "trash")
+            HStack(spacing: 4) {
+                if isEditing {
+                    Button("Save") {
+                        commitEdit()
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Delete quotation")
                 }
-            } else {
                 Button {
                     showDeleteConfirmation = true
                 } label: {
@@ -90,6 +87,7 @@ struct QuotationRowView: View {
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Delete quotation")
             }
+            .frame(width: actionsColumnWidth, alignment: .trailing)
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
