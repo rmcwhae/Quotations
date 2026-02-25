@@ -16,7 +16,7 @@ struct ContentView: View {
         case .dark:
             return Color(red: 0.14, green: 0.12, blue: 0.10)
         default:
-            return Color(red: 0.98, green: 0.96, blue: 0.91)
+            return Color(red: 0.995, green: 0.99, blue: 0.97)
         }
     }
 
@@ -29,6 +29,7 @@ struct ContentView: View {
             return Color(red: 0.15, green: 0.13, blue: 0.12)
         }
     }
+
     @Query(filter: #Predicate<Source> { $0.deletedAt == nil },
            sort: [SortDescriptor(\.createdAt, order: .reverse)])
     private var sources: [Source]
@@ -39,14 +40,21 @@ struct ContentView: View {
     @State private var showAuthorForm = false
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var selectedSourceId: PersistentIdentifier?
 
     private var filteredSources: [Source] {
         guard let sets = searchState.matchSetsForQuery() else { return sources }
         return sources.filter { sets.sourceIds.contains($0.id) }
     }
 
+    private var selectedSource: Source? {
+        sources.first { $0.id == selectedSourceId }
+            ?? filteredSources.first { $0.id == selectedSourceId }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
+            // Top bar: search + Add Author + Add Source
             SearchBarView(
                 query: $searchState.query,
                 isSearching: searchState.isSearching,
@@ -71,52 +79,96 @@ struct ContentView: View {
             .onChange(of: searchState.query) { _, _ in
                 searchState.runSearchIfNeeded(modelContext: modelContext)
             }
+            .foregroundStyle(inkColor)
+            .background(
+                SidebarMaterialView()
+                    .ignoresSafeArea(edges: .top)
+            )
 
-            if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               !searchState.isSearching,
-               searchState.searchResults.isEmpty {
-                Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
-                    .foregroundStyle(.secondary)
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 24) {
-                    if showSourceForm {
-                        SourceFormView(
-                            onSuccess: {
-                                showSourceForm = false
-                            },
-                            onError: { message in
-                                errorMessage = message
-                                showError = true
-                            }
-                        )
+            HStack(spacing: 0) {
+                // Left sidebar: transparent background, source list
+                VStack(spacing: 0) {
+                    if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       !searchState.isSearching,
+                       searchState.searchResults.isEmpty {
+                        Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
 
-                    ForEach(filteredSources) { source in
-                        HStack(spacing: 0) {
-                            Spacer(minLength: 0)
-                            SourceRowView(
-                                source: source,
-                                searchQuery: searchState.query,
-                                quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds
-                            )
-                            Spacer(minLength: 0)
+                    if showSourceForm {
+                    SourceFormView(
+                        onSuccess: {
+                            showSourceForm = false
+                        },
+                        onError: { message in
+                            errorMessage = message
+                            showError = true
+                        }
+                    )
+                    .padding()
+                }
+
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(filteredSources) { source in
+                            Button {
+                                selectedSourceId = source.id
+                            } label: {
+                                SourceListRowView(
+                                    source: source,
+                                    searchQuery: searchState.query,
+                                    isSelected: source.id == selectedSourceId
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
+                    .padding(.vertical, 8)
                 }
-                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            .frame(width: 280)
+            .foregroundStyle(inkColor)
+            .background(
+                SidebarMaterialView()
+                    .ignoresSafeArea()
+            )
+            .overlay(alignment: .trailing) {
+                Rectangle()
+                    .fill(SeparatorShapeStyle())
+                    .frame(width: 1)
+                    .ignoresSafeArea(edges: .vertical)
+            }
+
+            // Right pane: opaque background, quotations for selected source
+            Group {
+                if let source = selectedSource {
+                    SourceDetailView(
+                        source: source,
+                        searchQuery: searchState.query,
+                        quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds
+                    )
+                } else {
+                    VStack {
+                        Spacer()
+                        Text("Select a source")
+                            .font(.title2)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            .foregroundStyle(inkColor)
+            .background(parchmentColor.ignoresSafeArea())
             }
         }
         .padding(.top, 44)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .foregroundStyle(inkColor)
-        .background(
-            SidebarMaterialView()
-                .ignoresSafeArea()
-        )
         .ignoresSafeArea()
         #if os(macOS)
         .modifier(TransparentWindowModifier())
