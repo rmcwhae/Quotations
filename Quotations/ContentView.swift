@@ -142,8 +142,8 @@ struct ContentView: View {
                     searchState.runSearchIfNeeded(modelContext: modelContext)
                 }
                 .foregroundStyle(inkColor)
-                .padding(.top, 28)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: 50)
                 .background(
                     SidebarMaterialView()
                         .ignoresSafeArea(edges: .top)
