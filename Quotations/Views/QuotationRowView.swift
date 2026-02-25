@@ -91,7 +91,6 @@ struct QuotationRowView: View {
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
-        .background(Color.primary.opacity(0.03), in: RoundedRectangle(cornerRadius: 6))
         .confirmationDialog("Delete this quotation?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 onDelete(quotation.id)

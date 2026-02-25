@@ -13,6 +13,7 @@ struct SourceDetailView: View {
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showQuotationForm = false
 
     var body: some View {
@@ -47,6 +48,8 @@ struct SourceDetailView: View {
                 .accessibilityLabel("Add quotation")
             }
             .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(colorScheme == .dark ? Color.black : Color.white)
 
             if showQuotationForm {
                 QuotationFormView(
