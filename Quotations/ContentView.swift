@@ -53,53 +53,24 @@ struct ContentView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Top bar: search + Add Author + Add Source
-            SearchBarView(
-                query: $searchState.query,
-                isSearching: searchState.isSearching,
-                isSearchFocused: $isSearchFocused,
-                isFocused: isSearchFocused
-            ) {
-                AnyView(
-                    HStack(spacing: 8) {
-                        Button {
-                            showAuthorForm = true
-                        } label: {
-                            Label("Add Author", systemImage: "person.badge.plus")
-                        }
-                        Button {
-                            showSourceForm.toggle()
-                        } label: {
-                            Label(showSourceForm ? "Cancel" : "Add Source", systemImage: "plus.circle.fill")
-                        }
-                    }
-                )
-            }
-            .onChange(of: searchState.query) { _, _ in
-                searchState.runSearchIfNeeded(modelContext: modelContext)
-            }
-            .foregroundStyle(inkColor)
-            .background(
-                SidebarMaterialView()
-                    .ignoresSafeArea(edges: .top)
-            )
+        HStack(spacing: 0) {
+            // Left sidebar: full height from top of window, source list
+            VStack(spacing: 0) {
+                Color.clear
+                    .frame(height: 28)
+                    .allowsHitTesting(false)
+                if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   !searchState.isSearching,
+                   searchState.searchResults.isEmpty {
+                    Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
+                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
 
-            HStack(spacing: 0) {
-                // Left sidebar: transparent background, source list
-                VStack(spacing: 0) {
-                    if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                       !searchState.isSearching,
-                       searchState.searchResults.isEmpty {
-                        Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    if showSourceForm {
+                if showSourceForm {
                     SourceFormView(
                         onSuccess: {
                             showSourceForm = false
@@ -144,30 +115,64 @@ struct ContentView: View {
                     .ignoresSafeArea(edges: .vertical)
             }
 
-            // Right pane: opaque background, quotations for selected source
-            Group {
-                if let source = selectedSource {
-                    SourceDetailView(
-                        source: source,
-                        searchQuery: searchState.query,
-                        quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds
+            // Right side: top bar + detail pane
+            VStack(spacing: 0) {
+                SearchBarView(
+                    query: $searchState.query,
+                    isSearching: searchState.isSearching,
+                    isSearchFocused: $isSearchFocused,
+                    isFocused: isSearchFocused
+                ) {
+                    AnyView(
+                        HStack(spacing: 8) {
+                            Button {
+                                showAuthorForm = true
+                            } label: {
+                                Label("Add Author", systemImage: "person.badge.plus")
+                            }
+                            Button {
+                                showSourceForm.toggle()
+                            } label: {
+                                Label(showSourceForm ? "Cancel" : "Add Source", systemImage: "plus.circle.fill")
+                            }
+                        }
                     )
-                } else {
-                    VStack {
-                        Spacer()
-                        Text("Select a source")
-                            .font(.title2)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .onChange(of: searchState.query) { _, _ in
+                    searchState.runSearchIfNeeded(modelContext: modelContext)
+                }
+                .foregroundStyle(inkColor)
+                .padding(.top, 28)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    SidebarMaterialView()
+                        .ignoresSafeArea(edges: .top)
+                )
+
+                Group {
+                    if let source = selectedSource {
+                        SourceDetailView(
+                            source: source,
+                            searchQuery: searchState.query,
+                            quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds
+                        )
+                    } else {
+                        VStack {
+                            Spacer()
+                            Text("Select a source")
+                                .font(.title2)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .foregroundStyle(inkColor)
+                .background(parchmentColor.ignoresSafeArea())
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .foregroundStyle(inkColor)
-            .background(parchmentColor.ignoresSafeArea())
-            }
+            .frame(maxWidth: .infinity)
         }
-        .padding(.top, 44)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         #if os(macOS)
