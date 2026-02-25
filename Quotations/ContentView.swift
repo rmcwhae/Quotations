@@ -150,7 +150,15 @@ struct ContentView: View {
                 )
 
                 Group {
-                    if let source = selectedSource {
+                    if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       let matchSets = searchState.matchSetsForQuery(),
+                       !filteredSources.isEmpty {
+                        UnifiedSearchResultsView(
+                            sources: filteredSources,
+                            searchQuery: searchState.query,
+                            quotationIdsFilter: matchSets.quotationIds
+                        )
+                    } else if let source = selectedSource {
                         SourceDetailView(
                             source: source,
                             searchQuery: searchState.query,
