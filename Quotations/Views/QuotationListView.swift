@@ -9,32 +9,30 @@ import SwiftData
 private struct DiamondDivider: View {
     @Environment(\.colorScheme) private var colorScheme
 
-    /// Parchment-tinted color for the divider: warm tan (light) / warm dark brown (dark).
-    private var parchmentColor: Color {
+    private var dividerColor: Color {
         switch colorScheme {
         case .dark:
-            return Color(red: 0.35, green: 0.30, blue: 0.26)
+            return Color(white: 0.62)
         default:
-            return Color(red: 0.72, green: 0.67, blue: 0.60)
+            return Color(white: 0.88)
         }
     }
 
     var body: some View {
         HStack(spacing: 10) {
             Rectangle()
-                .fill(parchmentColor)
+                .fill(dividerColor)
                 .frame(height: 1)
                 .frame(maxWidth: .infinity)
             Image(systemName: "diamond.fill")
                 .font(.system(size: 6))
-                .foregroundStyle(parchmentColor)
+                .foregroundStyle(dividerColor)
             Rectangle()
-                .fill(parchmentColor)
+                .fill(dividerColor)
                 .frame(height: 1)
                 .frame(maxWidth: .infinity)
         }
         .padding(.vertical, 10)
-        .opacity(0.5)
     }
 }
 

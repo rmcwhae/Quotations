@@ -10,16 +10,6 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
 
-    /// Light mode: very light parchment. Dark mode: warm dark.
-    private var parchmentColor: Color {
-        switch colorScheme {
-        case .dark:
-            return Color(red: 0.14, green: 0.12, blue: 0.10)
-        default:
-            return Color(red: 0.995, green: 0.99, blue: 0.97)
-        }
-    }
-
     /// Light mode: warm dark ink. Dark mode: light cream.
     private var inkColor: Color {
         switch colorScheme {
