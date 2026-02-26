@@ -148,7 +148,7 @@ struct ContentView: View {
                     }
             }
             .foregroundStyle(inkColor)
-            .background((colorScheme == .dark ? Color.black : Color.white).ignoresSafeArea())
+            .background((colorScheme == .dark ? Color(white: 0.12) : Color.white).ignoresSafeArea())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .searchable(

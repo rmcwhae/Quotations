@@ -93,7 +93,7 @@ private struct SingleSourceSearchSection: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(colorScheme == .dark ? Color.black : Color.white)
+            .background(colorScheme == .dark ? Color(white: 0.12) : Color.white)
             .overlay(alignment: .top) {
                 Rectangle()
                     .fill(.gray.opacity(0.4))
