@@ -61,6 +61,9 @@ struct ContentView: View {
                         onSuccess: {
                             showSourceForm = false
                         },
+                        onCancel: {
+                            showSourceForm = false
+                        },
                         onError: { message in
                             errorMessage = message
                             showError = true
@@ -88,7 +91,7 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 280, max: 400)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 300, max: 500)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {

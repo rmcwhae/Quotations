@@ -17,6 +17,7 @@ struct SourceFormView: View {
     @State private var url = ""
 
     var onSuccess: () -> Void
+    var onCancel: () -> Void
     var onError: (String) -> Void
 
     private var selectedAuthor: Author? {
@@ -25,26 +26,29 @@ struct SourceFormView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Picker("Author", selection: $selectedAuthorId) {
-                    Text("Select author").tag(nil as PersistentIdentifier?)
-                    ForEach(authors) { author in
-                        Text(author.name).tag(author.id as PersistentIdentifier?)
-                    }
+            Picker("Author", selection: $selectedAuthorId) {
+                Text("Select author").tag(nil as PersistentIdentifier?)
+                ForEach(authors) { author in
+                    Text(author.name).tag(author.id as PersistentIdentifier?)
                 }
-                .pickerStyle(.menu)
-                .frame(maxWidth: .infinity)
-
-                TextField("Title", text: $title)
-                TextField("Year", text: $publicationYear)
-                    .frame(width: 80)
             }
+            .pickerStyle(.menu)
+            .frame(maxWidth: .infinity)
+
+            TextField("Title", text: $title)
+
+            TextField("Year", text: $publicationYear)
+                .frame(width: 80)
 
             TextField("URL (optional)", text: $url)
                 .textContentType(.URL)
 
             HStack {
                 Spacer()
+                Button("Cancel") {
+                    onCancel()
+                }
+                .buttonStyle(.bordered)
                 Button("Add") {
                     submit()
                 }
