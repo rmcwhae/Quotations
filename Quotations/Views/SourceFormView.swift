@@ -95,7 +95,10 @@ struct SourceFormView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .frame(width: max(200, authorFieldFrame.width), height: 220)
+        .frame(
+            width: max(200, authorFieldFrame.width),
+            height: min(CGFloat(limited.count) * 32, 220)
+        )
         .background(authorSuggestionsMenuBackground)
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
