@@ -25,7 +25,6 @@ struct ContentView: View {
     private var sources: [Source]
 
     @State private var searchState = SearchState()
-    @FocusState private var isSearchFocused: Bool
     @State private var showSourceForm = false
     @State private var showAuthorForm = false
     @State private var errorMessage: String?
@@ -96,41 +95,8 @@ struct ContentView: View {
                     .ignoresSafeArea()
             )
         } detail: {
-            // Detail: top bar + content
-            VStack(spacing: 0) {
-                SearchBarView(
-                    query: $searchState.query,
-                    isSearching: searchState.isSearching,
-                    isSearchFocused: $isSearchFocused,
-                    isFocused: isSearchFocused
-                ) {
-                    AnyView(
-                        HStack(spacing: 8) {
-                            Button {
-                                showAuthorForm = true
-                            } label: {
-                                Label("Add Author", systemImage: "person.badge.plus")
-                            }
-                            Button {
-                                showSourceForm.toggle()
-                            } label: {
-                                Label(showSourceForm ? "Cancel" : "Add Source", systemImage: "plus.circle.fill")
-                            }
-                        }
-                    )
-                }
-                .onChange(of: searchState.query) { _, _ in
-                    searchState.runSearchIfNeeded(modelContext: modelContext)
-                }
-                .foregroundStyle(inkColor)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: 50)
-                .background(
-                    SidebarMaterialView()
-                        .ignoresSafeArea(edges: .top)
-                )
-
-                Group {
+            // Detail: content
+            Group {
                     if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                        let matchSets = searchState.matchSetsForQuery(),
                        !filteredSources.isEmpty {
@@ -155,12 +121,33 @@ struct ContentView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
+            }
+            .foregroundStyle(inkColor)
+            .background((colorScheme == .dark ? Color.black : Color.white).ignoresSafeArea())
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .toolbar {
+                Button {
+                    showAuthorForm = true
+                } label: {
+                    Label("Add Author", systemImage: "person.badge.plus")
                 }
-                .foregroundStyle(inkColor)
-                .background((colorScheme == .dark ? Color.black : Color.white).ignoresSafeArea())
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Button {
+                    showSourceForm.toggle()
+                } label: {
+                    Label(showSourceForm ? "Cancel" : "Add Source", systemImage: "plus.circle.fill")
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .searchable(
+            text: Binding(
+                get: { searchState.query },
+                set: { searchState.query = $0 }
+            ),
+            placement: .toolbar
+        )
+        .onChange(of: searchState.query) { _, _ in
+            searchState.runSearchIfNeeded(modelContext: modelContext)
         }
         .navigationSplitViewStyle(.balanced)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -177,19 +164,6 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showAuthorForm) {
             AuthorFormView()
-        }
-        .defaultFocus($isSearchFocused, false)
-        .onAppear {
-            DispatchQueue.main.async {
-                isSearchFocused = false
-            }
-        }
-        .onKeyPress(.init("f"), phases: .down) { press in
-            if press.modifiers.contains(EventModifiers.command) {
-                isSearchFocused = true
-                return .handled
-            }
-            return .ignored
         }
     }
 }
