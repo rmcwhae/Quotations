@@ -146,6 +146,7 @@ struct ContentView: View {
         .onChange(of: searchState.query) { _, _ in
             searchState.runSearchIfNeeded(modelContext: modelContext)
         }
+        .navigationTitle("")
         .navigationSplitViewStyle(.balanced)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()

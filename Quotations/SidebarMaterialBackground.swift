@@ -28,6 +28,10 @@ private struct WindowConfigurator: NSViewRepresentable {
         guard let window = nsView.window else { return }
         window.isOpaque = false
         window.backgroundColor = .clear
+        // Hide title text; apply asynchronously so it persists after SwiftUI sets the window title.
+        DispatchQueue.main.async {
+            window.titleVisibility = .hidden
+        }
     }
 }
 

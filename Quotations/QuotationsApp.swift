@@ -24,7 +24,7 @@ struct QuotationsApp: App {
     }()
 
     var body: some Scene {
-        WindowGroup {
+        WindowGroup("") {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
