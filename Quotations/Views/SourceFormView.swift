@@ -11,16 +11,21 @@ struct SourceFormView: View {
     @Query(filter: #Predicate<Author> { $0.deletedAt == nil }, sort: \Author.name)
     private var authors: [Author]
 
+    var existingSource: Source?
+
     @State private var authorText = ""
     @State private var selectedAuthorId: PersistentIdentifier?
     @State private var title = ""
     @State private var publicationYear = ""
     @State private var url = ""
     @FocusState private var isAuthorFieldFocused: Bool
+    @State private var hasPrefilled = false
 
     var onSuccess: () -> Void
     var onCancel: () -> Void
     var onError: (String) -> Void
+
+    private var isEditing: Bool { existingSource != nil }
 
     private var selectedAuthor: Author? {
         authors.first { $0.id == selectedAuthorId }
@@ -91,7 +96,7 @@ struct SourceFormView: View {
                     onCancel()
                 }
                 .buttonStyle(.bordered)
-                Button("Add") {
+                Button(isEditing ? "Save" : "Add") {
                     submit()
                 }
                 .buttonStyle(.borderedProminent)
@@ -100,6 +105,17 @@ struct SourceFormView: View {
         }
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .onAppear {
+            guard let source = existingSource, !hasPrefilled else { return }
+            title = source.title
+            url = source.url ?? ""
+            publicationYear = source.publicationYear.map { String($0) } ?? ""
+            if let author = source.author {
+                authorText = author.name
+                selectedAuthorId = author.id
+            }
+            hasPrefilled = true
+        }
     }
 
     private func submit() {
@@ -126,8 +142,18 @@ struct SourceFormView: View {
 
         let year = Int(publicationYear.trimmingCharacters(in: .whitespacesAndNewlines))
         let u = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        let source = Source(title: t, author: author, url: u.isEmpty ? nil : u, publicationYear: year)
-        modelContext.insert(source)
+
+        if let existing = existingSource {
+            existing.title = t
+            existing.author = author
+            existing.url = u.isEmpty ? nil : u
+            existing.publicationYear = year
+            existing.updatedAt = Date()
+        } else {
+            let source = Source(title: t, author: author, url: u.isEmpty ? nil : u, publicationYear: year)
+            modelContext.insert(source)
+        }
+
         do {
             try modelContext.save()
             title = ""

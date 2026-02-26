@@ -30,6 +30,9 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var selectedSourceId: PersistentIdentifier?
+    @State private var sourceToEdit: Source?
+    @State private var sourceToDelete: Source?
+    @State private var showDeleteSourceConfirmation = false
 
     private var filteredSources: [Source] {
         guard let sets = searchState.matchSetsForQuery() else { return sources }
@@ -85,6 +88,15 @@ struct ContentView: View {
                                 )
                             }
                             .buttonStyle(.plain)
+                            .contextMenu {
+                                Button("Edit…") {
+                                    sourceToEdit = source
+                                }
+                                Button("Delete", role: .destructive) {
+                                    sourceToDelete = source
+                                    showDeleteSourceConfirmation = true
+                                }
+                            }
                         }
                     }
                     .padding(.vertical, 8)
@@ -165,6 +177,39 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showAuthorForm) {
             AuthorFormView()
+        }
+        .sheet(item: $sourceToEdit) { source in
+            SourceFormView(
+                existingSource: source,
+                onSuccess: {
+                    sourceToEdit = nil
+                },
+                onCancel: {
+                    sourceToEdit = nil
+                },
+                onError: { message in
+                    errorMessage = message
+                    showError = true
+                }
+            )
+            .padding()
+            .frame(minWidth: 320, minHeight: 280)
+        }
+        .confirmationDialog("Delete Source?", isPresented: $showDeleteSourceConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) {
+                if let source = sourceToDelete {
+                    source.deletedAt = Date()
+                    try? modelContext.save()
+                }
+                sourceToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                sourceToDelete = nil
+            }
+        } message: {
+            if let source = sourceToDelete {
+                Text("“\(source.title)” will be removed. Quotations from this source will remain but the source will no longer appear in the list.")
+            }
         }
     }
 }
