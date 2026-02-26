@@ -18,17 +18,13 @@ struct UnifiedSearchResultsView: View {
     var body: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(sources.enumerated()), id: \.element.id) { index, source in
+                ForEach(Array(sources.enumerated()), id: \.element.id) { _, source in
                     SingleSourceSearchSection(
                         source: source,
                         searchQuery: searchQuery,
                         quotationIdsFilter: quotationIdsFilter,
                         horizontalPadding: horizontalPadding
                     )
-                    if index < sources.count - 1 {
-                        Divider()
-                            .padding(.vertical, 16)
-                    }
                 }
             }
             .padding(horizontalPadding)
@@ -48,7 +44,7 @@ private struct SingleSourceSearchSection: View {
             source: source,
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
-            headerOutset: horizontalPadding
+            headerOutset: horizontalPadding,
         ) {
             QuotationListView(
                 source: source,

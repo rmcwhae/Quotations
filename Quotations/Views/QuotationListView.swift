@@ -14,9 +14,9 @@ import AppKit
 private struct DiamondDivider: View {
     private var dividerColor: Color {
         #if os(macOS)
-        Color(nsColor: .tertiaryLabelColor)
+        Color(nsColor: .quaternaryLabelColor)
         #else
-        Color(uiColor: .tertiaryLabel)
+        Color(uiColor: .quaternaryLabel)
         #endif
     }
 
@@ -34,7 +34,7 @@ private struct DiamondDivider: View {
                 .frame(height: 1)
                 .frame(maxWidth: .infinity)
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 16)
     }
 }
 
