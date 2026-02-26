@@ -43,69 +43,13 @@ private struct SingleSourceSearchSection: View {
     var quotationIdsFilter: Set<PersistentIdentifier>?
     var horizontalPadding: CGFloat
 
-    @Environment(\.colorScheme) private var colorScheme
-    @State private var showQuotationForm = false
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Header block: full-width background with grey border above and below
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        if let urlString = source.url, !urlString.isEmpty, let url = URL(string: urlString) {
-                            Link(destination: url) {
-                                HighlightMatch(text: source.title, query: searchQuery)
-                            }
-                            .font(.title2)
-                        } else {
-                            HighlightMatch(text: source.title, query: searchQuery)
-                                .font(.title2)
-                        }
-                        if let author = source.author {
-                            HighlightMatch(
-                                text: author.name + (source.publicationYear.map { " (\($0))" } ?? ""),
-                                query: searchQuery
-                            )
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                        }
-                    }
-                    Spacer()
-                    Button {
-                        showQuotationForm = true
-                    } label: {
-                        Label("Add Quotation", systemImage: "text.quote")
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityLabel("Add quotation")
-                }
-                .padding()
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                if showQuotationForm {
-                    QuotationFormView(
-                        source: source,
-                        onSuccess: { showQuotationForm = false },
-                        onCancel: { showQuotationForm = false }
-                    )
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(colorScheme == .dark ? Color(white: 0.12) : Color.white)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(.gray.opacity(0.4))
-                    .frame(height: 1)
-            }
-            .overlay(alignment: .bottom) {
-                Rectangle()
-                    .fill(.gray.opacity(0.4))
-                    .frame(height: 1)
-            }
-            .padding(.horizontal, -horizontalPadding)
-
+        SourceSectionView(
+            source: source,
+            searchQuery: searchQuery,
+            quotationIdsFilter: quotationIdsFilter,
+            headerOutset: horizontalPadding
+        ) {
             QuotationListView(
                 source: source,
                 searchQuery: searchQuery,
@@ -113,6 +57,5 @@ private struct SingleSourceSearchSection: View {
             )
             .padding(.top, 8)
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }
