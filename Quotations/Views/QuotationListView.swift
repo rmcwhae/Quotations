@@ -5,17 +5,19 @@
 
 import SwiftUI
 import SwiftData
+#if canImport(UIKit)
+import UIKit
+#elseif canImport(AppKit)
+import AppKit
+#endif
 
 private struct DiamondDivider: View {
-    @Environment(\.colorScheme) private var colorScheme
-
     private var dividerColor: Color {
-        switch colorScheme {
-        case .dark:
-            return Color(white: 0.62)
-        default:
-            return Color(white: 0.88)
-        }
+        #if os(macOS)
+        Color(nsColor: .tertiaryLabelColor)
+        #else
+        Color(uiColor: .tertiaryLabel)
+        #endif
     }
 
     var body: some View {
