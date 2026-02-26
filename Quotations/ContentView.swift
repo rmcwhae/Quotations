@@ -125,19 +125,6 @@ struct ContentView: View {
             .foregroundStyle(inkColor)
             .background((colorScheme == .dark ? Color.black : Color.white).ignoresSafeArea())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .toolbar {
-                Button {
-                    showAuthorForm = true
-                } label: {
-                    Label("Add Author", systemImage: "person.badge.plus")
-                }
-                Button {
-                    showSourceForm.toggle()
-                } label: {
-                    Label(showSourceForm ? "Cancel" : "Add Source", systemImage: "plus.circle.fill")
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .searchable(
             text: Binding(
