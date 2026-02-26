@@ -89,6 +89,16 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 280, max: 400)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showSourceForm = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Create source")
+                }
+            }
             .foregroundStyle(inkColor)
             .background(
                 SidebarMaterialView()
