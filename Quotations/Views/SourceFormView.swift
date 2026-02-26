@@ -11,10 +11,12 @@ struct SourceFormView: View {
     @Query(filter: #Predicate<Author> { $0.deletedAt == nil }, sort: \Author.name)
     private var authors: [Author]
 
+    @State private var authorText = ""
     @State private var selectedAuthorId: PersistentIdentifier?
     @State private var title = ""
     @State private var publicationYear = ""
     @State private var url = ""
+    @FocusState private var isAuthorFieldFocused: Bool
 
     var onSuccess: () -> Void
     var onCancel: () -> Void
@@ -24,16 +26,56 @@ struct SourceFormView: View {
         authors.first { $0.id == selectedAuthorId }
     }
 
+    private var authorSuggestions: [Author] {
+        let query = authorText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return [] }
+        return authors.filter { $0.name.lowercased().contains(query) }
+    }
+
+    private var authorNameIsValid: Bool {
+        !authorText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Picker("Author", selection: $selectedAuthorId) {
-                Text("Select author").tag(nil as PersistentIdentifier?)
-                ForEach(authors) { author in
-                    Text(author.name).tag(author.id as PersistentIdentifier?)
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("Author", text: $authorText)
+                    .textContentType(.name)
+                    .focused($isAuthorFieldFocused)
+                    .onChange(of: authorText) { _, newValue in
+                        if let sel = selectedAuthor, sel.name != newValue {
+                            selectedAuthorId = nil
+                        }
+                    }
+                    .onChange(of: selectedAuthorId) { _, newValue in
+                        if let id = newValue, let a = authors.first(where: { $0.id == id }) {
+                            authorText = a.name
+                        }
+                    }
+
+                if isAuthorFieldFocused, !authorSuggestions.isEmpty {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ForEach(authorSuggestions) { author in
+                                Button {
+                                    selectedAuthorId = author.id
+                                    authorText = author.name
+                                    isAuthorFieldFocused = false
+                                } label: {
+                                    Text(author.name)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .padding(.vertical, 6)
+                                        .padding(.horizontal, 8)
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                    .frame(maxHeight: 180)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
                 }
             }
-            .pickerStyle(.menu)
-            .frame(maxWidth: .infinity)
 
             TextField("Title", text: $title)
 
@@ -53,7 +95,7 @@ struct SourceFormView: View {
                     submit()
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(selectedAuthor == nil || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .disabled(!authorNameIsValid || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
         .padding()
@@ -61,8 +103,9 @@ struct SourceFormView: View {
     }
 
     private func submit() {
-        guard let author = selectedAuthor else {
-            onError("Please select an author.")
+        let authorName = authorText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !authorName.isEmpty else {
+            onError("Author is required.")
             return
         }
         let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -70,6 +113,17 @@ struct SourceFormView: View {
             onError("Title is required.")
             return
         }
+
+        let author: Author
+        if let existing = selectedAuthor, existing.name == authorName {
+            author = existing
+        } else if let existing = authors.first(where: { $0.name == authorName }) {
+            author = existing
+        } else {
+            author = Author(name: authorName)
+            modelContext.insert(author)
+        }
+
         let year = Int(publicationYear.trimmingCharacters(in: .whitespacesAndNewlines))
         let u = url.trimmingCharacters(in: .whitespacesAndNewlines)
         let source = Source(title: t, author: author, url: u.isEmpty ? nil : u, publicationYear: year)
@@ -79,6 +133,7 @@ struct SourceFormView: View {
             title = ""
             publicationYear = ""
             url = ""
+            authorText = ""
             selectedAuthorId = nil
             onSuccess()
         } catch {
