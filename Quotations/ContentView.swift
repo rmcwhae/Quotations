@@ -53,12 +53,9 @@ struct ContentView: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            // Left sidebar: full height from top of window, source list
+        NavigationSplitView {
+            // Sidebar: source list
             VStack(spacing: 0) {
-                Color.clear
-                    .frame(height: 28)
-                    .allowsHitTesting(false)
                 if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    !searchState.isSearching,
                    searchState.searchResults.isEmpty {
@@ -102,20 +99,14 @@ struct ContentView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .frame(width: 280)
+            .navigationSplitViewColumnWidth(min: 200, ideal: 280, max: 400)
             .foregroundStyle(inkColor)
             .background(
                 SidebarMaterialView()
                     .ignoresSafeArea()
             )
-            .overlay(alignment: .trailing) {
-                Rectangle()
-                    .fill(SeparatorShapeStyle())
-                    .frame(width: 1)
-                    .ignoresSafeArea(edges: .vertical)
-            }
-
-            // Right side: top bar + detail pane
+        } detail: {
+            // Detail: top bar + content
             VStack(spacing: 0) {
                 SearchBarView(
                     query: $searchState.query,
@@ -176,11 +167,12 @@ struct ContentView: View {
                     }
                 }
                 .foregroundStyle(inkColor)
-                .background(parchmentColor.ignoresSafeArea())
+                .background((colorScheme == .dark ? Color.black : Color.white).ignoresSafeArea())
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .navigationSplitViewStyle(.balanced)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
         #if os(macOS)
