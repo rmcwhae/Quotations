@@ -49,7 +49,7 @@ struct SourceDetailView: View {
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(colorScheme == .dark ? Color.black : Color.white)
+            .background(Color(NSColor.windowBackgroundColor))
 
             if showQuotationForm {
                 QuotationFormView(
