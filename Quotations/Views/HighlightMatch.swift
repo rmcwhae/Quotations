@@ -17,10 +17,7 @@ struct HighlightMatch: View {
             result = AttributedString(text)
             return result
         }
-        let lower = text.lowercased()
-        let qLower = q.lowercased()
         var remaining = text
-        var startIndex = remaining.startIndex
         while let range = remaining.range(of: q, options: .caseInsensitive) {
             let before = String(remaining[..<range.lowerBound])
             let match = String(remaining[range])
@@ -30,7 +27,6 @@ struct HighlightMatch: View {
             var highlighted = AttributedString(match)
             highlighted.backgroundColor = Color.accentColor.opacity(0.35)
             result += highlighted
-            startIndex = range.upperBound
             remaining = String(remaining[range.upperBound...])
         }
         if !remaining.isEmpty {
