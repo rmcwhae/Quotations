@@ -115,10 +115,7 @@ struct ContentView: View {
                 }
             }
             .foregroundStyle(inkColor)
-            .background(
-                SidebarMaterialView()
-                    .ignoresSafeArea()
-            )
+         
         } detail: {
             // Detail: content
             Group {
@@ -165,9 +162,6 @@ struct ContentView: View {
         .navigationSplitViewStyle(.balanced)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
-        #if os(macOS)
-        .modifier(TransparentWindowModifier())
-        #endif
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {
