@@ -112,6 +112,7 @@ struct ContentView: View {
                         Image(systemName: "plus")
                     }
                     .accessibilityLabel("Create source")
+                    .help("Add source")
                 }
             }
             .foregroundStyle(inkColor)
