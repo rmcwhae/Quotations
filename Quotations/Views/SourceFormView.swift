@@ -19,6 +19,8 @@ struct SourceFormView: View {
     @State private var publicationYear = ""
     @State private var url = ""
     @State private var hasPrefilled = false
+    /// Only true after the user has changed the author text while the field is focused (not on initial focus or prefill).
+    @State private var authorInputChangedSinceFocus = false
     @FocusState private var isAuthorFieldFocused: Bool
 
     var onSuccess: () -> Void
@@ -47,12 +49,18 @@ struct SourceFormView: View {
                 .textContentType(.name)
                 .focused($isAuthorFieldFocused)
                 .textInputSuggestions {
-                    ForEach(authorSuggestions, id: \.id) { author in
-                        Text(author.name)
-                            .textInputCompletion(author.name)
+                    if authorInputChangedSinceFocus {
+                        ForEach(authorSuggestions, id: \.id) { author in
+                            Text(author.name)
+                                .textInputCompletion(author.name)
+                        }
                     }
                 }
+                .onChange(of: isAuthorFieldFocused) { _, newValue in
+                    if newValue { authorInputChangedSinceFocus = false }
+                }
                 .onChange(of: authorText) { _, newValue in
+                    if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
                     if let sel = selectedAuthor, sel.name != newValue {
                         selectedAuthorId = nil
                     }
@@ -101,6 +109,7 @@ struct SourceFormView: View {
                 selectedAuthorId = author.id
             }
             hasPrefilled = true
+            authorInputChangedSinceFocus = false
         }
     }
 
