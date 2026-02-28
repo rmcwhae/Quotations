@@ -5,18 +5,6 @@
 
 import SwiftUI
 import SwiftData
-#if canImport(UIKit)
-import UIKit
-#elseif canImport(AppKit)
-import AppKit
-#endif
-
-private struct AuthorFieldFrameKey: PreferenceKey {
-    static var defaultValue: CGRect = .zero
-    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
-        value = nextValue()
-    }
-}
 
 struct SourceFormView: View {
     @Environment(\.modelContext) private var modelContext
@@ -30,10 +18,8 @@ struct SourceFormView: View {
     @State private var title = ""
     @State private var publicationYear = ""
     @State private var url = ""
-    @FocusState private var isAuthorFieldFocused: Bool
     @State private var hasPrefilled = false
-    @State private var hoveredAuthorId: PersistentIdentifier?
-    @State private var authorFieldFrame: CGRect = .zero
+    @FocusState private var isAuthorFieldFocused: Bool
 
     var onSuccess: () -> Void
     var onCancel: () -> Void
@@ -55,76 +41,32 @@ struct SourceFormView: View {
         !authorText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var authorSuggestionsMenuBackground: Color {
-        #if os(macOS)
-        Color(nsColor: .windowBackgroundColor)
-        #else
-        Color(uiColor: .systemBackground)
-        #endif
-    }
-
-    private var authorSuggestionsMenuHoverColor: Color {
-        #if os(macOS)
-        Color(nsColor: .selectedContentBackgroundColor)
-        #else
-        Color(uiColor: .systemBlue).opacity(0.25)
-        #endif
-    }
-
-    @ViewBuilder
-    private func authorSuggestionsMenu(limited: [Author]) -> some View {
-        List(limited, id: \.id) { author in
-            Button {
-                selectedAuthorId = author.id
-                authorText = author.name
-                isAuthorFieldFocused = false
-            } label: {
-                Text(author.name)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .listRowBackground(hoveredAuthorId == author.id ? authorSuggestionsMenuHoverColor : authorSuggestionsMenuBackground)
-            .listRowInsets(EdgeInsets(top: 6, leading: 8, bottom: 6, trailing: 8))
-            .onHover { hovering in
-                if hovering {
-                    hoveredAuthorId = author.id
-                } else if hoveredAuthorId == author.id {
-                    hoveredAuthorId = nil
-                }
-            }
-        }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
-        .frame(
-            width: max(200, authorFieldFrame.width),
-            height: min(CGFloat(limited.count) * 32, 220)
-        )
-        .background(authorSuggestionsMenuBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                TextField("Author", text: $authorText)
-                    .textContentType(.name)
-                    .focused($isAuthorFieldFocused)
-                    .onChange(of: authorText) { _, newValue in
-                        if let sel = selectedAuthor, sel.name != newValue {
-                            selectedAuthorId = nil
-                        }
+            TextField("Author", text: $authorText)
+                .textContentType(.name)
+                .focused($isAuthorFieldFocused)
+                .textInputSuggestions {
+                    ForEach(authorSuggestions, id: \.id) { author in
+                        Text(author.name)
+                            .textInputCompletion(author.name)
                     }
-                    .onChange(of: selectedAuthorId) { _, newValue in
-                        if let id = newValue, let a = authors.first(where: { $0.id == id }) {
-                            authorText = a.name
-                        }
-                    }
-            }
-            .background(
-                GeometryReader { g in
-                    Color.clear.preference(key: AuthorFieldFrameKey.self, value: g.frame(in: .named("sourceForm")))
                 }
-            )
+                .onChange(of: authorText) { _, newValue in
+                    if let sel = selectedAuthor, sel.name != newValue {
+                        selectedAuthorId = nil
+                    }
+                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let author = authors.first(where: { $0.name == trimmed }) {
+                        selectedAuthorId = author.id
+                        isAuthorFieldFocused = false
+                    }
+                }
+                .onChange(of: selectedAuthorId) { _, newValue in
+                    if let id = newValue, let a = authors.first(where: { $0.id == id }) {
+                        authorText = a.name
+                    }
+                }
 
             TextField("Title", text: $title)
 
@@ -149,17 +91,6 @@ struct SourceFormView: View {
         }
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .coordinateSpace(name: "sourceForm")
-        .onPreferenceChange(AuthorFieldFrameKey.self) { authorFieldFrame = $0 }
-        .overlay(alignment: .topLeading) {
-            if isAuthorFieldFocused, !authorSuggestions.isEmpty {
-                let limited = Array(authorSuggestions.prefix(10))
-                // Overlay origin is the padded view; author frame is in inner VStack space, so add padding.
-                let padding: CGFloat = 16
-                authorSuggestionsMenu(limited: limited)
-                    .offset(x: padding + authorFieldFrame.minX, y: padding + authorFieldFrame.maxY + 26)
-            }
-        }
         .onAppear {
             guard let source = existingSource, !hasPrefilled else { return }
             title = source.title
