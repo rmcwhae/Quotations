@@ -10,6 +10,7 @@ struct SourceRowView: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
+    @Binding var selectedQuotationId: PersistentIdentifier?
 
     @State private var showQuotationForm = false
 
@@ -59,7 +60,8 @@ struct SourceRowView: View {
             QuotationListView(
                 source: source,
                 searchQuery: searchQuery,
-                quotationIdsFilter: quotationIdsFilter
+                quotationIdsFilter: quotationIdsFilter,
+                selectedQuotationId: $selectedQuotationId
             )
         }
         .frame(maxWidth: 700, alignment: .leading)

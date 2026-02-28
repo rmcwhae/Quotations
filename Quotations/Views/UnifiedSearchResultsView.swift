@@ -12,6 +12,7 @@ struct UnifiedSearchResultsView: View {
     let sources: [Source]
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
+    @Binding var selectedQuotationId: PersistentIdentifier?
 
     private let horizontalPadding: CGFloat = 16
 
@@ -23,6 +24,7 @@ struct UnifiedSearchResultsView: View {
                         source: source,
                         searchQuery: searchQuery,
                         quotationIdsFilter: quotationIdsFilter,
+                        selectedQuotationId: $selectedQuotationId,
                         horizontalPadding: horizontalPadding
                     )
                 }
@@ -37,6 +39,7 @@ private struct SingleSourceSearchSection: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
+    @Binding var selectedQuotationId: PersistentIdentifier?
     var horizontalPadding: CGFloat
 
     var body: some View {
@@ -49,7 +52,8 @@ private struct SingleSourceSearchSection: View {
             QuotationListView(
                 source: source,
                 searchQuery: searchQuery,
-                quotationIdsFilter: quotationIdsFilter
+                quotationIdsFilter: quotationIdsFilter,
+                selectedQuotationId: $selectedQuotationId
             )
             .padding(.top, 8)
         }

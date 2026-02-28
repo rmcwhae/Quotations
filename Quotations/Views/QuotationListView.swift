@@ -42,14 +42,16 @@ struct QuotationListView: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
+    @Binding var selectedQuotationId: PersistentIdentifier?
 
     @Query private var quotations: [Quotation]
     @Environment(\.modelContext) private var modelContext
 
-    init(source: Source, searchQuery: String, quotationIdsFilter: Set<PersistentIdentifier>? = nil) {
+    init(source: Source, searchQuery: String, quotationIdsFilter: Set<PersistentIdentifier>? = nil, selectedQuotationId: Binding<PersistentIdentifier?>) {
         self.source = source
         self.searchQuery = searchQuery
         self.quotationIdsFilter = quotationIdsFilter
+        _selectedQuotationId = selectedQuotationId
         let sourceId = source.id
         _quotations = Query(
             filter: #Predicate<Quotation> { q in
@@ -70,6 +72,8 @@ struct QuotationListView: View {
                 QuotationRowView(
                     quotation: quotation,
                     searchQuery: searchQuery,
+                    isSelected: quotation.id == selectedQuotationId,
+                    onSelect: { selectedQuotationId = quotation.id },
                     onEdit: saveQuotation,
                     onDelete: deleteQuotation
                 )

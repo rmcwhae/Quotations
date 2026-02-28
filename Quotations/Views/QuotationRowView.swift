@@ -14,6 +14,8 @@ private let quotationLineSpacing: CGFloat = 6
 struct QuotationRowView: View {
     let quotation: Quotation
     let searchQuery: String
+    var isSelected: Bool = false
+    var onSelect: (() -> Void)? = nil
     var onEdit: (Quotation) -> Void
     var onDelete: (PersistentIdentifier) -> Void
 
@@ -71,6 +73,11 @@ struct QuotationRowView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                guard !isEditing else { return }
+                onSelect?()
+            }
 
             HStack(spacing: 4) {
                 if isEditing {
@@ -91,6 +98,7 @@ struct QuotationRowView: View {
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
+        .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
         .confirmationDialog("Delete this quotation?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 onDelete(quotation.id)

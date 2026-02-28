@@ -12,6 +12,7 @@ struct SourceDetailView: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
+    @Binding var selectedQuotationId: PersistentIdentifier?
 
     var body: some View {
         SourceSectionView(
@@ -23,7 +24,8 @@ struct SourceDetailView: View {
                 QuotationListView(
                     source: source,
                     searchQuery: searchQuery,
-                    quotationIdsFilter: quotationIdsFilter
+                    quotationIdsFilter: quotationIdsFilter,
+                    selectedQuotationId: $selectedQuotationId
                 )
                 .padding()
             }

@@ -33,6 +33,8 @@ struct ContentView: View {
     @State private var sourceToEdit: Source?
     @State private var sourceToDelete: Source?
     @State private var showDeleteSourceConfirmation = false
+    @State private var isInspectorShown = true
+    @State private var selectedQuotationId: PersistentIdentifier?
 
     private var filteredSources: [Source] {
         guard let sets = searchState.matchSetsForQuery() else { return sources }
@@ -42,6 +44,38 @@ struct ContentView: View {
     private var selectedSource: Source? {
         sources.first { $0.id == selectedSourceId }
             ?? filteredSources.first { $0.id == selectedSourceId }
+    }
+
+    private var selectedQuotation: Quotation? {
+        guard let id = selectedQuotationId else { return nil }
+        return modelContext.model(for: id) as? Quotation
+    }
+
+    @ViewBuilder
+    private var inspectorContent: some View {
+        if let quotation = selectedQuotation {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Quotation")
+                    .font(.headline)
+                if let start = quotation.startPage {
+                    Text("Start page: \(start)")
+                        .font(.subheadline)
+                }
+                if let end = quotation.endPage {
+                    Text("End page: \(end)")
+                        .font(.subheadline)
+                }
+                if let updated = quotation.updatedAt {
+                    Text("Last updated: \(updated, style: .date)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        } else {
+            Text("Select a quotation to view details.")
+                .foregroundStyle(.secondary)
+        }
     }
 
     var body: some View {
@@ -118,36 +152,51 @@ struct ContentView: View {
             .foregroundStyle(inkColor)
          
         } detail: {
-            // Detail: content
+            // Main content area
             Group {
-                    if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                       let matchSets = searchState.matchSetsForQuery(),
-                       !filteredSources.isEmpty {
-                        UnifiedSearchResultsView(
-                            sources: filteredSources,
-                            searchQuery: searchState.query,
-                            quotationIdsFilter: matchSets.quotationIds
-                        )
-                    } else if let source = selectedSource {
-                        SourceDetailView(
-                            source: source,
-                            searchQuery: searchState.query,
-                            quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds
-                        )
-                    } else {
-                        VStack {
-                            Spacer()
-                            Text("Select a source")
-                                .font(.title2)
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                   let matchSets = searchState.matchSetsForQuery(),
+                   !filteredSources.isEmpty {
+                    UnifiedSearchResultsView(
+                        sources: filteredSources,
+                        searchQuery: searchState.query,
+                        quotationIdsFilter: matchSets.quotationIds,
+                        selectedQuotationId: $selectedQuotationId
+                    )
+                } else if let source = selectedSource {
+                    SourceDetailView(
+                        source: source,
+                        searchQuery: searchState.query,
+                        quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds,
+                        selectedQuotationId: $selectedQuotationId
+                    )
+                } else {
+                    VStack {
+                        Spacer()
+                        Text("Select a source")
+                            .font(.title2)
+                            .foregroundStyle(.secondary)
+                        Spacer()
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             }
             .foregroundStyle(inkColor)
             .background((colorScheme == .dark ? Color(white: 0.12) : Color.white).ignoresSafeArea())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { isInspectorShown.toggle() }) {
+                        Label("Toggle Inspector", systemImage: "sidebar.trailing")
+                    }
+                    .help(isInspectorShown ? "Hide Inspector" : "Show Inspector")
+                }
+            }
+            .inspector(isPresented: $isInspectorShown) {
+                inspectorContent
+                    .padding()
+                    .frame(minWidth: 150)
+            }
         }
         .searchable(
             text: Binding(
@@ -158,6 +207,9 @@ struct ContentView: View {
         )
         .onChange(of: searchState.query) { _, _ in
             searchState.runSearchIfNeeded(modelContext: modelContext)
+        }
+        .onChange(of: selectedSourceId) { _, _ in
+            selectedQuotationId = nil
         }
         .navigationTitle("")
         .navigationSplitViewStyle(.balanced)
