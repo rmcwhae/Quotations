@@ -13,12 +13,14 @@ struct SourceDetailView: View {
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     @Binding var selectedQuotationId: PersistentIdentifier?
+    @Binding var showQuotationForm: Bool
 
     var body: some View {
         SourceSectionView(
             source: source,
             searchQuery: searchQuery,
-            quotationIdsFilter: quotationIdsFilter
+            quotationIdsFilter: quotationIdsFilter,
+            showQuotationForm: $showQuotationForm
         ) {
             ScrollView {
                 QuotationListView(

@@ -35,6 +35,7 @@ struct ContentView: View {
     @State private var showDeleteSourceConfirmation = false
     @State private var isInspectorShown = true
     @State private var selectedQuotationId: PersistentIdentifier?
+    @State private var showQuotationForm = false
 
     private var filteredSources: [Source] {
         guard let sets = searchState.matchSetsForQuery() else { return sources }
@@ -168,7 +169,8 @@ struct ContentView: View {
                         source: source,
                         searchQuery: searchState.query,
                         quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds,
-                        selectedQuotationId: $selectedQuotationId
+                        selectedQuotationId: $selectedQuotationId,
+                        showQuotationForm: $showQuotationForm
                     )
                 } else {
                     VStack {
@@ -185,6 +187,17 @@ struct ContentView: View {
             .background((colorScheme == .dark ? Color(white: 0.12) : Color.white).ignoresSafeArea())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .toolbar {
+                if selectedSource != nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            showQuotationForm = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityLabel("Add quotation")
+                        .help("Add quotation")
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { isInspectorShown.toggle() }) {
                         Label("Toggle Inspector", systemImage: "sidebar.trailing")
@@ -210,6 +223,7 @@ struct ContentView: View {
         }
         .onChange(of: selectedSourceId) { _, _ in
             selectedQuotationId = nil
+            showQuotationForm = false
         }
         .navigationTitle("")
         .navigationSplitViewStyle(.balanced)

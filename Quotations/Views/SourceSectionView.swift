@@ -22,17 +22,29 @@ private func sourceSectionBackgroundColor() -> Color {
     #endif
 }
 
-/// One source block: header (title, author, Add Quotation), optional form, divider, and custom content below.
+/// One source block: header (title, author, optional Add Quotation plus), optional form, divider, and custom content below.
+/// When `showQuotationForm` binding is provided (e.g. from detail toolbar), the header has no button. When nil, the header shows a plus to add a quotation.
 struct SourceSectionView<BelowContent: View>: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     /// When set (e.g. to parent horizontal padding), the header is inset so its background extends to the edges.
     var headerOutset: CGFloat = 0
+    /// When non-nil, form visibility is driven by this binding and no add-quotation button is shown in the header (e.g. detail view uses toolbar plus). When nil, local state and a plus button in the header are used.
+    var showQuotationForm: Binding<Bool>? = nil
 
     @ViewBuilder let belowContent: () -> BelowContent
 
-    @State private var showQuotationForm = false
+    @State private var showQuotationFormLocal = false
+
+    /// Single binding that reflects either the external binding or local state.
+    private var formVisibility: Binding<Bool> {
+        if let showQuotationForm { return showQuotationForm }
+        return Binding(
+            get: { showQuotationFormLocal },
+            set: { showQuotationFormLocal = $0 }
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -58,22 +70,23 @@ struct SourceSectionView<BelowContent: View>: View {
                         }
                     }
                     Spacer()
-                    Button {
-                        showQuotationForm = true
-                    } label: {
-                        Label("Add Quotation", systemImage: "text.quote")
+                    if showQuotationForm == nil {
+                        Button {
+                            formVisibility.wrappedValue = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                        .accessibilityLabel("Add quotation")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .accessibilityLabel("Add quotation")
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                if showQuotationForm {
+                if formVisibility.wrappedValue {
                     QuotationFormView(
                         source: source,
-                        onSuccess: { showQuotationForm = false },
-                        onCancel: { showQuotationForm = false }
+                        onSuccess: { formVisibility.wrappedValue = false },
+                        onCancel: { formVisibility.wrappedValue = false }
                     )
                     .padding(.horizontal)
                     .padding(.bottom, 8)
