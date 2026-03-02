@@ -21,16 +21,20 @@ struct SourceDetailView: View {
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
             showQuotationForm: $showQuotationForm
-        ) {
+        ) { showForm in
             ScrollView {
                 QuotationListView(
                     source: source,
                     searchQuery: searchQuery,
                     quotationIdsFilter: quotationIdsFilter,
-                    selectedQuotationId: $selectedQuotationId
+                    selectedQuotationId: $selectedQuotationId,
+                    showQuotationForm: showForm
                 )
                 .padding()
             }
+            .simultaneousGesture(
+                TapGesture().onEnded { selectedQuotationId = nil }
+            )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

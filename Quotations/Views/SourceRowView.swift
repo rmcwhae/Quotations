@@ -43,25 +43,18 @@ struct SourceRowView: View {
                 Button {
                     showQuotationForm = true
                 } label: {
-                    Image(systemName: "text.quote")
+                    Image(systemName: "plus")
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Add quotation")
-            }
-
-            if showQuotationForm {
-                QuotationFormView(
-                    source: source,
-                    onSuccess: { showQuotationForm = false },
-                    onCancel: { showQuotationForm = false }
-                )
             }
 
             QuotationListView(
                 source: source,
                 searchQuery: searchQuery,
                 quotationIdsFilter: quotationIdsFilter,
-                selectedQuotationId: $selectedQuotationId
+                selectedQuotationId: $selectedQuotationId,
+                showQuotationForm: $showQuotationForm
             )
         }
         .frame(maxWidth: 700, alignment: .leading)

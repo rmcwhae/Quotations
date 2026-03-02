@@ -80,6 +80,13 @@ struct QuotationRowView: View {
         .onChange(of: editedContent) { _, newValue in
             scheduleDebouncedSave()
         }
+        .onKeyPress(.escape) {
+            if isTextFocused {
+                isTextFocused = false
+                return .handled
+            }
+            return .ignored
+        }
         .contextMenu {
             Button("Delete", role: .destructive) {
                 showDeleteConfirmation = true

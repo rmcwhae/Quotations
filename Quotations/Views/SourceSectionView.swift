@@ -22,7 +22,7 @@ private func sourceSectionBackgroundColor() -> Color {
     #endif
 }
 
-/// One source block: header (title, author, optional Add Quotation plus), optional form, divider, and custom content below.
+/// One source block: header (title, author, optional Add Quotation plus), optional form when plus is clicked, divider, and content below.
 /// When `showQuotationForm` binding is provided (e.g. from detail toolbar), the header has no button. When nil, the header shows a plus to add a quotation.
 struct SourceSectionView<BelowContent: View>: View {
     let source: Source
@@ -33,11 +33,10 @@ struct SourceSectionView<BelowContent: View>: View {
     /// When non-nil, form visibility is driven by this binding and no add-quotation button is shown in the header (e.g. detail view uses toolbar plus). When nil, local state and a plus button in the header are used.
     var showQuotationForm: Binding<Bool>? = nil
 
-    @ViewBuilder let belowContent: () -> BelowContent
+    @ViewBuilder let belowContent: (Binding<Bool>) -> BelowContent
 
     @State private var showQuotationFormLocal = false
 
-    /// Single binding that reflects either the external binding or local state.
     private var formVisibility: Binding<Bool> {
         if let showQuotationForm { return showQuotationForm }
         return Binding(
@@ -81,16 +80,6 @@ struct SourceSectionView<BelowContent: View>: View {
                 }
                 .padding()
                 .frame(maxWidth: .infinity, alignment: .leading)
-
-                if formVisibility.wrappedValue {
-                    QuotationFormView(
-                        source: source,
-                        onSuccess: { formVisibility.wrappedValue = false },
-                        onCancel: { formVisibility.wrappedValue = false }
-                    )
-                    .padding(.horizontal)
-                    .padding(.bottom, 8)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(sourceSectionBackgroundColor())
@@ -98,7 +87,7 @@ struct SourceSectionView<BelowContent: View>: View {
 
             Divider()
 
-            belowContent()
+            belowContent(formVisibility)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
     }

@@ -31,6 +31,9 @@ struct UnifiedSearchResultsView: View {
             }
             .padding(horizontalPadding)
         }
+        .simultaneousGesture(
+            TapGesture().onEnded { selectedQuotationId = nil }
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }
@@ -47,13 +50,14 @@ private struct SingleSourceSearchSection: View {
             source: source,
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
-            headerOutset: horizontalPadding,
-        ) {
+            headerOutset: horizontalPadding
+        ) { showForm in
             QuotationListView(
                 source: source,
                 searchQuery: searchQuery,
                 quotationIdsFilter: quotationIdsFilter,
-                selectedQuotationId: $selectedQuotationId
+                selectedQuotationId: $selectedQuotationId,
+                showQuotationForm: showForm
             )
             .padding(.top, 8)
         }
