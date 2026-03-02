@@ -21,10 +21,10 @@ struct QuotationFormView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Quotation text", text: $content, axis: .vertical)
+            TextField("", text: $content, axis: .vertical)
                 .font(quotationFont)
                 .lineSpacing(quotationLineSpacing)
-                .lineLimit(3...8)
+                .lineLimit(1...8)
                 .textFieldStyle(.roundedBorder)
 
             HStack {

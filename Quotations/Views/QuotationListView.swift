@@ -77,6 +77,7 @@ struct QuotationListView: View {
                     onEdit: saveQuotation,
                     onDelete: deleteQuotation
                 )
+                .padding(.vertical, 6)
                 if index < displayedQuotations.count - 1 {
                     DiamondDivider()
                 }

@@ -10,6 +10,9 @@ import SwiftUI
 private let quotationFont = Font.system(size: 16, design: .serif)
 /// Line spacing ~1.4 (extra points between lines).
 private let quotationLineSpacing: CGFloat = 6
+/// Thick blue border when editing (matches search field focus).
+private let editFocusBorder = Color(red: 0.35, green: 0.55, blue: 0.92)
+private let debounceInterval: Duration = .milliseconds(500)
 
 struct QuotationRowView: View {
     let quotation: Quotation
@@ -19,79 +22,64 @@ struct QuotationRowView: View {
     var onEdit: (Quotation) -> Void
     var onDelete: (PersistentIdentifier) -> Void
 
-    @State private var isEditing = false
-    @State private var editedContent = ""
+    @State private var editedContent: String
     @State private var showDeleteConfirmation = false
 
-    private var pageText: String {
-        if let start = quotation.startPage, let end = quotation.endPage {
-            return "(\(start)–\(end))"
-        }
-        if let start = quotation.startPage {
-            return "(\(start))"
-        }
-        return ""
+    init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, onSelect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
+        self.quotation = quotation
+        self.searchQuery = searchQuery
+        self.isSelected = isSelected
+        self.onSelect = onSelect
+        self.onEdit = onEdit
+        self.onDelete = onDelete
+        _editedContent = State(initialValue: quotation.content)
     }
-
-    /// Fixed width for the action column so text doesn't shift when toggling edit.
-    private let actionsColumnWidth: CGFloat = 88
+    @State private var saveTask: Task<Void, Never>?
+    @FocusState private var isTextFocused: Bool
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 4) {
-                if isEditing {
-                    TextEditor(text: $editedContent)
-                        .font(quotationFont)
-                        .lineSpacing(quotationLineSpacing)
-                        .scrollContentBackground(.hidden)
-                        .padding(.horizontal, -4)
-                        .padding(.vertical, -4)
-                        .frame(minHeight: 60)
-                        .onSubmit { commitEdit() }
-                } else {
-                    if pageText.isEmpty {
-                        Button {
-                            editedContent = quotation.content
-                            isEditing = true
-                        } label: {
-                            HighlightMatch(text: quotation.content, query: searchQuery)
-                                .font(quotationFont)
-                                .lineSpacing(quotationLineSpacing)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .buttonStyle(.plain)
-                    } else {
-                        HStack(alignment: .firstTextBaseline, spacing: 4) {
-                            HighlightMatch(text: quotation.content, query: searchQuery)
-                                .font(quotationFont)
-                                .lineSpacing(quotationLineSpacing)
-                            Text(pageText)
-                                .font(quotationFont)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
+                textEditor
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             .onTapGesture {
-                guard !isEditing else { return }
-                onSelect?()
-            }
-
-            if isEditing {
-                HStack(spacing: 4) {
-                    Button("Save") {
-                        commitEdit()
-                    }
-                    .buttonStyle(.borderless)
+                if isTextFocused {
+                    isTextFocused = false
+                } else {
+                    onSelect?()
                 }
-                .frame(width: actionsColumnWidth, alignment: .trailing)
             }
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .background((isSelected && !isTextFocused) ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+        .overlay {
+            RoundedRectangle(cornerRadius: 6)
+                .strokeBorder(
+                    isTextFocused ? editFocusBorder : Color.clear,
+                    lineWidth: isTextFocused ? 3 : 0
+                )
+        }
+        .onChange(of: isTextFocused) { _, focused in
+            if focused {
+                onSelect?()
+            }
+        }
+        .onChange(of: isSelected) { _, selected in
+            if !selected {
+                isTextFocused = false
+            }
+        }
+        .onChange(of: quotation.content) { _, newValue in
+            if !isTextFocused {
+                editedContent = newValue
+            }
+        }
+        .onChange(of: editedContent) { _, newValue in
+            scheduleDebouncedSave()
+        }
         .contextMenu {
             Button("Delete", role: .destructive) {
                 showDeleteConfirmation = true
@@ -107,6 +95,28 @@ struct QuotationRowView: View {
         }
     }
 
+    private var textEditor: some View {
+        TextEditor(text: $editedContent)
+            .font(quotationFont)
+            .lineSpacing(quotationLineSpacing)
+            .scrollContentBackground(.hidden)
+            .padding(.horizontal, -4)
+            .padding(.vertical, -4)
+            .frame(minHeight: 20)
+            .focused($isTextFocused)
+    }
+
+    private func scheduleDebouncedSave() {
+        saveTask?.cancel()
+        saveTask = Task {
+            try? await Task.sleep(for: debounceInterval)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                commitEdit()
+            }
+        }
+    }
+
     private func commitEdit() {
         let trimmed = editedContent.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {
@@ -114,6 +124,5 @@ struct QuotationRowView: View {
             quotation.updatedAt = Date()
             onEdit(quotation)
         }
-        isEditing = false
     }
 }

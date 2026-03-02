@@ -36,6 +36,8 @@ struct ContentView: View {
     @State private var isInspectorShown = true
     @State private var selectedQuotationId: PersistentIdentifier?
     @State private var showQuotationForm = false
+    @State private var inspectorStartPage = ""
+    @State private var inspectorEndPage = ""
 
     private var filteredSources: [Source] {
         guard let sets = searchState.matchSetsForQuery() else { return sources }
@@ -55,16 +57,30 @@ struct ContentView: View {
     @ViewBuilder
     private var inspectorContent: some View {
         if let quotation = selectedQuotation {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Quotation")
                     .font(.headline)
-                if let start = quotation.startPage {
-                    Text("Start page: \(start)")
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("Start page")
                         .font(.subheadline)
+                        .frame(width: 70, alignment: .leading)
+                    TextField("—", text: $inspectorStartPage)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 60)
+                        .onChange(of: inspectorStartPage) { _, _ in
+                            applyInspectorPages(to: quotation)
+                        }
                 }
-                if let end = quotation.endPage {
-                    Text("End page: \(end)")
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text("End page")
                         .font(.subheadline)
+                        .frame(width: 70, alignment: .leading)
+                    TextField("—", text: $inspectorEndPage)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 60)
+                        .onChange(of: inspectorEndPage) { _, _ in
+                            applyInspectorPages(to: quotation)
+                        }
                 }
                 if let updated = quotation.updatedAt {
                     Text("Last updated: \(updated, style: .date)")
@@ -73,10 +89,30 @@ struct ContentView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
+            .onAppear {
+                syncInspectorFromQuotation(quotation)
+            }
+            .onChange(of: selectedQuotationId) { _, _ in
+                if let q = selectedQuotation {
+                    syncInspectorFromQuotation(q)
+                }
+            }
         } else {
             Text("Select a quotation to view details.")
                 .foregroundStyle(.secondary)
         }
+    }
+
+    private func syncInspectorFromQuotation(_ quotation: Quotation) {
+        inspectorStartPage = quotation.startPage.map(String.init) ?? ""
+        inspectorEndPage = quotation.endPage.map(String.init) ?? ""
+    }
+
+    private func applyInspectorPages(to quotation: Quotation) {
+        quotation.startPage = Int(inspectorStartPage.trimmingCharacters(in: .whitespaces)).flatMap { $0 > 0 ? $0 : nil }
+        quotation.endPage = Int(inspectorEndPage.trimmingCharacters(in: .whitespaces)).flatMap { $0 > 0 ? $0 : nil }
+        quotation.updatedAt = Date()
+        try? modelContext.save()
     }
 
     var body: some View {
