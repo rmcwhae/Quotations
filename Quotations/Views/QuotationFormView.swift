@@ -16,54 +16,36 @@ struct QuotationFormView: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var content = ""
-    @State private var startPage = ""
-    @State private var endPage = ""
+    @FocusState private var isFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            TextField("", text: $content, axis: .vertical)
-                .font(quotationFont)
-                .lineSpacing(quotationLineSpacing)
-                .lineLimit(1...8)
-                .textFieldStyle(.roundedBorder)
-
-            HStack {
-                TextField("Start page", text: $startPage)
-                    .frame(width: 80)
-                TextField("End page", text: $endPage)
-                    .frame(width: 80)
-            }
+        TextField("Add quotation…", text: $content, axis: .vertical)
+            .font(quotationFont)
+            .lineSpacing(quotationLineSpacing)
+            .lineLimit(1...8)
             .textFieldStyle(.roundedBorder)
-
-            HStack {
-                if let onCancel {
-                    Button("Cancel") {
-                        onCancel()
+            .focused($isFocused)
+            .onSubmit {
+                commitIfNonEmpty()
+            }
+            .onChange(of: isFocused) { _, focused in
+                if !focused {
+                    if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        onCancel?()
+                    } else {
+                        commitIfNonEmpty()
                     }
                 }
-                Spacer()
-                Button("Add") {
-                    submit()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-        }
-        .padding()
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
     }
 
-    private func submit() {
+    private func commitIfNonEmpty() {
         let c = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !c.isEmpty else { return }
-        let start = Int(startPage.trimmingCharacters(in: .whitespacesAndNewlines))
-        let end = Int(endPage.trimmingCharacters(in: .whitespacesAndNewlines))
-        let quotation = Quotation(content: c, source: source, startPage: start, endPage: end)
+        let quotation = Quotation(content: c, source: source, startPage: nil, endPage: nil)
         modelContext.insert(quotation)
         try? modelContext.save()
         content = ""
-        startPage = ""
-        endPage = ""
         onSuccess()
     }
 }

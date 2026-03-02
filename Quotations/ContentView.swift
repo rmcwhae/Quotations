@@ -58,13 +58,11 @@ struct ContentView: View {
     private var inspectorContent: some View {
         if let quotation = selectedQuotation {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Quotation")
-                    .font(.headline)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text("Start page")
                         .font(.subheadline)
                         .frame(width: 70, alignment: .leading)
-                    TextField("—", text: $inspectorStartPage)
+                    TextField("", text: $inspectorStartPage)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 60)
                         .onChange(of: inspectorStartPage) { _, _ in
@@ -75,7 +73,7 @@ struct ContentView: View {
                     Text("End page")
                         .font(.subheadline)
                         .frame(width: 70, alignment: .leading)
-                    TextField("—", text: $inspectorEndPage)
+                    TextField("", text: $inspectorEndPage)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 60)
                         .onChange(of: inspectorEndPage) { _, _ in
@@ -83,7 +81,7 @@ struct ContentView: View {
                         }
                 }
                 if let updated = quotation.updatedAt {
-                    Text("Last updated: \(updated, style: .date)")
+                    Text("Last updated: \(updated, style: .date) \(updated, style: .time)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -244,7 +242,7 @@ struct ContentView: View {
             .inspector(isPresented: $isInspectorShown) {
                 inspectorContent
                     .padding()
-                    .frame(minWidth: 150)
+                    .frame(minWidth: 150, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
         .searchable(
