@@ -103,13 +103,11 @@ struct QuotationRowView: View {
     }
 
     private var textEditor: some View {
-        TextEditor(text: $editedContent)
+        TextField("Quotation", text: $editedContent, axis: .vertical)
+            .textFieldStyle(.plain)
+            .fixedSize(horizontal: false, vertical: true)
             .font(quotationFont)
             .lineSpacing(quotationLineSpacing)
-            .scrollContentBackground(.hidden)
-            .padding(.horizontal, -4)
-            .padding(.vertical, -4)
-            .frame(minHeight: 20)
             .focused($isTextFocused)
     }
 
