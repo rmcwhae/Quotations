@@ -37,6 +37,7 @@ struct QuotationFormView: View {
                     }
                 }
             }
+            .onAppear { isFocused = true }
     }
 
     private func commitIfNonEmpty() {
