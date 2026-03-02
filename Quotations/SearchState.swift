@@ -46,7 +46,7 @@ final class SearchState {
 
             let descriptor = FetchDescriptor<Quotation>(
                 predicate: #Predicate<Quotation> { q in q.deletedAt == nil },
-                sortBy: [SortDescriptor(\.startPage)]
+                sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
             )
             guard let allQuotations = try? modelContext.fetch(descriptor) else {
                 isSearching = false

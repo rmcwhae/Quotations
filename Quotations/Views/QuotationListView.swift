@@ -59,7 +59,7 @@ struct QuotationListView: View {
             filter: #Predicate<Quotation> { q in
                 q.deletedAt == nil && q.source?.id == sourceId
             },
-            sort: [SortDescriptor(\.startPage)]
+            sort: [SortDescriptor(\.createdAt, order: .reverse)]
         )
     }
 
