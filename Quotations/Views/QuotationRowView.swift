@@ -79,26 +79,24 @@ struct QuotationRowView: View {
                 onSelect?()
             }
 
-            HStack(spacing: 4) {
-                if isEditing {
+            if isEditing {
+                HStack(spacing: 4) {
                     Button("Save") {
                         commitEdit()
                     }
                     .buttonStyle(.borderless)
                 }
-                Button {
-                    showDeleteConfirmation = true
-                } label: {
-                    Image(systemName: "trash")
-                }
-                .buttonStyle(.borderless)
-                .accessibilityLabel("Delete quotation")
+                .frame(width: actionsColumnWidth, alignment: .trailing)
             }
-            .frame(width: actionsColumnWidth, alignment: .trailing)
         }
         .padding(.vertical, 4)
         .padding(.horizontal, 8)
         .background(isSelected ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+        .contextMenu {
+            Button("Delete", role: .destructive) {
+                showDeleteConfirmation = true
+            }
+        }
         .confirmationDialog("Delete this quotation?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 onDelete(quotation.id)

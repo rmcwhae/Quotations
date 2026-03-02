@@ -78,11 +78,11 @@ struct SourceFormView: View {
 
             TextField("Title", text: $title)
 
-            TextField("Year", text: $publicationYear)
-                .frame(width: 80)
-
             TextField("URL (optional)", text: $url)
                 .textContentType(.URL)
+
+            TextField("Year", text: $publicationYear)
+                .frame(width: 80)
 
             HStack {
                 Spacer()
