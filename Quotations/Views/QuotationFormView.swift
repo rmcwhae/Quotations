@@ -8,6 +8,8 @@ import SwiftUI
 
 private let quotationFont = Font.system(size: 16, design: .serif)
 private let quotationLineSpacing: CGFloat = 6
+/// Blue border when focused (matches QuotationRowView).
+private let editFocusBorder = Color(red: 0.35, green: 0.55, blue: 0.92)
 
 struct QuotationFormView: View {
     let source: Source
@@ -23,8 +25,18 @@ struct QuotationFormView: View {
             .font(quotationFont)
             .lineSpacing(quotationLineSpacing)
             .lineLimit(1...8)
-            .textFieldStyle(.roundedBorder)
+            .textFieldStyle(.plain)
+            .fixedSize(horizontal: false, vertical: true)
             .focused($isFocused)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(
+                        isFocused ? editFocusBorder : Color.clear,
+                        lineWidth: isFocused ? 3 : 0
+                    )
+            }
             .onSubmit {
                 commitIfNonEmpty()
             }
