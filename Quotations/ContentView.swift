@@ -121,10 +121,11 @@ struct ContentView: View {
                 Text("This action cannot be undone.")
             }
         } else {
-            VStack(spacing: 12) {
+            VStack(spacing: 0) {
                 Text("\u{201C}")
-                    .font(.system(size: 64, design: .serif))
+                    .font(.system(size: 96, design: .serif))
                     .foregroundStyle(.quaternary)
+                    .padding(.bottom, -12)
                 Text("Select a quotation to view details")
                     .foregroundStyle(.secondary)
             }
@@ -146,62 +147,64 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            // Sidebar: source list
             VStack(spacing: 0) {
-                if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   !searchState.isSearching,
-                   searchState.searchResults.isEmpty {
-                    Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                if showSourceForm {
-                    SourceFormView(
-                        onSuccess: {
-                            showSourceForm = false
-                        },
-                        onCancel: {
-                            showSourceForm = false
-                        },
-                        onError: { message in
-                            errorMessage = message
-                            showError = true
-                        }
-                    )
-                    .padding()
-                }
-
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(filteredSources) { source in
-                            Button {
-                                selectedSourceId = source.id
-                            } label: {
-                                SourceListRowView(
-                                    source: source,
-                                    searchQuery: searchState.query,
-                                    isSelected: source.id == selectedSourceId
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu {
-                                Button("Edit…") {
-                                    sourceToEdit = source
-                                }
-                                Button("Delete", role: .destructive) {
-                                    sourceToDelete = source
-                                    showDeleteSourceConfirmation = true
-                                }
-                            }
-                        }
+                Divider()
+                VStack(spacing: 0) {
+                    if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       !searchState.isSearching,
+                       searchState.searchResults.isEmpty {
+                        Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .padding(.vertical, 8)
+
+                    if showSourceForm {
+                        SourceFormView(
+                            onSuccess: {
+                                showSourceForm = false
+                            },
+                            onCancel: {
+                                showSourceForm = false
+                            },
+                            onError: { message in
+                                errorMessage = message
+                                showError = true
+                            }
+                        )
+                        .padding()
+                    }
+
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            ForEach(filteredSources) { source in
+                                Button {
+                                    selectedSourceId = source.id
+                                } label: {
+                                    SourceListRowView(
+                                        source: source,
+                                        searchQuery: searchState.query,
+                                        isSelected: source.id == selectedSourceId
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button("Edit…") {
+                                        sourceToEdit = source
+                                    }
+                                    Button("Delete", role: .destructive) {
+                                        sourceToDelete = source
+                                        showDeleteSourceConfirmation = true
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
             .navigationSplitViewColumnWidth(min: 200, ideal: 300, max: 500)
             .toolbar {
@@ -226,51 +229,49 @@ struct ContentView: View {
             }
             .foregroundStyle(inkColor)
             .background(
-                (colorScheme == .dark
-                    ? Color(red: 0.10, green: 0.09, blue: 0.06)
-                    : Color(red: 0.97, green: 0.96, blue: 0.94))
+                AppColors.sideColumnBackground(colorScheme: colorScheme)
                 .ignoresSafeArea()
             )
 
         } detail: {
-            // Main content area
-            Group {
-                if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   let matchSets = searchState.matchSetsForQuery(),
-                   !filteredSources.isEmpty {
-                    UnifiedSearchResultsView(
-                        sources: filteredSources,
-                        searchQuery: searchState.query,
-                        quotationIdsFilter: matchSets.quotationIds,
-                        selectedQuotationId: $selectedQuotationId
-                    )
-                } else if let source = selectedSource {
-                    SourceDetailView(
-                        source: source,
-                        searchQuery: searchState.query,
-                        quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds,
-                        selectedQuotationId: $selectedQuotationId,
-                        showQuotationForm: $showQuotationForm
-                    )
-                } else {
-                    VStack {
-                        Spacer()
-                        Text("Select a source")
-                            .font(.title2)
-                            .foregroundStyle(.secondary)
-                        Spacer()
+            VStack(spacing: 0) {
+                Divider()
+                Group {
+                    if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                       let matchSets = searchState.matchSetsForQuery(),
+                       !filteredSources.isEmpty {
+                        UnifiedSearchResultsView(
+                            sources: filteredSources,
+                            searchQuery: searchState.query,
+                            quotationIdsFilter: matchSets.quotationIds,
+                            selectedQuotationId: $selectedQuotationId
+                        )
+                    } else if let source = selectedSource {
+                        SourceDetailView(
+                            source: source,
+                            searchQuery: searchState.query,
+                            quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds,
+                            selectedQuotationId: $selectedQuotationId,
+                            showQuotationForm: $showQuotationForm
+                        )
+                    } else {
+                        VStack {
+                            Spacer()
+                            Text("Select a source")
+                                .font(.title2)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                .foregroundStyle(inkColor)
+                .background(
+                    AppColors.mainBackground(colorScheme: colorScheme)
+                        .ignoresSafeArea()
+                    )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .foregroundStyle(inkColor)
-            .background(
-                    (colorScheme == .dark
-                        ? Color(red: 0.11, green: 0.10, blue: 0.07)
-                        : Color(red: 0.99, green: 0.98, blue: 0.96))
-                    .ignoresSafeArea()
-                )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .toolbar {
                 if selectedSource != nil {
                     ToolbarItem(placement: .primaryAction) {
@@ -291,10 +292,17 @@ struct ContentView: View {
                 }
             }
             .inspector(isPresented: $isInspectorShown) {
-                inspectorContent
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .inspectorColumnWidth(min: 180, ideal: 260, max: 420)
+                VStack(spacing: 0) {
+                    Divider()
+                    inspectorContent
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .background(
+                            AppColors.sideColumnBackground(colorScheme: colorScheme)
+                                .ignoresSafeArea()
+                        )
+                        .inspectorColumnWidth(min: 180, ideal: 260, max: 420)
+                }
             }
         }
         .searchable(
@@ -313,9 +321,7 @@ struct ContentView: View {
         }
         .navigationTitle("")
         .toolbarBackground(
-            (colorScheme == .dark
-                ? Color(red: 0.11, green: 0.10, blue: 0.07)
-                : Color(red: 0.99, green: 0.98, blue: 0.96)),
+            AppColors.mainBackground(colorScheme: colorScheme),
             for: .windowToolbar
         )
         .navigationSplitViewStyle(.balanced)
@@ -378,3 +384,4 @@ struct ContentView: View {
     ContentView()
         .modelContainer(for: [Author.self, Source.self, Quotation.self], inMemory: true)
 }
+

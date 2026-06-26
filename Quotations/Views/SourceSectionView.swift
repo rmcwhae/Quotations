@@ -26,9 +26,7 @@ struct SourceSectionView<BelowContent: View>: View {
     @State private var showQuotationFormLocal = false
 
     private var parchmentBackground: Color {
-        colorScheme == .dark
-            ? Color(red: 0.11, green: 0.10, blue: 0.07)
-            : Color(red: 0.99, green: 0.98, blue: 0.96)
+        AppColors.mainBackground(colorScheme: colorScheme)
     }
 
     private var formVisibility: Binding<Bool> {

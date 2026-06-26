@@ -77,6 +77,7 @@ struct AuthorListView: View {
                     }
                 }
                 .listStyle(.plain)
+                .contentMargins(.bottom, 12, for: .scrollContent)
             }
         }
         .frame(minWidth: 280, minHeight: 320)

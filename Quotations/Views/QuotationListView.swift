@@ -22,18 +22,11 @@ private struct DiamondDivider: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Rectangle()
-                .fill(dividerColor)
-                .frame(height: 1)
-                .frame(maxWidth: .infinity)
             Image(systemName: "diamond.fill")
                 .font(.system(size: 6))
                 .foregroundStyle(dividerColor)
-            Rectangle()
-                .fill(dividerColor)
-                .frame(height: 1)
-                .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
     }
 }

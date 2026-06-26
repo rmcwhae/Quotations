@@ -25,6 +25,7 @@ struct QuotationRowView: View {
 
     @State private var editedContent: String
     @State private var showDeleteConfirmation = false
+    @State private var textContainerWidth: CGFloat = quotationTextMaxWidth
 
     init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, onSelect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
         self.quotation = quotation
@@ -39,17 +40,29 @@ struct QuotationRowView: View {
     @State private var pendingSelectTask: Task<Void, Never>?
     @FocusState private var isTextFocused: Bool
 
+    private var textFieldWidth: CGFloat {
+        min(textContainerWidth, quotationTextMaxWidth)
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             Text("\u{201C}")
-                .font(.system(size: 36, design: .serif))
+                .font(.system(size: 44, design: .serif))
                 .foregroundStyle(.quaternary)
-                .frame(width: 32, alignment: .leading)
-                .offset(y: -8)
+                .frame(width: 36, alignment: .leading)
+                .offset(y: -2)
             VStack(alignment: .leading, spacing: 4) {
                 textEditor
             }
             .frame(maxWidth: quotationTextMaxWidth, alignment: .leading)
+            .background {
+                GeometryReader { geometry in
+                    Color.clear
+                        .onChange(of: geometry.size.width, initial: true) { _, newWidth in
+                            textContainerWidth = newWidth
+                        }
+                }
+            }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(Color.clear, in: RoundedRectangle(cornerRadius: 6))
@@ -128,8 +141,7 @@ struct QuotationRowView: View {
     private var textEditor: some View {
         TextField("Quotation", text: $editedContent, axis: .vertical)
             .textFieldStyle(.plain)
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: quotationTextMaxWidth)
+            .frame(width: textFieldWidth, alignment: .leading)
             .font(quotationFont)
             .lineSpacing(quotationLineSpacing)
             .focused($isTextFocused)
