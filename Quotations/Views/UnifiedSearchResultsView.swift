@@ -29,7 +29,6 @@ struct UnifiedSearchResultsView: View {
                     )
                 }
             }
-            .padding(horizontalPadding)
         }
         .simultaneousGesture(
             TapGesture().onEnded { selectedQuotationId = nil }
@@ -50,7 +49,6 @@ private struct SingleSourceSearchSection: View {
             source: source,
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
-            headerOutset: horizontalPadding,
             showsAddButton: false
         ) { showForm in
             QuotationListView(

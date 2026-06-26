@@ -156,6 +156,8 @@ struct QuotationRowView: View {
         } else {
             TextField("Quotation", text: $editedContent, axis: .vertical)
                 .textFieldStyle(.plain)
+                .lineLimit(1...)
+                .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: textFieldWidth, alignment: .leading)
                 .font(quotationFont)
                 .lineSpacing(quotationLineSpacing)
