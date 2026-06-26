@@ -303,6 +303,12 @@ struct ContentView: View {
             showQuotationForm = false
         }
         .navigationTitle("")
+        .toolbarBackground(
+            (colorScheme == .dark
+                ? Color(red: 0.10, green: 0.09, blue: 0.06)
+                : Color(red: 0.97, green: 0.96, blue: 0.94)),
+            for: .windowToolbar
+        )
         .navigationSplitViewStyle(.balanced)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .ignoresSafeArea()
