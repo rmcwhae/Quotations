@@ -90,11 +90,15 @@ struct SourceFormView: View {
                     onCancel()
                 }
                 .buttonStyle(.bordered)
+                .accessibilityLabel("Cancel")
+                .help("Cancel")
                 Button(isEditing ? "Save" : "Add") {
                     submit()
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!authorNameIsValid || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .accessibilityLabel(isEditing ? "Save source" : "Add source")
+                .help(isEditing ? "Save changes" : "Add source")
             }
         }
         .padding()

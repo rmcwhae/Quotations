@@ -26,7 +26,7 @@ struct ContentView: View {
 
     @State private var searchState = SearchState()
     @State private var showSourceForm = false
-    @State private var showAuthorForm = false
+    @State private var showAuthorList = false
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var selectedSourceId: PersistentIdentifier?
@@ -34,6 +34,7 @@ struct ContentView: View {
     @State private var sourceToDelete: Source?
     @State private var showDeleteSourceConfirmation = false
     @State private var isInspectorShown = true
+    @State private var showDeleteQuotationConfirmation = false
     @State private var selectedQuotationId: PersistentIdentifier?
     @State private var showQuotationForm = false
     @State private var inspectorStartPage = ""
@@ -85,8 +86,17 @@ struct ContentView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                Spacer()
+                Button(role: .destructive) {
+                    showDeleteQuotationConfirmation = true
+                } label: {
+                    Label("Delete Quotation", systemImage: "trash")
+                        .frame(maxWidth: .infinity)
+                }
+                .accessibilityLabel("Delete quotation")
+                .help("Delete this quotation")
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .onAppear {
                 syncInspectorFromQuotation(quotation)
             }
@@ -94,6 +104,19 @@ struct ContentView: View {
                 if let q = selectedQuotation {
                     syncInspectorFromQuotation(q)
                 }
+            }
+            .confirmationDialog("Delete this quotation?", isPresented: $showDeleteQuotationConfirmation, titleVisibility: .visible) {
+                Button("Delete", role: .destructive) {
+                    if let quotation = selectedQuotation {
+                        quotation.deletedAt = Date()
+                        quotation.updatedAt = Date()
+                        try? modelContext.save()
+                        selectedQuotationId = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This action cannot be undone.")
             }
         } else {
             Text("Select a quotation to view details.")
@@ -183,6 +206,15 @@ struct ContentView: View {
                     .accessibilityLabel("Create source")
                     .help("Add source")
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showAuthorList = true
+                    } label: {
+                        Image(systemName: "person.2")
+                    }
+                    .accessibilityLabel("Manage authors")
+                    .help("Manage authors")
+                }
             }
             .foregroundStyle(inkColor)
          
@@ -270,8 +302,8 @@ struct ContentView: View {
                 Text(errorMessage)
             }
         }
-        .sheet(isPresented: $showAuthorForm) {
-            AuthorFormView()
+        .sheet(isPresented: $showAuthorList) {
+            AuthorListView(onDismiss: { showAuthorList = false })
         }
         .sheet(item: $sourceToEdit) { source in
             SourceFormView(
@@ -293,7 +325,14 @@ struct ContentView: View {
         .confirmationDialog("Delete Source?", isPresented: $showDeleteSourceConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let source = sourceToDelete {
+                    let sourceId = source.id
                     source.deletedAt = Date()
+                    let descriptor = FetchDescriptor<Quotation>(
+                        predicate: #Predicate { q in q.source?.id == sourceId && q.deletedAt == nil }
+                    )
+                    if let quotations = try? modelContext.fetch(descriptor) {
+                        for q in quotations { q.deletedAt = Date() }
+                    }
                     try? modelContext.save()
                 }
                 sourceToDelete = nil
@@ -303,7 +342,7 @@ struct ContentView: View {
             }
         } message: {
             if let source = sourceToDelete {
-                Text("“\(source.title)” will be removed. Quotations from this source will remain but the source will no longer appear in the list.")
+                Text("\"\(source.title)\" and all its quotations will be removed.")
             }
         }
     }

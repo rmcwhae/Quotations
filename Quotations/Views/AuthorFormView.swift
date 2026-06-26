@@ -8,49 +8,61 @@ import SwiftData
 
 struct AuthorFormView: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
+
+    var existingAuthor: Author?
+    var onSuccess: () -> Void
+    var onCancel: () -> Void
+    var onError: (String) -> Void
 
     @State private var name = ""
-    @State private var errorMessage: String?
+    @State private var hasPrefilled = false
+
+    private var isEditing: Bool { existingAuthor != nil }
 
     var body: some View {
         Form {
             TextField("Author name", text: $name)
-            if let errorMessage {
-                Text(errorMessage)
-                    .foregroundStyle(.red)
-            }
         }
         .formStyle(.grouped)
         .frame(minWidth: 280, minHeight: 120)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
-                }
+                Button("Cancel") { onCancel() }
+                    .accessibilityLabel("Cancel")
+                    .help("Cancel")
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Add") {
-                    submit()
-                }
-                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button(isEditing ? "Save" : "Add") { submit() }
+                    .accessibilityLabel(isEditing ? "Save author" : "Add author")
+                    .help(isEditing ? "Save changes" : "Add author")
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
+        }
+        .onAppear {
+            guard let author = existingAuthor, !hasPrefilled else { return }
+            name = author.name
+            hasPrefilled = true
         }
     }
 
     private func submit() {
         let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !n.isEmpty else {
-            errorMessage = "Name is required."
+            onError("Name is required.")
             return
         }
-        let author = Author(name: n)
-        modelContext.insert(author)
         do {
+            if let existing = existingAuthor {
+                existing.name = n
+                existing.updatedAt = Date()
+            } else {
+                let author = Author(name: n)
+                modelContext.insert(author)
+            }
             try modelContext.save()
-            dismiss()
+            onSuccess()
         } catch {
-            errorMessage = error.localizedDescription
+            onError(error.localizedDescription)
         }
     }
 }
