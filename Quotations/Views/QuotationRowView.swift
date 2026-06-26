@@ -12,7 +12,10 @@ private let quotationFont = Font.system(size: 16, design: .serif)
 private let quotationLineSpacing: CGFloat = 6
 /// Thick blue border when editing (matches search field focus).
 private let editFocusBorder = Color(red: 0.35, green: 0.55, blue: 0.92)
+/// Light grey border when selected (single click).
+private let selectionBorder = Color(white: 0.78)
 private let debounceInterval: Duration = .milliseconds(500)
+private let singleTapDelay: Duration = .milliseconds(250)
 
 struct QuotationRowView: View {
     let quotation: Quotation
@@ -35,6 +38,7 @@ struct QuotationRowView: View {
         _editedContent = State(initialValue: quotation.content)
     }
     @State private var saveTask: Task<Void, Never>?
+    @State private var pendingSelectTask: Task<Void, Never>?
     @FocusState private var isTextFocused: Bool
 
     var body: some View {
@@ -44,22 +48,32 @@ struct QuotationRowView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                pendingSelectTask?.cancel()
+                pendingSelectTask = nil
+                isTextFocused = true
+            }
             .onTapGesture {
                 if isTextFocused {
                     isTextFocused = false
                 } else {
-                    onSelect?()
+                    pendingSelectTask?.cancel()
+                    pendingSelectTask = Task {
+                        try? await Task.sleep(for: singleTapDelay)
+                        guard !Task.isCancelled else { return }
+                        await MainActor.run { onSelect?() }
+                    }
                 }
             }
         }
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background((isSelected && !isTextFocused) ? Color.accentColor.opacity(0.15) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+        .background(Color.clear, in: RoundedRectangle(cornerRadius: 6))
         .overlay {
             RoundedRectangle(cornerRadius: 6)
                 .strokeBorder(
-                    isTextFocused ? editFocusBorder : Color.clear,
-                    lineWidth: isTextFocused ? 3 : 0
+                    isTextFocused ? editFocusBorder : (isSelected && !isTextFocused ? selectionBorder : Color.clear),
+                    lineWidth: (isTextFocused || (isSelected && !isTextFocused)) ? 3 : 0
                 )
         }
         .onChange(of: isTextFocused) { _, focused in
