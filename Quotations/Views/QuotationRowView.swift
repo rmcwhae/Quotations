@@ -42,7 +42,12 @@ struct QuotationRowView: View {
     @FocusState private var isTextFocused: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
+        HStack(alignment: .top, spacing: 0) {
+            Text("\u{201C}")
+                .font(.system(size: 36, design: .serif))
+                .foregroundStyle(.quaternary)
+                .frame(width: 32, alignment: .leading)
+                .padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
                 textEditor
             }
@@ -65,10 +70,11 @@ struct QuotationRowView: View {
                     }
                 }
             }
-
+            Spacer(minLength: 0)
         }
         .padding(.vertical, 10)
-        .padding(.horizontal, 12)
+        .padding(.leading, 16)
+        .padding(.trailing, 16)
         .background(Color.clear, in: RoundedRectangle(cornerRadius: 6))
         .overlay {
             RoundedRectangle(cornerRadius: 6)
@@ -121,6 +127,7 @@ struct QuotationRowView: View {
         TextField("Quotation", text: $editedContent, axis: .vertical)
             .textFieldStyle(.plain)
             .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 520)
             .font(quotationFont)
             .lineSpacing(quotationLineSpacing)
             .focused($isTextFocused)

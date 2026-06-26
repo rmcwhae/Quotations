@@ -7,20 +7,7 @@
 
 import SwiftData
 import SwiftUI
-#if canImport(UIKit)
-import UIKit
-#elseif canImport(AppKit)
-import AppKit
-#endif
 
-/// Background color used for the source header block in both detail and search.
-private func sourceSectionBackgroundColor() -> Color {
-    #if os(macOS)
-    Color(nsColor: .windowBackgroundColor)
-    #else
-    Color(uiColor: .systemBackground)
-    #endif
-}
 
 /// One source block: header (title, author, optional Add Quotation plus), optional form when plus is clicked, divider, and content below.
 /// When `showQuotationForm` binding is provided (e.g. from detail toolbar), the header has no button. When nil, the header shows a plus to add a quotation.
@@ -35,7 +22,14 @@ struct SourceSectionView<BelowContent: View>: View {
 
     @ViewBuilder let belowContent: (Binding<Bool>) -> BelowContent
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showQuotationFormLocal = false
+
+    private var parchmentBackground: Color {
+        colorScheme == .dark
+            ? Color(red: 0.11, green: 0.10, blue: 0.07)
+            : Color(red: 0.99, green: 0.98, blue: 0.96)
+    }
 
     private var formVisibility: Binding<Bool> {
         if let showQuotationForm { return showQuotationForm }
@@ -49,25 +43,26 @@ struct SourceSectionView<BelowContent: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 6) {
                         if let urlString = source.url, !urlString.isEmpty, let url = URL(string: urlString) {
                             Link(destination: url) {
                                 HighlightMatch(text: source.title, query: searchQuery)
                             }
-                            .font(.title2)
+                            .font(.system(size: 30, weight: .regular, design: .serif))
                         } else {
                             HighlightMatch(text: source.title, query: searchQuery)
-                                .font(.title2)
+                                .font(.system(size: 30, weight: .regular, design: .serif))
                         }
                         if let author = source.author {
                             HighlightMatch(
                                 text: author.name + (source.publicationYear.map { " (\($0))" } ?? ""),
                                 query: searchQuery
                             )
-                            .font(.subheadline)
+                            .font(.system(size: 14, design: .serif).italic())
                             .foregroundStyle(.secondary)
                         }
                     }
+                    .padding(.top, 24)
                     Spacer()
                     if showQuotationForm == nil {
                         Button {
@@ -82,7 +77,6 @@ struct SourceSectionView<BelowContent: View>: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(sourceSectionBackgroundColor())
             .padding(.horizontal, headerOutset > 0 ? -headerOutset : 0)
 
             Divider()
@@ -90,5 +84,6 @@ struct SourceSectionView<BelowContent: View>: View {
             belowContent(formVisibility)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        .background(parchmentBackground)
     }
 }

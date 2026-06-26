@@ -217,7 +217,13 @@ struct ContentView: View {
                 }
             }
             .foregroundStyle(inkColor)
-         
+            .background(
+                (colorScheme == .dark
+                    ? Color(red: 0.10, green: 0.09, blue: 0.06)
+                    : Color(red: 0.97, green: 0.96, blue: 0.94))
+                .ignoresSafeArea()
+            )
+
         } detail: {
             // Main content area
             Group {
@@ -250,7 +256,12 @@ struct ContentView: View {
                 }
             }
             .foregroundStyle(inkColor)
-            .background((colorScheme == .dark ? Color(white: 0.12) : Color.white).ignoresSafeArea())
+            .background(
+                    (colorScheme == .dark
+                        ? Color(red: 0.11, green: 0.10, blue: 0.07)
+                        : Color(red: 0.99, green: 0.98, blue: 0.96))
+                    .ignoresSafeArea()
+                )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .toolbar {
                 if selectedSource != nil {

@@ -30,8 +30,9 @@ struct SourceDetailView: View {
                     selectedQuotationId: $selectedQuotationId,
                     showQuotationForm: showForm
                 )
-                .padding()
+                .padding(.vertical, 16)
             }
+            .scrollContentBackground(.hidden)
             .simultaneousGesture(
                 TapGesture().onEnded { selectedQuotationId = nil }
             )
