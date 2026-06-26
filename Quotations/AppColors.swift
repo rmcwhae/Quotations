@@ -15,9 +15,6 @@ enum AppColors {
     /// Yellow background for search term matches.
     static let searchHighlight = Color.yellow.opacity(0.4)
 
-    /// Brown/tan for diamond dividers between quotations.
-    static let dividerColor = highlightColor.opacity(0.7)
-
     /// Sidebar and inspector column background.
     static func sideColumnBackground(colorScheme: ColorScheme) -> Color {
         colorScheme == .dark

@@ -6,18 +6,6 @@
 import SwiftUI
 import SwiftData
 
-private struct DiamondDivider: View {
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "diamond.fill")
-                .font(.system(size: 6))
-                .foregroundStyle(AppColors.dividerColor)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-    }
-}
-
 struct QuotationListView: View {
     let source: Source
     let searchQuery: String
@@ -57,10 +45,9 @@ struct QuotationListView: View {
                     onCancel: { showQuotationForm = false }
                 )
                 .padding(.vertical, 6)
-                DiamondDivider()
             }
 
-            ForEach(Array(displayedQuotations.enumerated()), id: \.element.id) { index, quotation in
+            ForEach(displayedQuotations) { quotation in
                 QuotationRowView(
                     quotation: quotation,
                     searchQuery: searchQuery,
@@ -70,9 +57,6 @@ struct QuotationListView: View {
                     onDelete: deleteQuotation
                 )
                 .padding(.vertical, 6)
-                if index < displayedQuotations.count - 1 {
-                    DiamondDivider()
-                }
             }
         }
     }

@@ -73,7 +73,7 @@ Create vs edit: pass `existingSource` (or equivalent) and branch on `isEditing`.
 ### Reusable view composition
 
 - `SourceSectionView<BelowContent>` — header (title, author, link) + divider + content slot
-- `QuotationListView` — quotations for one source with diamond dividers
+- `QuotationListView` — quotations for one source
 - `HighlightMatch` — case-insensitive search term highlighting
 
 Prefer extracting reusable blocks over duplicating header/list markup.
@@ -89,7 +89,7 @@ Prefer extracting reusable blocks over duplicating header/list markup.
 
 ### Dividers and spacing
 
-`DiamondDivider` (◆ between horizontal rules) separates quotations. Use `.padding(.vertical, 6)` around row content.
+Use `.padding(.vertical, 6)` around quotation row content.
 
 ### Accessibility
 

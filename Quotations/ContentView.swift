@@ -125,7 +125,7 @@ struct ContentView: View {
                 Text("\u{201C}")
                     .font(.system(size: 96, design: .serif))
                     .foregroundStyle(.quaternary)
-                    .padding(.bottom, -12)
+                    .padding(.bottom, -40)
                 Text("Select a quotation to view details")
                     .foregroundStyle(.secondary)
             }
