@@ -5,26 +5,13 @@
 
 import SwiftUI
 import SwiftData
-#if canImport(UIKit)
-import UIKit
-#elseif canImport(AppKit)
-import AppKit
-#endif
 
 private struct DiamondDivider: View {
-    private var dividerColor: Color {
-        #if os(macOS)
-        Color(nsColor: .quaternaryLabelColor)
-        #else
-        Color(uiColor: .quaternaryLabel)
-        #endif
-    }
-
     var body: some View {
         HStack(spacing: 10) {
             Image(systemName: "diamond.fill")
                 .font(.system(size: 6))
-                .foregroundStyle(dividerColor)
+                .foregroundStyle(AppColors.dividerColor)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)

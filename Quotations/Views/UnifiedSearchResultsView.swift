@@ -50,7 +50,8 @@ private struct SingleSourceSearchSection: View {
             source: source,
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
-            headerOutset: horizontalPadding
+            headerOutset: horizontalPadding,
+            showsAddButton: false
         ) { showForm in
             QuotationListView(
                 source: source,

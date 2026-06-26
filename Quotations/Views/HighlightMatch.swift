@@ -25,7 +25,7 @@ struct HighlightMatch: View {
                 result += AttributedString(before)
             }
             var highlighted = AttributedString(match)
-            highlighted.backgroundColor = Color.accentColor.opacity(0.35)
+            highlighted.backgroundColor = AppColors.searchHighlight
             result += highlighted
             remaining = String(remaining[range.upperBound...])
         }

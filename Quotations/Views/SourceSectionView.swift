@@ -19,6 +19,8 @@ struct SourceSectionView<BelowContent: View>: View {
     var headerOutset: CGFloat = 0
     /// When non-nil, form visibility is driven by this binding and no add-quotation button is shown in the header (e.g. detail view uses toolbar plus). When nil, local state and a plus button in the header are used.
     var showQuotationForm: Binding<Bool>? = nil
+    /// When false, hides the header add-quotation button (e.g. search results).
+    var showsAddButton: Bool = true
 
     @ViewBuilder let belowContent: (Binding<Bool>) -> BelowContent
 
@@ -62,7 +64,7 @@ struct SourceSectionView<BelowContent: View>: View {
                     }
                     .padding(.top, 24)
                     Spacer()
-                    if showQuotationForm == nil {
+                    if showQuotationForm == nil && showsAddButton {
                         Button {
                             formVisibility.wrappedValue = true
                         } label: {

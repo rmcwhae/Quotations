@@ -44,6 +44,14 @@ struct QuotationRowView: View {
         min(textContainerWidth, quotationTextMaxWidth)
     }
 
+    private var isSearchActive: Bool {
+        !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var showsHighlightedText: Bool {
+        isSearchActive && !isTextFocused
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             Text("\u{201C}")
@@ -138,13 +146,21 @@ struct QuotationRowView: View {
         }
     }
 
+    @ViewBuilder
     private var textEditor: some View {
-        TextField("Quotation", text: $editedContent, axis: .vertical)
-            .textFieldStyle(.plain)
-            .frame(width: textFieldWidth, alignment: .leading)
-            .font(quotationFont)
-            .lineSpacing(quotationLineSpacing)
-            .focused($isTextFocused)
+        if showsHighlightedText {
+            HighlightMatch(text: editedContent, query: searchQuery)
+                .font(quotationFont)
+                .lineSpacing(quotationLineSpacing)
+                .frame(maxWidth: textFieldWidth, alignment: .leading)
+        } else {
+            TextField("Quotation", text: $editedContent, axis: .vertical)
+                .textFieldStyle(.plain)
+                .frame(maxWidth: textFieldWidth, alignment: .leading)
+                .font(quotationFont)
+                .lineSpacing(quotationLineSpacing)
+                .focused($isTextFocused)
+        }
     }
 
     private func scheduleDebouncedSave() {
