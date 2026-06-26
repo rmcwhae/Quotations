@@ -10,10 +10,8 @@ import SwiftUI
 private let quotationFont = Font.system(size: 16, design: .serif)
 /// Line spacing ~1.4 (extra points between lines).
 private let quotationLineSpacing: CGFloat = 6
-/// Thick blue border when editing (matches search field focus).
-private let editFocusBorder = Color(red: 0.35, green: 0.55, blue: 0.92)
-/// Light grey border when selected (single click).
-private let selectionBorder = Color(white: 0.78)
+/// Max width for quotation text and its edit/selection outline.
+private let quotationTextMaxWidth: CGFloat = 520
 private let debounceInterval: Duration = .milliseconds(500)
 private let singleTapDelay: Duration = .milliseconds(250)
 
@@ -47,11 +45,23 @@ struct QuotationRowView: View {
                 .font(.system(size: 36, design: .serif))
                 .foregroundStyle(.quaternary)
                 .frame(width: 32, alignment: .leading)
-                .padding(.top, 2)
+                .offset(y: -8)
             VStack(alignment: .leading, spacing: 4) {
                 textEditor
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: quotationTextMaxWidth, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.clear, in: RoundedRectangle(cornerRadius: 6))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(
+                        isTextFocused
+                            ? AppColors.highlightColor
+                            : (isSelected && !isTextFocused ? AppColors.highlightColor.opacity(0.55) : Color.clear),
+                        lineWidth: (isTextFocused || (isSelected && !isTextFocused)) ? 3 : 0
+                    )
+            }
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
                 pendingSelectTask?.cancel()
@@ -75,14 +85,6 @@ struct QuotationRowView: View {
         .padding(.vertical, 10)
         .padding(.leading, 16)
         .padding(.trailing, 16)
-        .background(Color.clear, in: RoundedRectangle(cornerRadius: 6))
-        .overlay {
-            RoundedRectangle(cornerRadius: 6)
-                .strokeBorder(
-                    isTextFocused ? editFocusBorder : (isSelected && !isTextFocused ? selectionBorder : Color.clear),
-                    lineWidth: (isTextFocused || (isSelected && !isTextFocused)) ? 3 : 0
-                )
-        }
         .onChange(of: isTextFocused) { _, focused in
             if focused {
                 onSelect?()
@@ -127,7 +129,7 @@ struct QuotationRowView: View {
         TextField("Quotation", text: $editedContent, axis: .vertical)
             .textFieldStyle(.plain)
             .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: 520)
+            .frame(maxWidth: quotationTextMaxWidth)
             .font(quotationFont)
             .lineSpacing(quotationLineSpacing)
             .focused($isTextFocused)

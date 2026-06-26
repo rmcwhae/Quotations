@@ -65,6 +65,7 @@ struct ContentView: View {
                         .frame(width: 70, alignment: .leading)
                     TextField("", text: $inspectorStartPage)
                         .textFieldStyle(.roundedBorder)
+                        .tint(AppColors.highlightColor)
                         .frame(width: 60)
                         .onChange(of: inspectorStartPage) { _, _ in
                             applyInspectorPages(to: quotation)
@@ -76,6 +77,7 @@ struct ContentView: View {
                         .frame(width: 70, alignment: .leading)
                     TextField("", text: $inspectorEndPage)
                         .textFieldStyle(.roundedBorder)
+                        .tint(AppColors.highlightColor)
                         .frame(width: 60)
                         .onChange(of: inspectorEndPage) { _, _ in
                             applyInspectorPages(to: quotation)
@@ -119,8 +121,14 @@ struct ContentView: View {
                 Text("This action cannot be undone.")
             }
         } else {
-            Text("Select a quotation to view details.")
-                .foregroundStyle(.secondary)
+            VStack(spacing: 12) {
+                Text("\u{201C}")
+                    .font(.system(size: 64, design: .serif))
+                    .foregroundStyle(.quaternary)
+                Text("Select a quotation to view details")
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -285,7 +293,8 @@ struct ContentView: View {
             .inspector(isPresented: $isInspectorShown) {
                 inspectorContent
                     .padding()
-                    .frame(minWidth: 150, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .inspectorColumnWidth(min: 180, ideal: 260, max: 420)
             }
         }
         .searchable(

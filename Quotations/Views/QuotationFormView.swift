@@ -8,8 +8,6 @@ import SwiftUI
 
 private let quotationFont = Font.system(size: 16, design: .serif)
 private let quotationLineSpacing: CGFloat = 6
-/// Blue border when focused (matches QuotationRowView).
-private let editFocusBorder = Color(red: 0.35, green: 0.55, blue: 0.92)
 
 private enum FormField { case content, startPage, endPage }
 
@@ -38,7 +36,7 @@ struct QuotationFormView: View {
                 .overlay {
                     RoundedRectangle(cornerRadius: 6)
                         .strokeBorder(
-                            focusedField != nil ? editFocusBorder : Color.clear,
+                            focusedField != nil ? AppColors.highlightColor : Color.clear,
                             lineWidth: focusedField != nil ? 3 : 0
                         )
                 }
@@ -53,6 +51,7 @@ struct QuotationFormView: View {
                     .foregroundStyle(.secondary)
                 TextField("", text: $startPage)
                     .textFieldStyle(.roundedBorder)
+                    .tint(AppColors.highlightColor)
                     .frame(width: 48)
                     .focused($focusedField, equals: .startPage)
                     .onSubmit { commitIfNonEmpty() }
@@ -61,6 +60,7 @@ struct QuotationFormView: View {
                     .foregroundStyle(.secondary)
                 TextField("", text: $endPage)
                     .textFieldStyle(.roundedBorder)
+                    .tint(AppColors.highlightColor)
                     .frame(width: 48)
                     .focused($focusedField, equals: .endPage)
                     .onSubmit { commitIfNonEmpty() }

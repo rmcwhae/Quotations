@@ -34,7 +34,7 @@ struct SourceListRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+        .background(isSelected ? AppColors.selectionBackground : Color.clear)
         .contentShape(Rectangle())
     }
 }
