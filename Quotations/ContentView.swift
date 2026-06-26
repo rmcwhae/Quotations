@@ -305,8 +305,8 @@ struct ContentView: View {
         .navigationTitle("")
         .toolbarBackground(
             (colorScheme == .dark
-                ? Color(red: 0.10, green: 0.09, blue: 0.06)
-                : Color(red: 0.97, green: 0.96, blue: 0.94)),
+                ? Color(red: 0.11, green: 0.10, blue: 0.07)
+                : Color(red: 0.99, green: 0.98, blue: 0.96)),
             for: .windowToolbar
         )
         .navigationSplitViewStyle(.balanced)
