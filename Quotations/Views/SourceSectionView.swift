@@ -31,6 +31,11 @@ struct SourceSectionView<BelowContent: View>: View {
         AppColors.mainBackground(colorScheme: colorScheme)
     }
 
+    private var sourceURL: URL? {
+        guard let urlString = source.url, !urlString.isEmpty else { return nil }
+        return URL(string: urlString)
+    }
+
     private var formVisibility: Binding<Bool> {
         if let showQuotationForm { return showQuotationForm }
         return Binding(
@@ -44,22 +49,29 @@ struct SourceSectionView<BelowContent: View>: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
-                        if let urlString = source.url, !urlString.isEmpty, let url = URL(string: urlString) {
-                            Link(destination: url) {
-                                HighlightMatch(text: source.title, query: searchQuery)
-                            }
+                        HighlightMatch(text: source.title, query: searchQuery)
                             .font(.system(size: 30, weight: .regular, design: .serif))
-                        } else {
-                            HighlightMatch(text: source.title, query: searchQuery)
-                                .font(.system(size: 30, weight: .regular, design: .serif))
-                        }
-                        if let author = source.author {
-                            HighlightMatch(
-                                text: author.name + (source.publicationYear.map { " (\($0))" } ?? ""),
-                                query: searchQuery
-                            )
-                            .font(.system(size: 14, design: .serif).italic())
-                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if source.author != nil || sourceURL != nil {
+                            HStack(spacing: 6) {
+                                if let author = source.author {
+                                    HighlightMatch(
+                                        text: author.name + (source.publicationYear.map { " (\($0))" } ?? ""),
+                                        query: searchQuery
+                                    )
+                                    .font(.system(size: 14, design: .serif).italic())
+                                    .foregroundStyle(.secondary)
+                                }
+                                if let url = sourceURL {
+                                    Link(destination: url) {
+                                        Image(systemName: "link")
+                                    }
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.secondary)
+                                    .accessibilityLabel("Open source link")
+                                }
+                            }
                         }
                     }
                     .padding(.top, 24)
