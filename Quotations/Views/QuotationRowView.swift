@@ -6,10 +6,6 @@
 import SwiftData
 import SwiftUI
 
-/// System serif for quotation text (larger for readability).
-private let quotationFont = Font.system(size: 16, design: .serif)
-/// Line spacing ~1.4 (extra points between lines).
-private let quotationLineSpacing: CGFloat = 6
 /// Max width for quotation text and its edit/selection outline.
 private let quotationTextMaxWidth: CGFloat = 520
 private let debounceInterval: Duration = .milliseconds(500)
@@ -38,7 +34,7 @@ struct QuotationRowView: View {
     }
     @State private var saveTask: Task<Void, Never>?
     @State private var pendingSelectTask: Task<Void, Never>?
-    @FocusState private var isTextFocused: Bool
+    @State private var isTextFocused = false
 
     private var textFieldWidth: CGFloat {
         min(textContainerWidth, quotationTextMaxWidth)
@@ -148,20 +144,21 @@ struct QuotationRowView: View {
 
     @ViewBuilder
     private var textEditor: some View {
-        if showsHighlightedText {
-            HighlightMatch(text: editedContent, query: searchQuery)
-                .font(quotationFont)
-                .lineSpacing(quotationLineSpacing)
+        if isTextFocused {
+            QuotationRichTextEditor(
+                markdown: $editedContent,
+                maxWidth: textFieldWidth,
+                isFocused: isTextFocused,
+                onFocusChange: { isTextFocused = $0 }
+            )
+            .frame(maxWidth: textFieldWidth, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+        } else if showsHighlightedText {
+            HighlightMatch(text: editedContent, query: searchQuery, useMarkdown: true)
                 .frame(maxWidth: textFieldWidth, alignment: .leading)
         } else {
-            TextField("Quotation", text: $editedContent, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...)
-                .fixedSize(horizontal: false, vertical: true)
+            FormattedQuotationText(text: editedContent)
                 .frame(maxWidth: textFieldWidth, alignment: .leading)
-                .font(quotationFont)
-                .lineSpacing(quotationLineSpacing)
-                .focused($isTextFocused)
         }
     }
 

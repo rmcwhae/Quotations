@@ -6,8 +6,7 @@
 import SwiftData
 import SwiftUI
 
-private let quotationFont = Font.system(size: 16, design: .serif)
-private let quotationLineSpacing: CGFloat = 6
+private let quotationTextMaxWidth: CGFloat = 520
 
 private enum FormField { case content, startPage, endPage }
 
@@ -20,29 +19,29 @@ struct QuotationFormView: View {
     @State private var content = ""
     @State private var startPage = ""
     @State private var endPage = ""
+    @State private var isContentFocused = false
+    @State private var blurCheckTask: Task<Void, Never>?
     @FocusState private var focusedField: FormField?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            TextField("Add quotation…", text: $content, axis: .vertical)
-                .font(quotationFont)
-                .lineSpacing(quotationLineSpacing)
-                .lineLimit(1...8)
-                .textFieldStyle(.plain)
-                .fixedSize(horizontal: false, vertical: true)
-                .focused($focusedField, equals: .content)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .overlay {
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(
-                            focusedField != nil ? AppColors.highlightColor : Color.clear,
-                            lineWidth: focusedField != nil ? 3 : 0
-                        )
-                }
-                .onSubmit {
-                    commitIfNonEmpty()
-                }
+            QuotationRichTextEditor(
+                markdown: $content,
+                maxWidth: quotationTextMaxWidth,
+                isFocused: isContentFocused,
+                onFocusChange: { isContentFocused = $0 }
+            )
+            .frame(maxWidth: quotationTextMaxWidth, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(
+                        isContentFocused ? AppColors.highlightColor : Color.clear,
+                        lineWidth: isContentFocused ? 3 : 0
+                    )
+            }
 
             HStack(spacing: 12) {
                 Label("Start", systemImage: "")
@@ -69,15 +68,30 @@ struct QuotationFormView: View {
             .padding(.bottom, 6)
         }
         .onChange(of: focusedField) { _, newField in
-            if newField == nil {
-                if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    onCancel?()
-                } else {
-                    commitIfNonEmpty()
-                }
+            if newField != nil { isContentFocused = false }
+            scheduleBlurCheck()
+        }
+        .onChange(of: isContentFocused) { _, focused in
+            if focused { focusedField = nil }
+            scheduleBlurCheck()
+        }
+        .onAppear { isContentFocused = true }
+    }
+
+    /// Commit (or cancel) only once focus has fully left the form, so moving
+    /// between the content editor and page fields does not prematurely commit.
+    private func scheduleBlurCheck() {
+        blurCheckTask?.cancel()
+        blurCheckTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
+            guard !isContentFocused, focusedField == nil else { return }
+            if content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                onCancel?()
+            } else {
+                commitIfNonEmpty()
             }
         }
-        .onAppear { focusedField = .content }
     }
 
     private func commitIfNonEmpty() {
