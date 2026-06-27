@@ -56,7 +56,7 @@ struct QuotationListView: View {
                     onEdit: saveQuotation,
                     onDelete: deleteQuotation
                 )
-                .padding(.vertical, 6)
+                .padding(.vertical, 2)
             }
         }
     }
