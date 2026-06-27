@@ -29,6 +29,7 @@ struct QuotationFormView: View {
                 markdown: $content,
                 maxWidth: quotationTextMaxWidth,
                 isFocused: isContentFocused,
+                clickLocation: .constant(nil),
                 onFocusChange: { isContentFocused = $0 }
             )
             .frame(maxWidth: quotationTextMaxWidth, alignment: .leading)

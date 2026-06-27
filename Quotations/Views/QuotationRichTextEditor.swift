@@ -11,6 +11,8 @@ struct QuotationRichTextEditor: NSViewRepresentable {
     @Binding var markdown: String
     var maxWidth: CGFloat
     var isFocused: Bool
+    @Binding var clickLocation: CGPoint?
+    var clickInset: CGSize = CGSize(width: 8, height: 6)
     var onFocusChange: (Bool) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -65,15 +67,27 @@ struct QuotationRichTextEditor: NSViewRepresentable {
         if isFocused, textView.window?.firstResponder !== textView {
             if textView.window != nil {
                 textView.window?.makeFirstResponder(textView)
+                placeCaretIfNeeded(in: textView, context: context)
             } else {
                 // View not yet in a window; focus on the next runloop tick.
                 DispatchQueue.main.async { [weak textView] in
                     guard let textView, textView.window?.firstResponder !== textView else { return }
                     textView.window?.makeFirstResponder(textView)
+                    context.coordinator.placeCaretIfNeeded(in: textView, clickLocation: clickLocation, clickInset: clickInset) {
+                        clickLocation = nil
+                    }
                 }
             }
+        } else if isFocused {
+            placeCaretIfNeeded(in: textView, context: context)
         } else if !isFocused, textView.window?.firstResponder === textView {
             textView.window?.makeFirstResponder(nil)
+        }
+    }
+
+    private func placeCaretIfNeeded(in textView: QuotationTextView, context: Context) {
+        context.coordinator.placeCaretIfNeeded(in: textView, clickLocation: clickLocation, clickInset: clickInset) {
+            clickLocation = nil
         }
     }
 
@@ -123,6 +137,25 @@ struct QuotationRichTextEditor: NSViewRepresentable {
 
         func textDidEndEditing(_ notification: Notification) {
             parent.onFocusChange(false)
+        }
+
+        func placeCaretIfNeeded(
+            in textView: NSTextView,
+            clickLocation: CGPoint?,
+            clickInset: CGSize,
+            onPlaced: @escaping () -> Void
+        ) {
+            guard let point = clickLocation else { return }
+            DispatchQueue.main.async { [weak textView] in
+                guard let textView else { return }
+                textView.layoutManager?.ensureLayout(for: textView.textContainer!)
+                let x = point.x - clickInset.width
+                // SwiftUI uses a top-left origin; NSTextView uses bottom-left.
+                let y = textView.bounds.height - (point.y - clickInset.height)
+                let index = textView.characterIndexForInsertion(at: NSPoint(x: x, y: y))
+                textView.setSelectedRange(NSRange(location: index, length: 0))
+                onPlaced()
+            }
         }
     }
 }

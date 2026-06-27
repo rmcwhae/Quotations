@@ -3,6 +3,7 @@
 //  Quotations
 //
 
+import AppKit
 import SwiftData
 import SwiftUI
 
@@ -10,6 +11,7 @@ import SwiftUI
 private let quotationTextMaxWidth: CGFloat = 520
 private let debounceInterval: Duration = .milliseconds(500)
 private let singleTapDelay: Duration = .milliseconds(250)
+private let textContainerPadding = CGSize(width: 8, height: 6)
 
 struct QuotationRowView: View {
     let quotation: Quotation
@@ -19,9 +21,12 @@ struct QuotationRowView: View {
     var onEdit: (Quotation) -> Void
     var onDelete: (PersistentIdentifier) -> Void
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var editedContent: String
     @State private var showDeleteConfirmation = false
     @State private var textContainerWidth: CGFloat = quotationTextMaxWidth
+    @State private var isHovering = false
+    @State private var pendingClickLocation: CGPoint?
 
     init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, onSelect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
         self.quotation = quotation
@@ -48,6 +53,20 @@ struct QuotationRowView: View {
         isSearchActive && !isTextFocused
     }
 
+    private var borderColor: Color {
+        if isTextFocused { return AppColors.highlightColor }
+        if isSelected { return AppColors.highlightColor.opacity(0.55) }
+        if isHovering { return AppColors.highlightColor.opacity(0.55) }
+        return .clear
+    }
+
+    private var borderWidth: CGFloat {
+        if isTextFocused { return 3 }
+        if isSelected { return 3 }
+        if isHovering { return 2 }
+        return 0
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             Text("\u{201C}")
@@ -67,24 +86,28 @@ struct QuotationRowView: View {
                         }
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(Color.clear, in: RoundedRectangle(cornerRadius: 6))
+            .padding(.horizontal, textContainerPadding.width)
+            .padding(.vertical, textContainerPadding.height)
+            .background(
+                isTextFocused
+                    ? AppColors.editingBackground(colorScheme: colorScheme)
+                    : Color.clear,
+                in: RoundedRectangle(cornerRadius: 6)
+            )
             .overlay {
                 RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(
-                        isTextFocused
-                            ? AppColors.highlightColor
-                            : (isSelected && !isTextFocused ? AppColors.highlightColor.opacity(0.55) : Color.clear),
-                        lineWidth: (isTextFocused || (isSelected && !isTextFocused)) ? 3 : 0
-                    )
+                    .strokeBorder(borderColor, lineWidth: borderWidth)
             }
             .contentShape(Rectangle())
-            .onTapGesture(count: 2) {
-                pendingSelectTask?.cancel()
-                pendingSelectTask = nil
-                isTextFocused = true
-            }
+            .onHover { isHovering = $0 }
+            .gesture(
+                SpatialTapGesture(count: 2).onEnded { value in
+                    pendingSelectTask?.cancel()
+                    pendingSelectTask = nil
+                    pendingClickLocation = value.location
+                    isTextFocused = true
+                }
+            )
             .onTapGesture {
                 if isTextFocused {
                     isTextFocused = false
@@ -128,6 +151,9 @@ struct QuotationRowView: View {
             return .ignored
         }
         .contextMenu {
+            Button("Copy") {
+                copyQuotation()
+            }
             Button("Delete", role: .destructive) {
                 showDeleteConfirmation = true
             }
@@ -149,6 +175,8 @@ struct QuotationRowView: View {
                 markdown: $editedContent,
                 maxWidth: textFieldWidth,
                 isFocused: isTextFocused,
+                clickLocation: $pendingClickLocation,
+                clickInset: textContainerPadding,
                 onFocusChange: { isTextFocused = $0 }
             )
             .frame(maxWidth: textFieldWidth, alignment: .leading)
@@ -180,5 +208,10 @@ struct QuotationRowView: View {
             quotation.updatedAt = Date()
             onEdit(quotation)
         }
+    }
+
+    private func copyQuotation() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(quotation.content, forType: .string)
     }
 }
