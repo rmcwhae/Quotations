@@ -52,7 +52,6 @@ struct SourceSectionView<BelowContent: View>: View {
                         HighlightMatch(text: source.title, query: searchQuery)
                             .font(.system(size: 30, weight: .regular, design: .serif))
                             .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
                         if source.author != nil || sourceURL != nil {
                             HStack(spacing: 6) {
                                 if let author = source.author {
