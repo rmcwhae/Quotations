@@ -74,7 +74,8 @@ struct QuotationRichTextEditor: NSViewRepresentable {
             }
             // Apply the initial selection exactly once per focus session, never on every
             // keystroke (which would re-run "select all" and reduce typing to one letter).
-            if !context.coordinator.didApplyInitialSelection {
+            let needsInitialSelection = selectAllOnFocus || clickLocation != nil
+            if needsInitialSelection, !context.coordinator.didApplyInitialSelection {
                 context.coordinator.didApplyInitialSelection = true
                 let location = clickLocation
                 let selectAll = selectAllOnFocus
@@ -188,6 +189,28 @@ final class QuotationTextView: NSTextView {
             return
         }
         super.mouseUp(with: event)
+    }
+
+    /// Pastes content normalized to the quotation serif font, preserving bold/italic only.
+    override func paste(_ sender: Any?) {
+        let pasteboard = NSPasteboard.general
+        let normalized: NSAttributedString
+
+        if let rtf = pasteboard.data(forType: .rtf),
+           let attributed = NSAttributedString(rtf: rtf, documentAttributes: nil) {
+            normalized = MarkdownCodec.normalizedForEditor(attributed)
+        } else if let plain = pasteboard.string(forType: .string) {
+            normalized = NSAttributedString(string: plain, attributes: MarkdownCodec.editorTypingAttributes)
+        } else {
+            super.paste(sender)
+            return
+        }
+
+        let range = selectedRange()
+        guard shouldChangeText(in: range, replacementString: normalized.string) else { return }
+        textStorage?.replaceCharacters(in: range, with: normalized)
+        typingAttributes = MarkdownCodec.editorTypingAttributes
+        didChangeText()
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {

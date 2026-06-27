@@ -6,13 +6,11 @@
 import AppKit
 import SwiftUI
 
-/// A single mouse-up reported to SwiftUI with the click location (view-local, top-left origin)
-/// and window-local location plus timestamp. Multi-click detection is done in durable SwiftUI
-/// state by the consumer, so it survives view re-renders. When `isEditing` is true, clicks pass
-/// through to the underlying text view.
+/// Reports mouse-up to SwiftUI with the click location (view-local, top-left origin) and
+/// `NSEvent.clickCount`. When `isEditing` is true, clicks pass through to the text view.
 struct QuotationClickView: NSViewRepresentable {
     var isEditing: Bool
-    var onClick: (_ localPoint: CGPoint, _ windowPoint: CGPoint, _ timestamp: TimeInterval) -> Void
+    var onClick: (_ localPoint: CGPoint, _ clickCount: Int) -> Void
 
     func makeNSView(context: Context) -> QuotationClickNSView {
         let view = QuotationClickNSView()
@@ -32,7 +30,7 @@ struct QuotationClickView: NSViewRepresentable {
 
 final class QuotationClickNSView: NSView {
     var isEditing = false
-    var onClick: ((CGPoint, CGPoint, TimeInterval) -> Void)?
+    var onClick: ((CGPoint, Int) -> Void)?
 
     /// Flipped so converted points use a top-left origin, matching SwiftUI coordinates.
     override var isFlipped: Bool { true }
@@ -47,6 +45,6 @@ final class QuotationClickNSView: NSView {
     override func mouseUp(with event: NSEvent) {
         let windowLocation = event.locationInWindow
         let local = convert(windowLocation, from: nil)
-        onClick?(local, windowLocation, event.timestamp)
+        onClick?(local, event.clickCount)
     }
 }

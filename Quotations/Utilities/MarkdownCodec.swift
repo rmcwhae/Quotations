@@ -63,6 +63,28 @@ enum MarkdownCodec {
         return result
     }
 
+    /// Re-maps an arbitrary attributed string (e.g. pasted content) onto the editor's
+    /// serif font and paragraph style, preserving only bold/italic traits.
+    static func normalizedForEditor(_ source: NSAttributedString) -> NSAttributedString {
+        let result = NSMutableAttributedString(string: source.string)
+        let paragraph = quotationParagraphStyle
+        let fullRange = NSRange(location: 0, length: (source.string as NSString).length)
+        result.addAttributes(
+            [.font: quotationBaseFont, .paragraphStyle: paragraph, .foregroundColor: NSColor.textColor],
+            range: fullRange
+        )
+        source.enumerateAttribute(.font, in: NSRange(location: 0, length: source.length), options: []) { value, range, _ in
+            guard let font = value as? NSFont else { return }
+            let traits = font.fontDescriptor.symbolicTraits
+            result.addAttribute(
+                .font,
+                value: self.font(bold: traits.contains(.bold), italic: traits.contains(.italic)),
+                range: range
+            )
+        }
+        return result
+    }
+
     // MARK: - Serialize
 
     static func markdown(from attributedString: NSAttributedString) -> String {

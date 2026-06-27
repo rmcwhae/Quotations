@@ -18,21 +18,25 @@ struct UnifiedSearchResultsView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(sources.enumerated()), id: \.element.id) { _, source in
-                    SingleSourceSearchSection(
-                        source: source,
-                        searchQuery: searchQuery,
-                        quotationIdsFilter: quotationIdsFilter,
-                        selectedQuotationId: $selectedQuotationId,
-                        horizontalPadding: horizontalPadding
-                    )
+            VStack(spacing: 0) {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    ForEach(Array(sources.enumerated()), id: \.element.id) { _, source in
+                        SingleSourceSearchSection(
+                            source: source,
+                            searchQuery: searchQuery,
+                            quotationIdsFilter: quotationIdsFilter,
+                            selectedQuotationId: $selectedQuotationId,
+                            horizontalPadding: horizontalPadding
+                        )
+                    }
                 }
+
+                Color.clear
+                    .frame(maxWidth: .infinity, minHeight: 200)
+                    .contentShape(Rectangle())
+                    .onTapGesture { selectedQuotationId = nil }
             }
         }
-        .simultaneousGesture(
-            TapGesture().onEnded { selectedQuotationId = nil }
-        )
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 }

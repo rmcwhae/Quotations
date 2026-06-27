@@ -29,9 +29,7 @@ struct QuotationRowView: View {
     @State private var isHovering = false
     @State private var pendingClickLocation: CGPoint?
     @State private var selectAllOnFocus = false
-    @State private var clickCount = 0
-    @State private var lastClickTime: TimeInterval = 0
-    @State private var lastClickWindowPoint: CGPoint = .zero
+    @State private var pendingSelectTask: Task<Void, Never>?
 
     init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, beginEditing: Bool = false, onSelect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
         self.quotation = quotation
@@ -196,29 +194,35 @@ struct QuotationRowView: View {
         }
     }
 
-    /// Multi-click detection in durable view state (window coordinates) so it survives the
-    /// re-render triggered by selecting a previously unselected quotation.
-    private func handleClick(localPoint: CGPoint, windowPoint: CGPoint, timestamp: TimeInterval) {
-        let withinInterval = (timestamp - lastClickTime) <= NSEvent.doubleClickInterval
-        let distance = hypot(windowPoint.x - lastClickWindowPoint.x, windowPoint.y - lastClickWindowPoint.y)
-        let nearby = distance <= 6
-
-        clickCount = (withinInterval && nearby) ? clickCount + 1 : 1
-        lastClickTime = timestamp
-        lastClickWindowPoint = windowPoint
-
+    /// Uses `NSEvent.clickCount` so double-clicks stay intact across the re-render from
+    /// selecting a previously unselected quotation. Single-click select is deferred so the
+    /// first click of a double-click does not enter a transient selected state.
+    private func handleClick(localPoint: CGPoint, clickCount: Int) {
         switch clickCount {
         case 1:
-            if !isSelected { onSelect?() }
+            pendingSelectTask?.cancel()
+            pendingSelectTask = Task {
+                let delay = Duration.milliseconds(Int(NSEvent.doubleClickInterval * 1000))
+                try? await Task.sleep(for: delay)
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    if !isSelected, !isTextFocused {
+                        onSelect?()
+                    }
+                }
+            }
         case 2:
+            pendingSelectTask?.cancel()
+            if !isSelected { onSelect?() }
             pendingClickLocation = localPoint
             selectAllOnFocus = false
             isTextFocused = true
         default:
+            pendingSelectTask?.cancel()
+            if !isSelected { onSelect?() }
             pendingClickLocation = nil
             selectAllOnFocus = true
             isTextFocused = true
-            clickCount = 0
         }
     }
 

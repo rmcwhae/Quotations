@@ -23,19 +23,23 @@ struct SourceDetailView: View {
             showsAddButton: false
         ) { _ in
             ScrollView {
-                QuotationListView(
-                    source: source,
-                    searchQuery: searchQuery,
-                    quotationIdsFilter: quotationIdsFilter,
-                    selectedQuotationId: $selectedQuotationId,
-                    newQuotationId: newQuotationId
-                )
-                .padding(.vertical, 16)
+                VStack(spacing: 0) {
+                    QuotationListView(
+                        source: source,
+                        searchQuery: searchQuery,
+                        quotationIdsFilter: quotationIdsFilter,
+                        selectedQuotationId: $selectedQuotationId,
+                        newQuotationId: newQuotationId
+                    )
+                    .padding(.vertical, 16)
+
+                    Color.clear
+                        .frame(maxWidth: .infinity, minHeight: 200)
+                        .contentShape(Rectangle())
+                        .onTapGesture { selectedQuotationId = nil }
+                }
             }
             .scrollContentBackground(.hidden)
-            .simultaneousGesture(
-                TapGesture().onEnded { selectedQuotationId = nil }
-            )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
