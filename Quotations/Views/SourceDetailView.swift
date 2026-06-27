@@ -13,22 +13,22 @@ struct SourceDetailView: View {
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     @Binding var selectedQuotationId: PersistentIdentifier?
-    @Binding var showQuotationForm: Bool
+    var newQuotationId: PersistentIdentifier?
 
     var body: some View {
         SourceSectionView(
             source: source,
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
-            showQuotationForm: $showQuotationForm
-        ) { showForm in
+            showsAddButton: false
+        ) { _ in
             ScrollView {
                 QuotationListView(
                     source: source,
                     searchQuery: searchQuery,
                     quotationIdsFilter: quotationIdsFilter,
                     selectedQuotationId: $selectedQuotationId,
-                    showQuotationForm: showForm
+                    newQuotationId: newQuotationId
                 )
                 .padding(.vertical, 16)
             }

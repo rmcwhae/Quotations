@@ -73,7 +73,7 @@ struct SourceSectionView<BelowContent: View>: View {
                             }
                         }
                     }
-                    .padding(.top, 24)
+                    .padding(.top, 4)
                     Spacer()
                     if showQuotationForm == nil && showsAddButton {
                         Button {
@@ -84,7 +84,9 @@ struct SourceSectionView<BelowContent: View>: View {
                         .accessibilityLabel("Add quotation")
                     }
                 }
-                .padding()
+                .padding(.vertical, 16)
+                .padding(.leading, 28)
+                .padding(.trailing, 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

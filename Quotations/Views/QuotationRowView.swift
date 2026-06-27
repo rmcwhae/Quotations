@@ -16,6 +16,8 @@ struct QuotationRowView: View {
     let quotation: Quotation
     let searchQuery: String
     var isSelected: Bool = false
+    /// When true, the row enters edit mode on appear (used for a freshly added quotation).
+    var beginEditing: Bool = false
     var onSelect: (() -> Void)? = nil
     var onEdit: (Quotation) -> Void
     var onDelete: (PersistentIdentifier) -> Void
@@ -26,11 +28,16 @@ struct QuotationRowView: View {
     @State private var textContainerWidth: CGFloat = quotationTextMaxWidth
     @State private var isHovering = false
     @State private var pendingClickLocation: CGPoint?
+    @State private var selectAllOnFocus = false
+    @State private var clickCount = 0
+    @State private var lastClickTime: TimeInterval = 0
+    @State private var lastClickWindowPoint: CGPoint = .zero
 
-    init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, onSelect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
+    init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, beginEditing: Bool = false, onSelect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
         self.quotation = quotation
         self.searchQuery = searchQuery
         self.isSelected = isSelected
+        self.beginEditing = beginEditing
         self.onSelect = onSelect
         self.onEdit = onEdit
         self.onDelete = onDelete
@@ -38,6 +45,7 @@ struct QuotationRowView: View {
     }
     @State private var saveTask: Task<Void, Never>?
     @State private var isTextFocused = false
+    @State private var didBeginEditing = false
 
     private var textFieldWidth: CGFloat {
         min(textContainerWidth, quotationTextMaxWidth)
@@ -98,27 +106,27 @@ struct QuotationRowView: View {
             }
             .contentShape(Rectangle())
             .onHover { isHovering = $0 }
-            .gesture(
-                SpatialTapGesture(count: 2).onEnded { value in
-                    pendingClickLocation = value.location
-                    isTextFocused = true
-                }
-            )
-            .onTapGesture {
-                if isTextFocused {
-                    isTextFocused = false
-                } else if !isSelected {
-                    onSelect?()
-                }
+            .overlay {
+                QuotationClickView(isEditing: isTextFocused, onClick: handleClick)
             }
             Spacer(minLength: 0)
         }
         .padding(.vertical, 10)
-        .padding(.leading, 16)
+        .padding(.leading, 28)
         .padding(.trailing, 16)
+        .onAppear {
+            if beginEditing, !didBeginEditing {
+                didBeginEditing = true
+                isTextFocused = true
+            }
+        }
         .onChange(of: isTextFocused) { _, focused in
             if focused, !isSelected {
                 onSelect?()
+            }
+            if !focused {
+                selectAllOnFocus = false
+                pendingClickLocation = nil
             }
         }
         .onChange(of: isSelected) { _, selected in
@@ -161,23 +169,56 @@ struct QuotationRowView: View {
 
     @ViewBuilder
     private var textEditor: some View {
-        if isTextFocused {
+        ZStack(alignment: .topLeading) {
             QuotationRichTextEditor(
                 markdown: $editedContent,
                 maxWidth: textFieldWidth,
                 isFocused: isTextFocused,
-                clickLocation: $pendingClickLocation,
+                clickLocation: pendingClickLocation,
+                selectAllOnFocus: selectAllOnFocus,
                 clickInset: textContainerPadding,
                 onFocusChange: { isTextFocused = $0 }
             )
+            .opacity(isTextFocused ? 1 : 0)
+            .allowsHitTesting(isTextFocused)
             .frame(maxWidth: textFieldWidth, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
-        } else if showsHighlightedText {
-            HighlightMatch(text: editedContent, query: searchQuery, useMarkdown: true)
-                .frame(maxWidth: textFieldWidth, alignment: .leading)
-        } else {
-            FormattedQuotationText(text: editedContent)
-                .frame(maxWidth: textFieldWidth, alignment: .leading)
+
+            if !isTextFocused {
+                if showsHighlightedText {
+                    HighlightMatch(text: editedContent, query: searchQuery, useMarkdown: true)
+                        .frame(maxWidth: textFieldWidth, alignment: .leading)
+                } else {
+                    FormattedQuotationText(text: editedContent)
+                        .frame(maxWidth: textFieldWidth, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    /// Multi-click detection in durable view state (window coordinates) so it survives the
+    /// re-render triggered by selecting a previously unselected quotation.
+    private func handleClick(localPoint: CGPoint, windowPoint: CGPoint, timestamp: TimeInterval) {
+        let withinInterval = (timestamp - lastClickTime) <= NSEvent.doubleClickInterval
+        let distance = hypot(windowPoint.x - lastClickWindowPoint.x, windowPoint.y - lastClickWindowPoint.y)
+        let nearby = distance <= 6
+
+        clickCount = (withinInterval && nearby) ? clickCount + 1 : 1
+        lastClickTime = timestamp
+        lastClickWindowPoint = windowPoint
+
+        switch clickCount {
+        case 1:
+            if !isSelected { onSelect?() }
+        case 2:
+            pendingClickLocation = localPoint
+            selectAllOnFocus = false
+            isTextFocused = true
+        default:
+            pendingClickLocation = nil
+            selectAllOnFocus = true
+            isTextFocused = true
+            clickCount = 0
         }
     }
 

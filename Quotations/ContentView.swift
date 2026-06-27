@@ -36,7 +36,7 @@ struct ContentView: View {
     @State private var isInspectorShown = true
     @State private var showDeleteQuotationConfirmation = false
     @State private var selectedQuotationId: PersistentIdentifier?
-    @State private var showQuotationForm = false
+    @State private var newQuotationId: PersistentIdentifier?
     @State private var inspectorStartPage = ""
     @State private var inspectorEndPage = ""
 
@@ -143,6 +143,29 @@ struct ContentView: View {
         quotation.endPage = Int(inspectorEndPage.trimmingCharacters(in: .whitespaces)).flatMap { $0 > 0 ? $0 : nil }
         quotation.updatedAt = Date()
         try? modelContext.save()
+    }
+
+    /// Adds a new empty quotation to the selected source and selects it so it
+    /// opens inline in edit mode, looking exactly like an existing quotation.
+    private func addQuotation() {
+        guard let source = selectedSource else { return }
+        cleanupNewQuotationIfEmpty()
+        let quotation = Quotation(content: "", source: source)
+        modelContext.insert(quotation)
+        try? modelContext.save()
+        newQuotationId = quotation.id
+        selectedQuotationId = quotation.id
+    }
+
+    /// Removes a freshly added quotation that was left empty (abandoned).
+    private func cleanupNewQuotationIfEmpty() {
+        defer { newQuotationId = nil }
+        guard let id = newQuotationId,
+              let quotation = modelContext.model(for: id) as? Quotation else { return }
+        if quotation.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            modelContext.delete(quotation)
+            try? modelContext.save()
+        }
     }
 
     var body: some View {
@@ -252,7 +275,7 @@ struct ContentView: View {
                             searchQuery: searchState.query,
                             quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds,
                             selectedQuotationId: $selectedQuotationId,
-                            showQuotationForm: $showQuotationForm
+                            newQuotationId: newQuotationId
                         )
                     } else {
                         VStack {
@@ -276,7 +299,7 @@ struct ContentView: View {
                 if selectedSource != nil {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
-                            showQuotationForm = true
+                            addQuotation()
                         } label: {
                             Image(systemName: "plus")
                         }
@@ -316,8 +339,13 @@ struct ContentView: View {
             searchState.runSearchIfNeeded(modelContext: modelContext)
         }
         .onChange(of: selectedSourceId) { _, _ in
+            cleanupNewQuotationIfEmpty()
             selectedQuotationId = nil
-            showQuotationForm = false
+        }
+        .onChange(of: selectedQuotationId) { _, newValue in
+            if let newId = newQuotationId, newValue != newId {
+                cleanupNewQuotationIfEmpty()
+            }
         }
         .navigationTitle("")
         .toolbarBackground(

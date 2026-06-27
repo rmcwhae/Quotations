@@ -11,7 +11,10 @@ struct QuotationRichTextEditor: NSViewRepresentable {
     @Binding var markdown: String
     var maxWidth: CGFloat
     var isFocused: Bool
-    @Binding var clickLocation: CGPoint?
+    /// Where to place the caret when focus is gained (view-local, top-left origin). Nil = leave default.
+    var clickLocation: CGPoint? = nil
+    /// Select all text when focus is gained.
+    var selectAllOnFocus: Bool = false
     var clickInset: CGSize = CGSize(width: 8, height: 6)
     var onFocusChange: (Bool) -> Void
 
@@ -64,30 +67,28 @@ struct QuotationRichTextEditor: NSViewRepresentable {
             context.coordinator.syncMarkdownIfNeeded(into: textView)
         }
 
-        if isFocused, textView.window?.firstResponder !== textView {
-            if textView.window != nil {
-                textView.window?.makeFirstResponder(textView)
-                placeCaretIfNeeded(in: textView, context: context)
-            } else {
-                // View not yet in a window; focus on the next runloop tick.
+        if isFocused {
+            guard let window = textView.window else { return }
+            if window.firstResponder !== textView {
+                window.makeFirstResponder(textView)
+            }
+            // Apply the initial selection exactly once per focus session, never on every
+            // keystroke (which would re-run "select all" and reduce typing to one letter).
+            if !context.coordinator.didApplyInitialSelection {
+                context.coordinator.didApplyInitialSelection = true
+                let location = clickLocation
+                let selectAll = selectAllOnFocus
+                let inset = clickInset
                 DispatchQueue.main.async { [weak textView] in
-                    guard let textView, textView.window?.firstResponder !== textView else { return }
-                    textView.window?.makeFirstResponder(textView)
-                    context.coordinator.placeCaretIfNeeded(in: textView, clickLocation: clickLocation, clickInset: clickInset) {
-                        clickLocation = nil
-                    }
+                    guard let textView else { return }
+                    Coordinator.applySelection(in: textView, clickLocation: location, selectAllOnFocus: selectAll, clickInset: inset)
                 }
             }
-        } else if isFocused {
-            placeCaretIfNeeded(in: textView, context: context)
-        } else if !isFocused, textView.window?.firstResponder === textView {
-            textView.window?.makeFirstResponder(nil)
-        }
-    }
-
-    private func placeCaretIfNeeded(in textView: QuotationTextView, context: Context) {
-        context.coordinator.placeCaretIfNeeded(in: textView, clickLocation: clickLocation, clickInset: clickInset) {
-            clickLocation = nil
+        } else {
+            context.coordinator.didApplyInitialSelection = false
+            if textView.window?.firstResponder === textView {
+                textView.window?.makeFirstResponder(nil)
+            }
         }
     }
 
@@ -95,6 +96,7 @@ struct QuotationRichTextEditor: NSViewRepresentable {
         var parent: QuotationRichTextEditor
         var lastMarkdown: String = ""
         var isUpdatingFromView = false
+        var didApplyInitialSelection = false
 
         init(parent: QuotationRichTextEditor) {
             self.parent = parent
@@ -139,22 +141,25 @@ struct QuotationRichTextEditor: NSViewRepresentable {
             parent.onFocusChange(false)
         }
 
-        func placeCaretIfNeeded(
+        static func applySelection(
             in textView: NSTextView,
             clickLocation: CGPoint?,
-            clickInset: CGSize,
-            onPlaced: @escaping () -> Void
+            selectAllOnFocus: Bool,
+            clickInset: CGSize
         ) {
-            guard let point = clickLocation else { return }
-            DispatchQueue.main.async { [weak textView] in
-                guard let textView else { return }
-                textView.layoutManager?.ensureLayout(for: textView.textContainer!)
+            guard selectAllOnFocus || clickLocation != nil else { return }
+            if let textContainer = textView.textContainer {
+                textView.layoutManager?.ensureLayout(for: textContainer)
+            }
+            if selectAllOnFocus {
+                let length = (textView.string as NSString).length
+                textView.setSelectedRange(NSRange(location: 0, length: length))
+            } else if let point = clickLocation {
                 let x = point.x - clickInset.width
                 // SwiftUI uses a top-left origin; NSTextView uses bottom-left.
                 let y = textView.bounds.height - (point.y - clickInset.height)
                 let index = textView.characterIndexForInsertion(at: NSPoint(x: x, y: y))
                 textView.setSelectedRange(NSRange(location: index, length: 0))
-                onPlaced()
             }
         }
     }
@@ -174,6 +179,15 @@ final class QuotationTextView: NSTextView {
     override func didChangeText() {
         super.didChangeText()
         invalidateIntrinsicContentSize()
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        if event.clickCount == 3, isEditable {
+            let length = (string as NSString).length
+            setSelectedRange(NSRange(location: 0, length: length))
+            return
+        }
+        super.mouseUp(with: event)
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {

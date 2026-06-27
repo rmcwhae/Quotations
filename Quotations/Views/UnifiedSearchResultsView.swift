@@ -50,13 +50,12 @@ private struct SingleSourceSearchSection: View {
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
             showsAddButton: false
-        ) { showForm in
+        ) { _ in
             QuotationListView(
                 source: source,
                 searchQuery: searchQuery,
                 quotationIdsFilter: quotationIdsFilter,
-                selectedQuotationId: $selectedQuotationId,
-                showQuotationForm: showForm
+                selectedQuotationId: $selectedQuotationId
             )
             .padding(.top, 8)
         }

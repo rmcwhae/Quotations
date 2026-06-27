@@ -11,17 +11,18 @@ struct QuotationListView: View {
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     @Binding var selectedQuotationId: PersistentIdentifier?
-    @Binding var showQuotationForm: Bool
+    /// The id of a freshly added quotation that should open in edit mode.
+    var newQuotationId: PersistentIdentifier?
 
     @Query private var quotations: [Quotation]
     @Environment(\.modelContext) private var modelContext
 
-    init(source: Source, searchQuery: String, quotationIdsFilter: Set<PersistentIdentifier>? = nil, selectedQuotationId: Binding<PersistentIdentifier?>, showQuotationForm: Binding<Bool>) {
+    init(source: Source, searchQuery: String, quotationIdsFilter: Set<PersistentIdentifier>? = nil, selectedQuotationId: Binding<PersistentIdentifier?>, newQuotationId: PersistentIdentifier? = nil) {
         self.source = source
         self.searchQuery = searchQuery
         self.quotationIdsFilter = quotationIdsFilter
         _selectedQuotationId = selectedQuotationId
-        _showQuotationForm = showQuotationForm
+        self.newQuotationId = newQuotationId
         let sourceId = source.id
         _quotations = Query(
             filter: #Predicate<Quotation> { q in
@@ -38,20 +39,12 @@ struct QuotationListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if showQuotationForm {
-                QuotationFormView(
-                    source: source,
-                    onSuccess: { showQuotationForm = false },
-                    onCancel: { showQuotationForm = false }
-                )
-                .padding(.vertical, 6)
-            }
-
             ForEach(displayedQuotations) { quotation in
                 QuotationRowView(
                     quotation: quotation,
                     searchQuery: searchQuery,
                     isSelected: quotation.id == selectedQuotationId,
+                    beginEditing: quotation.id == newQuotationId,
                     onSelect: { selectedQuotationId = quotation.id },
                     onEdit: saveQuotation,
                     onDelete: deleteQuotation
