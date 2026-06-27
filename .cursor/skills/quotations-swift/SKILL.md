@@ -103,7 +103,7 @@ App targets macOS only (`SDKROOT = macosx`), but some views use `#if canImport(U
 
 1. **New model field**: Update `@Model` class, any forms, list/row views, and search if searchable
 2. **New view**: Place in `Views/`, add file header comment, include `#Preview` with in-memory container
-3. **New query**: Always filter `deletedAt == nil`; use `#Predicate` with captured IDs for relationship filters (see `QuotationListView.init`)
+3. **New query**: Always filter `deletedAt == nil`; for relationship filters capture `model.persistentModelID` and compare against `q.relationship?.persistentModelID` (see `QuotationListView.init`). Never compare `\.id` in a `#Predicate` — SwiftData can't translate the `Identifiable` keypath and crashes the fetch with `EXC_BREAKPOINT`.
 4. **New Xcode file**: Add to `Quotations.xcodeproj/project.pbxproj` (or ask user to add via Xcode)
 5. **State ownership**: App-level state in `ContentView`; feature state in dedicated `@Observable` types (like `SearchState`), not scattered `@State` in leaf views
 

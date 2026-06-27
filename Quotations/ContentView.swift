@@ -385,10 +385,10 @@ struct ContentView: View {
         .confirmationDialog("Delete Source?", isPresented: $showDeleteSourceConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let source = sourceToDelete {
-                    let sourceId = source.id
+                    let sourceId = source.persistentModelID
                     source.deletedAt = Date()
                     let descriptor = FetchDescriptor<Quotation>(
-                        predicate: #Predicate { q in q.source?.id == sourceId && q.deletedAt == nil }
+                        predicate: #Predicate { q in q.source?.persistentModelID == sourceId && q.deletedAt == nil }
                     )
                     if let quotations = try? modelContext.fetch(descriptor) {
                         for q in quotations { q.deletedAt = Date() }

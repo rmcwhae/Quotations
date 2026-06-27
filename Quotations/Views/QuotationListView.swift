@@ -23,10 +23,10 @@ struct QuotationListView: View {
         self.quotationIdsFilter = quotationIdsFilter
         _selectedQuotationId = selectedQuotationId
         self.newQuotationId = newQuotationId
-        let sourceId = source.id
+        let sourceId = source.persistentModelID
         _quotations = Query(
             filter: #Predicate<Quotation> { q in
-                q.deletedAt == nil && q.source?.id == sourceId
+                q.deletedAt == nil && q.source?.persistentModelID == sourceId
             },
             sort: [SortDescriptor(\.createdAt, order: .reverse)]
         )
