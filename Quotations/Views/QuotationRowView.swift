@@ -10,7 +10,6 @@ import SwiftUI
 /// Max width for quotation text and its edit/selection outline.
 private let quotationTextMaxWidth: CGFloat = 520
 private let debounceInterval: Duration = .milliseconds(500)
-private let singleTapDelay: Duration = .milliseconds(250)
 private let textContainerPadding = CGSize(width: 8, height: 6)
 
 struct QuotationRowView: View {
@@ -38,7 +37,6 @@ struct QuotationRowView: View {
         _editedContent = State(initialValue: quotation.content)
     }
     @State private var saveTask: Task<Void, Never>?
-    @State private var pendingSelectTask: Task<Void, Never>?
     @State private var isTextFocused = false
 
     private var textFieldWidth: CGFloat {
@@ -102,8 +100,6 @@ struct QuotationRowView: View {
             .onHover { isHovering = $0 }
             .gesture(
                 SpatialTapGesture(count: 2).onEnded { value in
-                    pendingSelectTask?.cancel()
-                    pendingSelectTask = nil
                     pendingClickLocation = value.location
                     isTextFocused = true
                 }
@@ -111,13 +107,8 @@ struct QuotationRowView: View {
             .onTapGesture {
                 if isTextFocused {
                     isTextFocused = false
-                } else {
-                    pendingSelectTask?.cancel()
-                    pendingSelectTask = Task {
-                        try? await Task.sleep(for: singleTapDelay)
-                        guard !Task.isCancelled else { return }
-                        await MainActor.run { onSelect?() }
-                    }
+                } else if !isSelected {
+                    onSelect?()
                 }
             }
             Spacer(minLength: 0)
@@ -126,7 +117,7 @@ struct QuotationRowView: View {
         .padding(.leading, 16)
         .padding(.trailing, 16)
         .onChange(of: isTextFocused) { _, focused in
-            if focused {
+            if focused, !isSelected {
                 onSelect?()
             }
         }
