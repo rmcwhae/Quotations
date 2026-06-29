@@ -31,11 +31,10 @@ struct UnifiedSearchResultsView: View {
                     }
                 }
 
-                Color.clear
-                    .frame(maxWidth: .infinity, minHeight: 200)
-                    .contentShape(Rectangle())
-                    .onTapGesture { selectedQuotationId = nil }
+                Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .deselectQuotationOnBackgroundTap($selectedQuotationId)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -53,7 +52,8 @@ private struct SingleSourceSearchSection: View {
             source: source,
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
-            showsAddButton: false
+            showsAddButton: false,
+            selectedQuotationId: $selectedQuotationId
         ) { _ in
             QuotationListView(
                 source: source,

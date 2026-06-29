@@ -11,11 +11,13 @@ struct QuotationRichTextEditor: NSViewRepresentable {
     @Binding var markdown: String
     var maxWidth: CGFloat
     var isFocused: Bool
-    /// Where to place the caret when focus is gained (view-local, top-left origin). Nil = leave default.
-    var clickLocation: CGPoint? = nil
+    /// Where to place the caret when focus is gained (in window coordinates). Nil = leave default.
+    var clickWindowLocation: CGPoint? = nil
     /// Select all text when focus is gained.
     var selectAllOnFocus: Bool = false
-    var clickInset: CGSize = CGSize(width: 8, height: 6)
+    /// Identifies a distinct selection request. The editor applies the requested
+    /// caret/selection once per id, so a new click re-applies even while focused.
+    var selectionRequestID: Int = 0
     var onFocusChange: (Bool) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -72,23 +74,29 @@ struct QuotationRichTextEditor: NSViewRepresentable {
             if window.firstResponder !== textView {
                 window.makeFirstResponder(textView)
             }
-            // Apply the initial selection exactly once per focus session, never on every
+            // Apply each selection request exactly once (keyed by id), never on every
             // keystroke (which would re-run "select all" and reduce typing to one letter).
-            let needsInitialSelection = selectAllOnFocus || clickLocation != nil
-            if needsInitialSelection, !context.coordinator.didApplyInitialSelection {
-                context.coordinator.didApplyInitialSelection = true
-                let location = clickLocation
+            // Keying on the id lets a triple-click re-apply select-all even though the
+            // preceding double-click already focused the view.
+            let needsSelection = selectAllOnFocus || clickWindowLocation != nil
+            if needsSelection, context.coordinator.lastAppliedSelectionID != selectionRequestID {
+                context.coordinator.lastAppliedSelectionID = selectionRequestID
+                let windowPoint = clickWindowLocation
                 let selectAll = selectAllOnFocus
-                let inset = clickInset
                 DispatchQueue.main.async { [weak textView] in
                     guard let textView else { return }
-                    Coordinator.applySelection(in: textView, clickLocation: location, selectAllOnFocus: selectAll, clickInset: inset)
+                    Coordinator.applySelection(in: textView, clickWindowLocation: windowPoint, selectAllOnFocus: selectAll)
                 }
             }
         } else {
-            context.coordinator.didApplyInitialSelection = false
+            context.coordinator.lastAppliedSelectionID = selectionRequestID
             if textView.window?.firstResponder === textView {
                 textView.window?.makeFirstResponder(nil)
+            }
+            // Collapse any lingering selection (e.g. a previous select-all) so it
+            // doesn't briefly flash highlighted when this editor regains focus.
+            if textView.selectedRange().length > 0 {
+                textView.setSelectedRange(NSRange(location: 0, length: 0))
             }
         }
     }
@@ -97,7 +105,7 @@ struct QuotationRichTextEditor: NSViewRepresentable {
         var parent: QuotationRichTextEditor
         var lastMarkdown: String = ""
         var isUpdatingFromView = false
-        var didApplyInitialSelection = false
+        var lastAppliedSelectionID = 0
 
         init(parent: QuotationRichTextEditor) {
             self.parent = parent
@@ -144,22 +152,21 @@ struct QuotationRichTextEditor: NSViewRepresentable {
 
         static func applySelection(
             in textView: NSTextView,
-            clickLocation: CGPoint?,
-            selectAllOnFocus: Bool,
-            clickInset: CGSize
+            clickWindowLocation: CGPoint?,
+            selectAllOnFocus: Bool
         ) {
-            guard selectAllOnFocus || clickLocation != nil else { return }
+            guard selectAllOnFocus || clickWindowLocation != nil else { return }
             if let textContainer = textView.textContainer {
                 textView.layoutManager?.ensureLayout(for: textContainer)
             }
             if selectAllOnFocus {
                 let length = (textView.string as NSString).length
                 textView.setSelectedRange(NSRange(location: 0, length: length))
-            } else if let point = clickLocation {
-                let x = point.x - clickInset.width
-                // SwiftUI uses a top-left origin; NSTextView uses bottom-left.
-                let y = textView.bounds.height - (point.y - clickInset.height)
-                let index = textView.characterIndexForInsertion(at: NSPoint(x: x, y: y))
+            } else if let windowPoint = clickWindowLocation {
+                // Convert through the text view's own (flipped) coordinate space so the
+                // caret lands on the correct line and character without manual flip math.
+                let local = textView.convert(windowPoint, from: nil)
+                let index = textView.characterIndexForInsertion(at: local)
                 textView.setSelectedRange(NSRange(location: index, length: 0))
             }
         }

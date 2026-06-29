@@ -6,11 +6,11 @@
 import AppKit
 import SwiftUI
 
-/// Reports mouse-up to SwiftUI with the click location (view-local, top-left origin) and
+/// Reports mouse-up to SwiftUI with the click location (in window coordinates) and
 /// `NSEvent.clickCount`. When `isEditing` is true, clicks pass through to the text view.
 struct QuotationClickView: NSViewRepresentable {
     var isEditing: Bool
-    var onClick: (_ localPoint: CGPoint, _ clickCount: Int) -> Void
+    var onClick: (_ windowPoint: CGPoint, _ clickCount: Int) -> Void
 
     func makeNSView(context: Context) -> QuotationClickNSView {
         let view = QuotationClickNSView()
@@ -32,8 +32,6 @@ final class QuotationClickNSView: NSView {
     var isEditing = false
     var onClick: ((CGPoint, Int) -> Void)?
 
-    /// Flipped so converted points use a top-left origin, matching SwiftUI coordinates.
-    override var isFlipped: Bool { true }
     override var acceptsFirstResponder: Bool { false }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
@@ -43,8 +41,8 @@ final class QuotationClickNSView: NSView {
     }
 
     override func mouseUp(with event: NSEvent) {
-        let windowLocation = event.locationInWindow
-        let local = convert(windowLocation, from: nil)
-        onClick?(local, event.clickCount)
+        // Report the raw window location; the text view converts it into its own
+        // (flipped) coordinate space, which avoids manual inset/flip math.
+        onClick?(event.locationInWindow, event.clickCount)
     }
 }

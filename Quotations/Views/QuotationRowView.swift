@@ -19,6 +19,7 @@ struct QuotationRowView: View {
     /// When true, the row enters edit mode on appear (used for a freshly added quotation).
     var beginEditing: Bool = false
     var onSelect: (() -> Void)? = nil
+    var onDeselect: (() -> Void)? = nil
     var onEdit: (Quotation) -> Void
     var onDelete: (PersistentIdentifier) -> Void
 
@@ -27,16 +28,20 @@ struct QuotationRowView: View {
     @State private var showDeleteConfirmation = false
     @State private var textContainerWidth: CGFloat = quotationTextMaxWidth
     @State private var isHovering = false
-    @State private var pendingClickLocation: CGPoint?
+    @State private var pendingClickWindowLocation: CGPoint?
     @State private var selectAllOnFocus = false
-    @State private var pendingSelectTask: Task<Void, Never>?
+    /// Bumped on each click that begins editing so the editor re-applies the
+    /// requested caret/selection even when focus is already active (e.g. a
+    /// triple-click arriving right after the double-click that started editing).
+    @State private var selectionRequestID = 0
 
-    init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, beginEditing: Bool = false, onSelect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
+    init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, beginEditing: Bool = false, onSelect: (() -> Void)? = nil, onDeselect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
         self.quotation = quotation
         self.searchQuery = searchQuery
         self.isSelected = isSelected
         self.beginEditing = beginEditing
         self.onSelect = onSelect
+        self.onDeselect = onDeselect
         self.onEdit = onEdit
         self.onDelete = onDelete
         _editedContent = State(initialValue: quotation.content)
@@ -78,6 +83,8 @@ struct QuotationRowView: View {
                 .foregroundStyle(.quaternary)
                 .frame(width: 36, alignment: .leading)
                 .offset(y: -2)
+                .contentShape(Rectangle())
+                .onTapGesture { onDeselect?() }
             VStack(alignment: .leading, spacing: 4) {
                 textEditor
             }
@@ -108,6 +115,8 @@ struct QuotationRowView: View {
                 QuotationClickView(isEditing: isTextFocused, onClick: handleClick)
             }
             Spacer(minLength: 0)
+                .contentShape(Rectangle())
+                .onTapGesture { onDeselect?() }
         }
         .padding(.vertical, 10)
         .padding(.leading, 28)
@@ -124,7 +133,7 @@ struct QuotationRowView: View {
             }
             if !focused {
                 selectAllOnFocus = false
-                pendingClickLocation = nil
+                pendingClickWindowLocation = nil
             }
         }
         .onChange(of: isSelected) { _, selected in
@@ -172,9 +181,9 @@ struct QuotationRowView: View {
                 markdown: $editedContent,
                 maxWidth: textFieldWidth,
                 isFocused: isTextFocused,
-                clickLocation: pendingClickLocation,
+                clickWindowLocation: pendingClickWindowLocation,
                 selectAllOnFocus: selectAllOnFocus,
-                clickInset: textContainerPadding,
+                selectionRequestID: selectionRequestID,
                 onFocusChange: { isTextFocused = $0 }
             )
             .opacity(isTextFocused ? 1 : 0)
@@ -195,35 +204,31 @@ struct QuotationRowView: View {
     }
 
     /// Uses `NSEvent.clickCount` so double-clicks stay intact across the re-render from
-    /// selecting a previously unselected quotation. Single-click select is deferred so the
-    /// first click of a double-click does not enter a transient selected state.
-    private func handleClick(localPoint: CGPoint, clickCount: Int) {
+    /// selecting a previously unselected quotation. Single-click select is immediate.
+    private func handleClick(windowPoint: CGPoint, clickCount: Int) {
         switch clickCount {
         case 1:
-            pendingSelectTask?.cancel()
-            pendingSelectTask = Task {
-                let delay = Duration.milliseconds(Int(NSEvent.doubleClickInterval * 1000))
-                try? await Task.sleep(for: delay)
-                guard !Task.isCancelled else { return }
-                await MainActor.run {
-                    if !isSelected, !isTextFocused {
-                        onSelect?()
-                    }
-                }
+            // Always select on single click.
+            if !isSelected {
+                onSelect?()
             }
         case 2:
-            pendingSelectTask?.cancel()
-            if !isSelected { onSelect?() }
-            pendingClickLocation = localPoint
-            selectAllOnFocus = false
-            isTextFocused = true
+            // Begin editing with the caret at the click point.
+            beginEditing(windowPoint: windowPoint, selectAll: false)
         default:
-            pendingSelectTask?.cancel()
-            if !isSelected { onSelect?() }
-            pendingClickLocation = nil
-            selectAllOnFocus = true
-            isTextFocused = true
+            // Begin editing with all text selected (triple+ click).
+            beginEditing(windowPoint: nil, selectAll: true)
         }
+    }
+
+    private func beginEditing(windowPoint: CGPoint?, selectAll: Bool) {
+        if !isSelected {
+            onSelect?()
+        }
+        pendingClickWindowLocation = windowPoint
+        selectAllOnFocus = selectAll
+        selectionRequestID &+= 1
+        isTextFocused = true
     }
 
     private func scheduleDebouncedSave() {

@@ -46,12 +46,15 @@ struct QuotationListView: View {
                     isSelected: quotation.id == selectedQuotationId,
                     beginEditing: quotation.id == newQuotationId,
                     onSelect: { selectedQuotationId = quotation.id },
+                    onDeselect: { selectedQuotationId = nil },
                     onEdit: saveQuotation,
                     onDelete: deleteQuotation
                 )
                 .padding(.vertical, 2)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .deselectQuotationOnBackgroundTap($selectedQuotationId)
     }
 
     private func saveQuotation(_ quotation: Quotation) {
@@ -64,5 +67,18 @@ struct QuotationListView: View {
         quotation.deletedAt = Date()
         quotation.updatedAt = Date()
         try? modelContext.save()
+    }
+}
+
+extension View {
+    /// Clears quotation selection when the user clicks empty space behind child views.
+    func deselectQuotationOnBackgroundTap(_ selectedQuotationId: Binding<PersistentIdentifier?>) -> some View {
+        background {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedQuotationId.wrappedValue = nil
+                }
+        }
     }
 }

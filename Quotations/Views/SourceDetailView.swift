@@ -20,7 +20,8 @@ struct SourceDetailView: View {
             source: source,
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
-            showsAddButton: false
+            showsAddButton: false,
+            selectedQuotationId: $selectedQuotationId
         ) { _ in
             ScrollView {
                 VStack(spacing: 0) {
@@ -33,11 +34,10 @@ struct SourceDetailView: View {
                     )
                     .padding(.vertical, 16)
 
-                    Color.clear
-                        .frame(maxWidth: .infinity, minHeight: 200)
-                        .contentShape(Rectangle())
-                        .onTapGesture { selectedQuotationId = nil }
+                    Spacer(minLength: 0)
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .deselectQuotationOnBackgroundTap($selectedQuotationId)
             }
             .scrollContentBackground(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

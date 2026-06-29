@@ -21,6 +21,8 @@ struct SourceSectionView<BelowContent: View>: View {
     var showQuotationForm: Binding<Bool>? = nil
     /// When false, hides the header add-quotation button (e.g. search results).
     var showsAddButton: Bool = true
+    /// When set, tapping the source header clears the selected quotation.
+    var selectedQuotationId: Binding<PersistentIdentifier?>? = nil
 
     @ViewBuilder let belowContent: (Binding<Bool>) -> BelowContent
 
@@ -88,6 +90,10 @@ struct SourceSectionView<BelowContent: View>: View {
                 .padding(.leading, 28)
                 .padding(.trailing, 16)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedQuotationId?.wrappedValue = nil
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, headerOutset > 0 ? -headerOutset : 0)

@@ -193,6 +193,7 @@ struct ContentView: View {
                     }
                 }
             }
+            .deselectQuotationOnBackgroundTap($selectedQuotationId)
             .overlay(alignment: .top) {
                 if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    !searchState.isSearching,
