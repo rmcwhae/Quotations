@@ -80,7 +80,7 @@ struct QuotationRowView: View {
         HStack(alignment: .top, spacing: 0) {
             Text("\u{201C}")
                 .font(.system(size: 44, design: .serif))
-                .foregroundStyle(.quaternary)
+                .foregroundStyle(AppColors.quoteGlyph)
                 .frame(width: 36, alignment: .leading)
                 .offset(y: -2)
                 .contentShape(Rectangle())

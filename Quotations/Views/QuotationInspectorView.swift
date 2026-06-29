@@ -27,7 +27,7 @@ struct QuotationInspectorView: View {
         VStack(spacing: 0) {
             Text("\u{201C}")
                 .font(.system(size: 96, design: .serif))
-                .foregroundStyle(.quaternary)
+                .foregroundStyle(AppColors.quoteGlyph)
                 .padding(.bottom, -40)
             Text("Select a quotation to view details")
                 .foregroundStyle(.secondary)
