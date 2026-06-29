@@ -56,7 +56,7 @@ struct SourceFormView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             FormFieldRow(label: "Author") {
-                TextField("Author", text: $authorText)
+                TextField("", text: $authorText)
                     .textFieldStyle(.plain)
                     .textContentType(.name)
                     .textInputSuggestions {
@@ -90,20 +90,20 @@ struct SourceFormView: View {
             }
 
             FormFieldRow(label: "Title") {
-                TextField("Title", text: $title)
+                TextField("", text: $title)
                     .textFieldStyle(.plain)
                     .formInputStyle()
             }
 
             FormFieldRow(label: "URL") {
-                TextField("URL", text: $url)
+                TextField("", text: $url)
                     .textFieldStyle(.plain)
                     .textContentType(.URL)
                     .formInputStyle()
             }
 
             FormFieldRow(label: "Publication year") {
-                TextField("Publication year", text: $publicationYear)
+                TextField("", text: $publicationYear)
                     .textFieldStyle(.plain)
                     .formInputStyle(maxWidth: 80)
             }
