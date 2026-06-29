@@ -202,6 +202,11 @@ struct ContentView: View {
                 .inspectorColumnWidth(min: 220, ideal: 300, max: 420)
             }
         }
+        .onKeyPress(.escape) {
+            guard selectedQuotationId != nil else { return .ignored }
+            selectedQuotationId = nil
+            return .handled
+        }
         .searchable(
             text: Binding(
                 get: { searchState.query },

@@ -150,8 +150,9 @@ struct QuotationRowView: View {
             scheduleDebouncedSave()
         }
         .onKeyPress(.escape) {
-            if isTextFocused {
-                isTextFocused = false
+            if isTextFocused || isSelected {
+                if isTextFocused { isTextFocused = false }
+                if isSelected { onDeselect?() }
                 return .handled
             }
             return .ignored
@@ -184,7 +185,11 @@ struct QuotationRowView: View {
                 clickWindowLocation: pendingClickWindowLocation,
                 selectAllOnFocus: selectAllOnFocus,
                 selectionRequestID: selectionRequestID,
-                onFocusChange: { isTextFocused = $0 }
+                onFocusChange: { isTextFocused = $0 },
+                onEscape: {
+                    isTextFocused = false
+                    onDeselect?()
+                }
             )
             .opacity(isTextFocused ? 1 : 0)
             .allowsHitTesting(isTextFocused)

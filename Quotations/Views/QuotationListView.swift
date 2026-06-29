@@ -77,7 +77,7 @@ struct QuotationListView: View {
 }
 
 extension View {
-    /// Clears quotation selection when the user clicks empty space behind child views.
+    /// Clears quotation selection when the user clicks empty space or presses Escape.
     func deselectQuotationOnBackgroundTap(_ selectedQuotationId: Binding<PersistentIdentifier?>) -> some View {
         background {
             Color.clear
@@ -85,6 +85,11 @@ extension View {
                 .onTapGesture {
                     selectedQuotationId.wrappedValue = nil
                 }
+        }
+        .onKeyPress(.escape) {
+            guard selectedQuotationId.wrappedValue != nil else { return .ignored }
+            selectedQuotationId.wrappedValue = nil
+            return .handled
         }
     }
 }

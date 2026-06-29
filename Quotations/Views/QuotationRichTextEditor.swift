@@ -19,6 +19,7 @@ struct QuotationRichTextEditor: NSViewRepresentable {
     /// caret/selection once per id, so a new click re-applies even while focused.
     var selectionRequestID: Int = 0
     var onFocusChange: (Bool) -> Void
+    var onEscape: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -58,6 +59,7 @@ struct QuotationRichTextEditor: NSViewRepresentable {
 
     func updateNSView(_ textView: QuotationTextView, context: Context) {
         context.coordinator.parent = self
+        textView.onEscape = onEscape
 
         if textView.frame.width != maxWidth {
             textView.frame.size.width = maxWidth
@@ -175,6 +177,16 @@ struct QuotationRichTextEditor: NSViewRepresentable {
 
 /// NSTextView that reports its laid-out height for inline SwiftUI sizing.
 final class QuotationTextView: NSTextView {
+    var onEscape: (() -> Void)?
+
+    override func cancelOperation(_ sender: Any?) {
+        if let onEscape {
+            onEscape()
+        } else {
+            super.cancelOperation(sender)
+        }
+    }
+
     override var intrinsicContentSize: NSSize {
         guard let layoutManager, let textContainer else {
             return super.intrinsicContentSize
