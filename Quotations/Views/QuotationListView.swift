@@ -37,6 +37,11 @@ struct QuotationListView: View {
         return quotations.filter { filter.contains($0.id) }
     }
 
+    /// Natural width of a quotation row: leading 28 + quote mark 36 + text
+    /// padding 16 + text 520 + trailing 16. Constraining to this and centering
+    /// gives the column a `margin: 0 auto` layout within the window.
+    private let columnMaxWidth: CGFloat = 616
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach(displayedQuotations) { quotation in
@@ -53,7 +58,8 @@ struct QuotationListView: View {
                 .padding(.vertical, 2)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: columnMaxWidth, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .deselectQuotationOnBackgroundTap($selectedQuotationId)
     }
 

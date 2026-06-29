@@ -29,6 +29,10 @@ struct SourceSectionView<BelowContent: View>: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var showQuotationFormLocal = false
 
+    /// Matches `QuotationListView.columnMaxWidth` so the header lines up with the
+    /// centered quotation column.
+    private let columnMaxWidth: CGFloat = 616
+
     private var parchmentBackground: Color {
         AppColors.mainBackground(colorScheme: colorScheme)
     }
@@ -89,7 +93,8 @@ struct SourceSectionView<BelowContent: View>: View {
                 .padding(.vertical, 16)
                 .padding(.leading, 28)
                 .padding(.trailing, 16)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: columnMaxWidth, alignment: .leading)
+                .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     selectedQuotationId?.wrappedValue = nil
