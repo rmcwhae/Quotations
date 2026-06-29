@@ -43,24 +43,31 @@ struct QuotationListView: View {
     private let columnMaxWidth: CGFloat = 616
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(displayedQuotations) { quotation in
-                QuotationRowView(
-                    quotation: quotation,
-                    searchQuery: searchQuery,
-                    isSelected: quotation.id == selectedQuotationId,
-                    beginEditing: quotation.id == newQuotationId,
-                    onSelect: { selectedQuotationId = quotation.id },
-                    onDeselect: { selectedQuotationId = nil },
-                    onEdit: saveQuotation,
-                    onDelete: deleteQuotation
-                )
-                .padding(.vertical, 2)
+        if quotationIdsFilter != nil && displayedQuotations.isEmpty {
+            Text("No matching quotations.")
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.vertical, 16)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(displayedQuotations) { quotation in
+                    QuotationRowView(
+                        quotation: quotation,
+                        searchQuery: searchQuery,
+                        isSelected: quotation.id == selectedQuotationId,
+                        beginEditing: quotation.id == newQuotationId,
+                        onSelect: { selectedQuotationId = quotation.id },
+                        onDeselect: { selectedQuotationId = nil },
+                        onEdit: saveQuotation,
+                        onDelete: deleteQuotation
+                    )
+                    .padding(.vertical, 2)
+                }
             }
+            .frame(maxWidth: columnMaxWidth, alignment: .leading)
+            .frame(maxWidth: .infinity)
+            .deselectQuotationOnBackgroundTap($selectedQuotationId)
         }
-        .frame(maxWidth: columnMaxWidth, alignment: .leading)
-        .frame(maxWidth: .infinity)
-        .deselectQuotationOnBackgroundTap($selectedQuotationId)
     }
 
     private func saveQuotation(_ quotation: Quotation) {

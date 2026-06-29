@@ -109,6 +109,13 @@ struct ContentView: View {
                 }
             }
             .deselectQuotationOnBackgroundTap($selectedQuotationId)
+            .overlay {
+                if sources.isEmpty && !showSourceForm
+                    && searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Text("No sources yet.")
+                        .foregroundStyle(.secondary)
+                }
+            }
             .overlay(alignment: .top) {
                 if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                    !searchState.isSearching,
