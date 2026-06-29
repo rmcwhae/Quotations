@@ -15,6 +15,8 @@ struct UnifiedSearchResultsView: View {
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
 
+    @Environment(\.colorScheme) private var colorScheme
+
     private let horizontalPadding: CGFloat = 16
 
     var body: some View {
@@ -41,6 +43,10 @@ struct UnifiedSearchResultsView: View {
             .deselectQuotationOnBackgroundTap($selectedQuotationId)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(
+            AppColors.mainBackground(colorScheme: colorScheme)
+                .ignoresSafeArea(.container, edges: .top)
+        )
     }
 }
 

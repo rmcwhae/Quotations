@@ -67,7 +67,6 @@ struct SourceSectionView<BelowContent: View>: View {
                     .padding(.top, 4)
                     Spacer()
                 }
-                .padding(.top, 16)
                 .padding(.bottom, 2)
                 .padding(.leading, 28)
                 .padding(.trailing, 16)

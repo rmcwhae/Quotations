@@ -9,6 +9,7 @@ import Combine
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
 
     @Query(filter: #Predicate<Source> { $0.deletedAt == nil },
            sort: [SortDescriptor(\.createdAt, order: .reverse)])
@@ -177,14 +178,24 @@ struct ContentView: View {
                         newQuotationId: newQuotationId
                     )
                 } else {
-                    VStack {
-                        Spacer()
-                        Text("Select a source")
-                            .font(.title2)
-                            .foregroundStyle(.secondary)
-                        Spacer()
+                    GeometryReader { proxy in
+                        ScrollView {
+                            VStack {
+                                Spacer()
+                                Text("Select a source")
+                                    .font(.title2)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                            }
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                        }
+                        .scrollContentBackground(.hidden)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(
+                        AppColors.mainBackground(colorScheme: colorScheme)
+                            .ignoresSafeArea(.container, edges: .top)
+                    )
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
