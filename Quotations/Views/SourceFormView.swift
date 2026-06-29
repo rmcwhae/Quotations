@@ -18,6 +18,9 @@ struct SourceFormView: View {
     @State private var title = ""
     @State private var publicationYear = ""
     @State private var url = ""
+    @State private var format: SourceFormat?
+    @State private var dateReadMonth: Int?
+    @State private var dateReadYear: Int?
     @State private var hasPrefilled = false
     /// Only true after the user has changed the author text while the field is focused (not on initial focus or prefill).
     @State private var authorInputChangedSinceFocus = false
@@ -41,6 +44,12 @@ struct SourceFormView: View {
 
     private var authorNameIsValid: Bool {
         !authorText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private let monthSymbols = Calendar.current.monthSymbols
+    private var yearRange: [Int] {
+        let currentYear = Calendar.current.component(.year, from: Date())
+        return Array((1950...(currentYear + 1)).reversed())
     }
 
     var body: some View {
@@ -84,6 +93,35 @@ struct SourceFormView: View {
             TextField("Year", text: $publicationYear)
                 .frame(width: 80)
 
+            Picker("Format", selection: $format) {
+                Text("—").tag(Optional<SourceFormat>.none)
+                ForEach(SourceFormat.allCases) { option in
+                    Text(option.rawValue).tag(Optional(option))
+                }
+            }
+
+            HStack {
+                Text("Date read")
+                Spacer()
+                Picker("Month", selection: $dateReadMonth) {
+                    Text("—").tag(Optional<Int>.none)
+                    ForEach(1...12, id: \.self) { month in
+                        Text(monthSymbols[month - 1]).tag(Optional(month))
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 120)
+
+                Picker("Year", selection: $dateReadYear) {
+                    Text("—").tag(Optional<Int>.none)
+                    ForEach(yearRange, id: \.self) { year in
+                        Text(String(year)).tag(Optional(year))
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 80)
+            }
+
             HStack {
                 Spacer()
                 Button("Cancel") {
@@ -108,6 +146,9 @@ struct SourceFormView: View {
             title = source.title
             url = source.url ?? ""
             publicationYear = source.publicationYear.map { String($0) } ?? ""
+            format = source.format.flatMap { SourceFormat(rawValue: $0) }
+            dateReadMonth = source.dateReadMonth
+            dateReadYear = source.dateReadYear
             if let author = source.author {
                 authorText = author.name
                 selectedAuthorId = author.id
@@ -147,9 +188,20 @@ struct SourceFormView: View {
             existing.author = author
             existing.url = u.isEmpty ? nil : u
             existing.publicationYear = year
+            existing.format = format?.rawValue
+            existing.dateReadMonth = dateReadMonth
+            existing.dateReadYear = dateReadYear
             existing.updatedAt = Date()
         } else {
-            let source = Source(title: t, author: author, url: u.isEmpty ? nil : u, publicationYear: year)
+            let source = Source(
+                title: t,
+                author: author,
+                url: u.isEmpty ? nil : u,
+                publicationYear: year,
+                format: format?.rawValue,
+                dateReadMonth: dateReadMonth,
+                dateReadYear: dateReadYear
+            )
             modelContext.insert(source)
         }
 
@@ -158,6 +210,9 @@ struct SourceFormView: View {
             title = ""
             publicationYear = ""
             url = ""
+            format = nil
+            dateReadMonth = nil
+            dateReadYear = nil
             authorText = ""
             selectedAuthorId = nil
             onSuccess()

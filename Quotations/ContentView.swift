@@ -23,11 +23,8 @@ struct ContentView: View {
     @State private var sourceToDelete: Source?
     @State private var showDeleteSourceConfirmation = false
     @State private var isInspectorShown = true
-    @State private var showDeleteQuotationConfirmation = false
     @State private var selectedQuotationId: PersistentIdentifier?
     @State private var newQuotationId: PersistentIdentifier?
-    @State private var inspectorStartPage = ""
-    @State private var inspectorEndPage = ""
 
     private var filteredSources: [Source] {
         guard let sets = searchState.matchSetsForQuery() else { return sources }
@@ -42,96 +39,6 @@ struct ContentView: View {
     private var selectedQuotation: Quotation? {
         guard let id = selectedQuotationId else { return nil }
         return modelContext.model(for: id) as? Quotation
-    }
-
-    @ViewBuilder
-    private var inspectorContent: some View {
-        if let quotation = selectedQuotation {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("Start page")
-                        .font(.subheadline)
-                        .frame(width: 70, alignment: .leading)
-                    TextField("", text: $inspectorStartPage)
-                        .textFieldStyle(.roundedBorder)
-                        .tint(AppColors.highlightColor)
-                        .frame(width: 60)
-                        .onChange(of: inspectorStartPage) { _, _ in
-                            applyInspectorPages(to: quotation)
-                        }
-                }
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("End page")
-                        .font(.subheadline)
-                        .frame(width: 70, alignment: .leading)
-                    TextField("", text: $inspectorEndPage)
-                        .textFieldStyle(.roundedBorder)
-                        .tint(AppColors.highlightColor)
-                        .frame(width: 60)
-                        .onChange(of: inspectorEndPage) { _, _ in
-                            applyInspectorPages(to: quotation)
-                        }
-                }
-                if let updated = quotation.updatedAt {
-                    Text("Last updated: \(updated, style: .date) \(updated, style: .time)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                Button(role: .destructive) {
-                    showDeleteQuotationConfirmation = true
-                } label: {
-                    Label("Delete Quotation", systemImage: "trash")
-                        .frame(maxWidth: .infinity)
-                }
-                .accessibilityLabel("Delete quotation")
-                .help("Delete this quotation")
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .onAppear {
-                syncInspectorFromQuotation(quotation)
-            }
-            .onChange(of: selectedQuotationId) { _, _ in
-                if let q = selectedQuotation {
-                    syncInspectorFromQuotation(q)
-                }
-            }
-            .confirmationDialog("Delete this quotation?", isPresented: $showDeleteQuotationConfirmation, titleVisibility: .visible) {
-                Button("Delete", role: .destructive) {
-                    if let quotation = selectedQuotation {
-                        quotation.deletedAt = Date()
-                        quotation.updatedAt = Date()
-                        try? modelContext.save()
-                        selectedQuotationId = nil
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This action cannot be undone.")
-            }
-        } else {
-            VStack(spacing: 0) {
-                Text("\u{201C}")
-                    .font(.system(size: 96, design: .serif))
-                    .foregroundStyle(.quaternary)
-                    .padding(.bottom, -40)
-                Text("Select a quotation to view details")
-                    .foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-    }
-
-    private func syncInspectorFromQuotation(_ quotation: Quotation) {
-        inspectorStartPage = quotation.startPage.map(String.init) ?? ""
-        inspectorEndPage = quotation.endPage.map(String.init) ?? ""
-    }
-
-    private func applyInspectorPages(to quotation: Quotation) {
-        quotation.startPage = Int(inspectorStartPage.trimmingCharacters(in: .whitespaces)).flatMap { $0 > 0 ? $0 : nil }
-        quotation.endPage = Int(inspectorEndPage.trimmingCharacters(in: .whitespaces)).flatMap { $0 > 0 ? $0 : nil }
-        quotation.updatedAt = Date()
-        try? modelContext.save()
     }
 
     /// Adds a new empty quotation to the selected source and selects it so it
@@ -278,10 +185,13 @@ struct ContentView: View {
                 }
             }
             .inspector(isPresented: $isInspectorShown) {
-                inspectorContent
-                    .padding()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .inspectorColumnWidth(min: 180, ideal: 260, max: 420)
+                QuotationInspectorView(
+                    quotation: selectedQuotation,
+                    selectedQuotationId: $selectedQuotationId
+                )
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .inspectorColumnWidth(min: 220, ideal: 300, max: 420)
             }
         }
         .searchable(
@@ -329,7 +239,7 @@ struct ContentView: View {
                 }
             )
             .padding()
-            .frame(minWidth: 320, minHeight: 280)
+            .frame(minWidth: 320, minHeight: 380)
         }
         .confirmationDialog("Delete Source?", isPresented: $showDeleteSourceConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
