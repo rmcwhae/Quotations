@@ -66,7 +66,7 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedSourceId) {
+            List {
                 if showSourceForm {
                     SourceFormView(
                         onSuccess: {
@@ -88,7 +88,15 @@ struct ContentView: View {
                         source: source,
                         searchQuery: searchState.query
                     )
-                    .tag(source.id)
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(source.id == selectedSourceId ? AppColors.selectionBackground : Color.clear)
+                            .padding(.horizontal, 4)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedSourceId = source.id
+                    }
                     .contextMenu {
                         Button("Edit…") {
                             sourceToEdit = source

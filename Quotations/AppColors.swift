@@ -9,6 +9,9 @@ enum AppColors {
     /// Warm amber/brown for selection, edit focus, and input highlights.
     static let highlightColor = Color(red: 0.72, green: 0.53, blue: 0.20)
 
+    /// Warm tan fill behind a selected sidebar row.
+    static let selectionBackground = highlightColor.opacity(0.25)
+
     /// Yellow background for search term matches.
     static let searchHighlight = Color.yellow.opacity(0.4)
 
