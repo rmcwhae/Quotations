@@ -22,8 +22,6 @@ struct UnifiedSearchResultsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                Divider()
-
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(sources) { source in
                         SingleSourceSearchSection(
