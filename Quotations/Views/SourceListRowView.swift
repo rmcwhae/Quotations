@@ -11,7 +11,6 @@ import SwiftUI
 struct SourceListRowView: View {
     let source: Source
     let searchQuery: String
-    let isSelected: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -32,9 +31,7 @@ struct SourceListRowView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(isSelected ? AppColors.selectionBackground : Color.clear)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
     }
 }
