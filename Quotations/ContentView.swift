@@ -47,6 +47,28 @@ struct ContentView: View {
         return modelContext.model(for: id) as? Quotation
     }
 
+    /// Centered placeholder text on a continuous parchment background (matches detail panes).
+    private func emptyDetail(_ message: String) -> some View {
+        GeometryReader { proxy in
+            ScrollView {
+                VStack {
+                    Spacer()
+                    Text(message)
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .frame(width: proxy.size.width, height: proxy.size.height)
+            }
+            .scrollContentBackground(.hidden)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            AppColors.mainBackground(colorScheme: colorScheme)
+                .ignoresSafeArea(.container, edges: .top)
+        )
+    }
+
     /// Adds a new empty quotation to the selected source and selects it so it
     /// opens inline in edit mode, looking exactly like an existing quotation.
     private func addQuotation() {
@@ -159,16 +181,18 @@ struct ContentView: View {
             }
         } detail: {
             Group {
-                if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   let matchSets = searchState.matchSetsForQuery(),
-                   !filteredSources.isEmpty {
-                    UnifiedSearchResultsView(
-                        sources: filteredSources,
-                        searchQuery: searchState.query,
-                        quotationIdsFilter: matchSets.quotationIds,
-                        selectedQuotationId: $selectedQuotationId,
-                        newQuotationId: newQuotationId
-                    )
+                if isSearchActive {
+                    if let matchSets = searchState.matchSetsForQuery(), !filteredSources.isEmpty {
+                        UnifiedSearchResultsView(
+                            sources: filteredSources,
+                            searchQuery: searchState.query,
+                            quotationIdsFilter: matchSets.quotationIds,
+                            selectedQuotationId: $selectedQuotationId,
+                            newQuotationId: newQuotationId
+                        )
+                    } else {
+                        emptyDetail(searchState.isSearching ? "Searching…" : "No results")
+                    }
                 } else if let source = selectedSource {
                     SourceDetailView(
                         source: source,
@@ -178,24 +202,7 @@ struct ContentView: View {
                         newQuotationId: newQuotationId
                     )
                 } else {
-                    GeometryReader { proxy in
-                        ScrollView {
-                            VStack {
-                                Spacer()
-                                Text("Select a source")
-                                    .font(.title2)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                            }
-                            .frame(width: proxy.size.width, height: proxy.size.height)
-                        }
-                        .scrollContentBackground(.hidden)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(
-                        AppColors.mainBackground(colorScheme: colorScheme)
-                            .ignoresSafeArea(.container, edges: .top)
-                    )
+                    emptyDetail("Select a source")
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
