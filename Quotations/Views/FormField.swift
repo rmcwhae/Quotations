@@ -25,18 +25,23 @@ struct FormFieldRow<Content: View>: View {
 private struct FormInputStyle: ViewModifier {
     var maxWidth: CGFloat
     @Environment(\.colorScheme) private var colorScheme
+    @FocusState private var isFocused: Bool
     @State private var isHovering = false
+
+    private var showsBackground: Bool { isHovering || isFocused }
 
     func body(content: Content) -> some View {
         content
             .multilineTextAlignment(.trailing)
+            .focused($isFocused)
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
             .frame(maxWidth: maxWidth, alignment: .trailing)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isHovering ? AppColors.editingBackground(colorScheme: colorScheme) : Color.clear)
+                    .fill(showsBackground ? AppColors.editingBackground(colorScheme: colorScheme) : Color.clear)
             )
+            .animation(.easeInOut(duration: 0.15), value: showsBackground)
             .onHover { isHovering = $0 }
     }
 }

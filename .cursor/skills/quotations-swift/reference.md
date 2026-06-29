@@ -56,7 +56,7 @@ All models: `createdAt`, `updatedAt`, `deletedAt` (soft delete).
 | `sourceToEdit` / `sourceToDelete` | Sheet edit / delete confirmation |
 | `isInspectorShown` | Trailing inspector visibility |
 
-Inspector fields: **Page number or percentage** binds to `quotation.location`. **Format** and **Date read** are edited in `SourceFormView` and shown read-only under **Source Details** in the inspector.
+Inspector fields: **Location** binds to `quotation.location` (helper: "Page number or percentage" on focus). **Format** and **Date read** are edited in `SourceFormView` and shown read-only under **Source Details** in the inspector.
 
 ## Migration
 

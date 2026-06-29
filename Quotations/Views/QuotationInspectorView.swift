@@ -13,6 +13,7 @@ struct QuotationInspectorView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var location = ""
     @State private var showDeleteConfirmation = false
+    @FocusState private var isLocationFocused: Bool
 
     var body: some View {
         if let quotation {
@@ -37,14 +38,28 @@ struct QuotationInspectorView: View {
     @ViewBuilder
     private func inspectorForm(for quotation: Quotation) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            FormFieldRow(label: "Page number or percentage") {
-                TextField("", text: $location)
-                    .textFieldStyle(.plain)
-                    .tint(AppColors.highlightColor)
-                    .formInputStyle(maxWidth: 160)
-                    .onChange(of: location) { _, _ in
-                        applyLocation(to: quotation)
+            VStack(alignment: .leading, spacing: 4) {
+                FormFieldRow(label: "Location") {
+                    TextField("", text: $location)
+                        .textFieldStyle(.plain)
+                        .tint(AppColors.highlightColor)
+                        .focused($isLocationFocused)
+                        .formInputStyle(maxWidth: 160)
+                        .accessibilityHint("Page number or percentage")
+                        .onChange(of: location) { _, _ in
+                            applyLocation(to: quotation)
+                        }
+                }
+
+                if isLocationFocused {
+                    HStack {
+                        Spacer(minLength: 8)
+                        Text("Page number or percentage")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: 160, alignment: .trailing)
                     }
+                }
             }
 
             if let source = quotation.source {

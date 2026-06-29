@@ -19,6 +19,8 @@ struct UnifiedSearchResultsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
+                Divider()
+
                 LazyVStack(alignment: .leading, spacing: 0) {
                     ForEach(Array(sources.enumerated()), id: \.element.id) { _, source in
                         SingleSourceSearchSection(
