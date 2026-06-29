@@ -56,10 +56,9 @@ struct SourceFormView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             FormFieldRow(label: "Author") {
-                TextField("", text: $authorText)
+                TextField("Author", text: $authorText)
                     .textFieldStyle(.plain)
                     .textContentType(.name)
-                    .focused($isAuthorFieldFocused)
                     .textInputSuggestions {
                         if authorInputChangedSinceFocus {
                             ForEach(authorSuggestions, id: \.id) { author in
@@ -77,7 +76,7 @@ struct SourceFormView: View {
                             selectedAuthorId = nil
                         }
                         let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if let author = authors.first(where: { $0.name == trimmed }) {
+                        if let author = authors.first(where: { $0.name.lowercased() == trimmed.lowercased() }) {
                             selectedAuthorId = author.id
                             isAuthorFieldFocused = false
                         }
@@ -87,24 +86,24 @@ struct SourceFormView: View {
                             authorText = a.name
                         }
                     }
-                    .formInputStyle()
+                    .formInputStyle(isFocused: $isAuthorFieldFocused)
             }
 
             FormFieldRow(label: "Title") {
-                TextField("", text: $title)
+                TextField("Title", text: $title)
                     .textFieldStyle(.plain)
                     .formInputStyle()
             }
 
             FormFieldRow(label: "URL") {
-                TextField("", text: $url)
+                TextField("URL", text: $url)
                     .textFieldStyle(.plain)
                     .textContentType(.URL)
                     .formInputStyle()
             }
 
             FormFieldRow(label: "Publication year") {
-                TextField("", text: $publicationYear)
+                TextField("Publication year", text: $publicationYear)
                     .textFieldStyle(.plain)
                     .formInputStyle(maxWidth: 80)
             }
@@ -166,7 +165,7 @@ struct SourceFormView: View {
             title = source.title
             url = source.url ?? ""
             publicationYear = source.publicationYear.map { String($0) } ?? ""
-            format = source.format.flatMap { SourceFormat(rawValue: $0) }
+            format = source.sourceFormat
             dateReadMonth = source.dateReadMonth
             dateReadYear = source.dateReadYear
             if let author = source.author {
@@ -191,9 +190,10 @@ struct SourceFormView: View {
         }
 
         let author: Author
-        if let existing = selectedAuthor, existing.name == authorName {
+        let normalizedAuthorName = authorName.lowercased()
+        if let existing = selectedAuthor, existing.name.lowercased() == normalizedAuthorName {
             author = existing
-        } else if let existing = authors.first(where: { $0.name == authorName }) {
+        } else if let existing = authors.first(where: { $0.name.lowercased() == normalizedAuthorName }) {
             author = existing
         } else {
             author = Author(name: authorName)
@@ -227,6 +227,7 @@ struct SourceFormView: View {
 
         do {
             try modelContext.save()
+            NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
             title = ""
             publicationYear = ""
             url = ""

@@ -11,6 +11,15 @@ import SwiftUI
 struct SourceListRowView: View {
     let source: Source
     let searchQuery: String
+    var isSelected: Bool = false
+
+    private var accessibilitySummary: String {
+        if let author = source.author {
+            let year = source.publicationYear.map { " (\($0))" } ?? ""
+            return "\(source.title), \(author.name)\(year)"
+        }
+        return source.title
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
@@ -33,5 +42,8 @@ struct SourceListRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 4)
         .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilitySummary)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

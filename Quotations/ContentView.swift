@@ -5,6 +5,7 @@
 
 import SwiftUI
 import SwiftData
+import Combine
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -25,6 +26,10 @@ struct ContentView: View {
     @State private var isInspectorShown = true
     @State private var selectedQuotationId: PersistentIdentifier?
     @State private var newQuotationId: PersistentIdentifier?
+
+    private var isSearchActive: Bool {
+        !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     private var filteredSources: [Source] {
         guard let sets = searchState.matchSetsForQuery() else { return sources }
@@ -59,7 +64,8 @@ struct ContentView: View {
         guard let id = newQuotationId,
               let quotation = modelContext.model(for: id) as? Quotation else { return }
         if quotation.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            modelContext.delete(quotation)
+            quotation.deletedAt = Date()
+            quotation.updatedAt = Date()
             try? modelContext.save()
         }
     }
@@ -86,8 +92,10 @@ struct ContentView: View {
                 ForEach(filteredSources) { source in
                     SourceListRowView(
                         source: source,
-                        searchQuery: searchState.query
+                        searchQuery: searchState.query,
+                        isSelected: source.id == selectedSourceId
                     )
+                    .tag(source.id)
                     .listRowBackground(
                         RoundedRectangle(cornerRadius: 6)
                             .fill(source.id == selectedSourceId ? AppColors.selectionBackground : Color.clear)
@@ -108,7 +116,6 @@ struct ContentView: View {
                     }
                 }
             }
-            .deselectQuotationOnBackgroundTap($selectedQuotationId)
             .overlay {
                 if sources.isEmpty && !showSourceForm
                     && searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -158,7 +165,8 @@ struct ContentView: View {
                         sources: filteredSources,
                         searchQuery: searchState.query,
                         quotationIdsFilter: matchSets.quotationIds,
-                        selectedQuotationId: $selectedQuotationId
+                        selectedQuotationId: $selectedQuotationId,
+                        newQuotationId: newQuotationId
                     )
                 } else if let source = selectedSource {
                     SourceDetailView(
@@ -181,7 +189,7 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .toolbar {
-                if selectedSource != nil {
+                if selectedSource != nil, !isSearchActive {
                     ToolbarItem(placement: .primaryAction) {
                         Button {
                             addQuotation()
@@ -196,6 +204,7 @@ struct ContentView: View {
                     Button(action: { isInspectorShown.toggle() }) {
                         Label("Toggle Inspector", systemImage: "sidebar.trailing")
                     }
+                    .accessibilityLabel(isInspectorShown ? "Hide inspector" : "Show inspector")
                     .help(isInspectorShown ? "Hide Inspector" : "Show Inspector")
                 }
             }
@@ -222,6 +231,9 @@ struct ContentView: View {
             placement: .toolbar
         )
         .onChange(of: searchState.query) { _, _ in
+            searchState.runSearchIfNeeded(modelContext: modelContext)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .quotationsDataDidChange)) { _ in
             searchState.runSearchIfNeeded(modelContext: modelContext)
         }
         .onChange(of: selectedSourceId) { _, _ in
@@ -265,14 +277,17 @@ struct ContentView: View {
             Button("Delete", role: .destructive) {
                 if let source = sourceToDelete {
                     let sourceId = source.persistentModelID
-                    source.deletedAt = Date()
-                    let descriptor = FetchDescriptor<Quotation>(
-                        predicate: #Predicate { q in q.source?.persistentModelID == sourceId && q.deletedAt == nil }
-                    )
-                    if let quotations = try? modelContext.fetch(descriptor) {
-                        for q in quotations { q.deletedAt = Date() }
+                    do {
+                        try SoftDelete.source(source, in: modelContext)
+                        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        showError = true
                     }
-                    try? modelContext.save()
+                    if selectedSourceId == sourceId {
+                        selectedSourceId = nil
+                        selectedQuotationId = nil
+                    }
                 }
                 sourceToDelete = nil
             }

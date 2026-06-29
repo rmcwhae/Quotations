@@ -5,9 +5,6 @@
 
 import SwiftUI
 
-private let quotationFont = Font.system(size: 16, design: .serif)
-private let quotationLineSpacing: CGFloat = 6
-
 /// Renders text with any substring matching the query (case-insensitive) highlighted.
 struct HighlightMatch: View {
     let text: String
@@ -15,7 +12,33 @@ struct HighlightMatch: View {
     /// When true, parses quotation markdown before highlighting (bold/italic markers are not shown).
     var useMarkdown: Bool = false
 
-    private var attributedString: AttributedString {
+    @State private var cachedAttributed = AttributedString()
+    @State private var cacheKey = ""
+
+    var body: some View {
+        Group {
+            if useMarkdown {
+                Text(cachedAttributed)
+                    .font(MarkdownCodec.quotationFont)
+                    .lineSpacing(MarkdownCodec.quotationLineSpacing)
+            } else {
+                Text(cachedAttributed)
+            }
+        }
+        .onAppear { rebuildCacheIfNeeded() }
+        .onChange(of: text) { _, _ in rebuildCacheIfNeeded() }
+        .onChange(of: query) { _, _ in rebuildCacheIfNeeded() }
+        .onChange(of: useMarkdown) { _, _ in rebuildCacheIfNeeded() }
+    }
+
+    private func rebuildCacheIfNeeded() {
+        let key = "\(text)\u{1F}|\(query)\u{1F}|\(useMarkdown)"
+        guard key != cacheKey else { return }
+        cacheKey = key
+        cachedAttributed = buildAttributedString()
+    }
+
+    private func buildAttributedString() -> AttributedString {
         var result = useMarkdown ? MarkdownCodec.attributedString(from: text) : AttributedString(text)
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return result }
@@ -34,18 +57,6 @@ struct HighlightMatch: View {
         }
 
         return result
-    }
-
-    var body: some View {
-        Group {
-            if useMarkdown {
-                Text(attributedString)
-                    .font(quotationFont)
-                    .lineSpacing(quotationLineSpacing)
-            } else {
-                Text(attributedString)
-            }
-        }
     }
 }
 

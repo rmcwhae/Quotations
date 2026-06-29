@@ -13,6 +13,7 @@ struct UnifiedSearchResultsView: View {
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     @Binding var selectedQuotationId: PersistentIdentifier?
+    var newQuotationId: PersistentIdentifier?
 
     private let horizontalPadding: CGFloat = 16
 
@@ -22,12 +23,13 @@ struct UnifiedSearchResultsView: View {
                 Divider()
 
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(sources.enumerated()), id: \.element.id) { _, source in
+                    ForEach(sources) { source in
                         SingleSourceSearchSection(
                             source: source,
                             searchQuery: searchQuery,
                             quotationIdsFilter: quotationIdsFilter,
                             selectedQuotationId: $selectedQuotationId,
+                            newQuotationId: newQuotationId,
                             horizontalPadding: horizontalPadding
                         )
                     }
@@ -47,6 +49,7 @@ private struct SingleSourceSearchSection: View {
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     @Binding var selectedQuotationId: PersistentIdentifier?
+    var newQuotationId: PersistentIdentifier?
     var horizontalPadding: CGFloat
 
     var body: some View {
@@ -54,14 +57,14 @@ private struct SingleSourceSearchSection: View {
             source: source,
             searchQuery: searchQuery,
             quotationIdsFilter: quotationIdsFilter,
-            showsAddButton: false,
             selectedQuotationId: $selectedQuotationId
-        ) { _ in
+        ) {
             QuotationListView(
                 source: source,
                 searchQuery: searchQuery,
                 quotationIdsFilter: quotationIdsFilter,
-                selectedQuotationId: $selectedQuotationId
+                selectedQuotationId: $selectedQuotationId,
+                newQuotationId: newQuotationId
             )
             .padding(.top, 8)
         }

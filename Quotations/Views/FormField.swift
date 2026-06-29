@@ -16,6 +16,7 @@ struct FormFieldRow<Content: View>: View {
                 .font(.subheadline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             content()
+                .accessibilityLabel(label)
         }
     }
 }
@@ -24,8 +25,8 @@ struct FormFieldRow<Content: View>: View {
 /// paper-colored background on hover (white in light mode, near-black in dark).
 private struct FormInputStyle: ViewModifier {
     var maxWidth: CGFloat
+    @FocusState.Binding var isFocused: Bool
     @Environment(\.colorScheme) private var colorScheme
-    @FocusState private var isFocused: Bool
     @State private var isHovering = false
 
     private var showsBackground: Bool { isHovering || isFocused }
@@ -46,9 +47,26 @@ private struct FormInputStyle: ViewModifier {
     }
 }
 
+/// Wraps content with an internal focus binding for fields that do not need external focus tracking.
+private struct FormInputStyleWithInternalFocus<Content: View>: View {
+    var maxWidth: CGFloat
+    @FocusState private var isFocused: Bool
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        content()
+            .modifier(FormInputStyle(maxWidth: maxWidth, isFocused: $isFocused))
+    }
+}
+
 extension View {
+    /// Apply to a plain `TextField` with an external focus binding (e.g. for autocomplete or captions).
+    func formInputStyle(maxWidth: CGFloat = 200, isFocused: FocusState<Bool>.Binding) -> some View {
+        modifier(FormInputStyle(maxWidth: maxWidth, isFocused: isFocused))
+    }
+
     /// Apply to a plain `TextField` to get the standardized blank/hover input look.
     func formInputStyle(maxWidth: CGFloat = 200) -> some View {
-        modifier(FormInputStyle(maxWidth: maxWidth))
+        FormInputStyleWithInternalFocus(maxWidth: maxWidth) { self }
     }
 }

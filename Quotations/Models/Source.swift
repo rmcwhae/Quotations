@@ -29,6 +29,9 @@ final class Source {
 
     var author: Author?
 
+    @Relationship(deleteRule: .nullify, inverse: \Quotation.source)
+    var quotations: [Quotation] = []
+
     init(
         title: String,
         author: Author? = nil,
@@ -50,12 +53,17 @@ final class Source {
         self.deletedAt = nil
     }
 
+    var sourceFormat: SourceFormat? {
+        get { format.flatMap { SourceFormat(rawValue: $0) } }
+        set { format = newValue?.rawValue }
+    }
+
     var formattedDateRead: String? {
         let monthSymbols = Calendar.current.monthSymbols
         switch (dateReadMonth, dateReadYear) {
-        case let (month?, year?):
+        case let (month?, year?) where (1...12).contains(month):
             return "\(monthSymbols[month - 1]) \(year)"
-        case let (month?, nil):
+        case let (month?, nil) where (1...12).contains(month):
             return monthSymbols[month - 1]
         case let (nil, year?):
             return String(year)

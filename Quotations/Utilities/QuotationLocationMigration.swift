@@ -24,11 +24,17 @@ enum QuotationLocationMigration {
             quotation.location = migrated
             quotation.startPage = nil
             quotation.endPage = nil
+            quotation.updatedAt = Date()
             didChange = true
         }
 
         if didChange {
-            try? context.save()
+            do {
+                try context.save()
+            } catch {
+                print("QuotationLocationMigration save failed: \(error)")
+                return
+            }
         }
         UserDefaults.standard.set(true, forKey: didMigrateKey)
     }

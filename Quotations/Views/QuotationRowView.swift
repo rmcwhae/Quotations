@@ -83,6 +83,7 @@ struct QuotationRowView: View {
                 .foregroundStyle(AppColors.quoteGlyph)
                 .frame(width: 36, alignment: .leading)
                 .offset(y: -2)
+                .accessibilityHidden(true)
                 .contentShape(Rectangle())
                 .onTapGesture { onDeselect?() }
             VStack(alignment: .leading, spacing: 4) {
@@ -121,6 +122,10 @@ struct QuotationRowView: View {
         .padding(.vertical, 10)
         .padding(.leading, 28)
         .padding(.trailing, 16)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(quotation.content.isEmpty ? "New quotation" : quotation.content)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityHint(isTextFocused ? "Editing quotation" : "Double-click to edit")
         .onAppear {
             if beginEditing, !didBeginEditing {
                 didBeginEditing = true
@@ -132,9 +137,15 @@ struct QuotationRowView: View {
                 onSelect?()
             }
             if !focused {
+                saveTask?.cancel()
+                commitEdit()
                 selectAllOnFocus = false
                 pendingClickWindowLocation = nil
             }
+        }
+        .onDisappear {
+            saveTask?.cancel()
+            commitEdit()
         }
         .onChange(of: isSelected) { _, selected in
             if !selected {
@@ -165,19 +176,19 @@ struct QuotationRowView: View {
                 showDeleteConfirmation = true
             }
         }
-        .confirmationDialog("Delete this quotation?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
+        .confirmationDialog("Remove quotation?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
                 onDelete(quotation.id)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This action cannot be undone.")
+            Text("This quotation will be removed from your library.")
         }
     }
 
     @ViewBuilder
     private var textEditor: some View {
-        ZStack(alignment: .topLeading) {
+        if isTextFocused {
             QuotationRichTextEditor(
                 markdown: $editedContent,
                 maxWidth: textFieldWidth,
@@ -191,20 +202,17 @@ struct QuotationRowView: View {
                     onDeselect?()
                 }
             )
-            .opacity(isTextFocused ? 1 : 0)
-            .allowsHitTesting(isTextFocused)
             .frame(maxWidth: textFieldWidth, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
-
-            if !isTextFocused {
+        } else {
+            Group {
                 if showsHighlightedText {
                     HighlightMatch(text: editedContent, query: searchQuery, useMarkdown: true)
-                        .frame(maxWidth: textFieldWidth, alignment: .leading)
                 } else {
                     FormattedQuotationText(text: editedContent)
-                        .frame(maxWidth: textFieldWidth, alignment: .leading)
                 }
             }
+            .frame(maxWidth: textFieldWidth, alignment: .leading)
         }
     }
 

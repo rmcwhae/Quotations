@@ -13,6 +13,9 @@ final class Author {
     var updatedAt: Date?
     var deletedAt: Date?
 
+    @Relationship(deleteRule: .nullify, inverse: \Source.author)
+    var sources: [Source] = []
+
     init(name: String) {
         self.name = name
         self.createdAt = Date()

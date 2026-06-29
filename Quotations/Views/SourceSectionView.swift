@@ -8,26 +8,19 @@
 import SwiftData
 import SwiftUI
 
-
-/// One source block: header (title, author, optional Add Quotation plus), optional form when plus is clicked, divider, and content below.
-/// When `showQuotationForm` binding is provided (e.g. from detail toolbar), the header has no button. When nil, the header shows a plus to add a quotation.
+/// One source block: header (title, author, link), divider, and content below.
 struct SourceSectionView<BelowContent: View>: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     /// When set (e.g. to parent horizontal padding), the header is inset so its background extends to the edges.
     var headerOutset: CGFloat = 0
-    /// When non-nil, form visibility is driven by this binding and no add-quotation button is shown in the header (e.g. detail view uses toolbar plus). When nil, local state and a plus button in the header are used.
-    var showQuotationForm: Binding<Bool>? = nil
-    /// When false, hides the header add-quotation button (e.g. search results).
-    var showsAddButton: Bool = true
     /// When set, tapping the source header clears the selected quotation.
     var selectedQuotationId: Binding<PersistentIdentifier?>? = nil
 
-    @ViewBuilder let belowContent: (Binding<Bool>) -> BelowContent
+    @ViewBuilder let belowContent: () -> BelowContent
 
     @Environment(\.colorScheme) private var colorScheme
-    @State private var showQuotationFormLocal = false
 
     /// Matches `QuotationListView.columnMaxWidth` so the header lines up with the
     /// centered quotation column.
@@ -40,14 +33,6 @@ struct SourceSectionView<BelowContent: View>: View {
     private var sourceURL: URL? {
         guard let urlString = source.url, !urlString.isEmpty else { return nil }
         return URL(string: urlString)
-    }
-
-    private var formVisibility: Binding<Bool> {
-        if let showQuotationForm { return showQuotationForm }
-        return Binding(
-            get: { showQuotationFormLocal },
-            set: { showQuotationFormLocal = $0 }
-        )
     }
 
     var body: some View {
@@ -81,16 +66,9 @@ struct SourceSectionView<BelowContent: View>: View {
                     }
                     .padding(.top, 4)
                     Spacer()
-                    if showQuotationForm == nil && showsAddButton {
-                        Button {
-                            formVisibility.wrappedValue = true
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .accessibilityLabel("Add quotation")
-                    }
                 }
-                .padding(.vertical, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 2)
                 .padding(.leading, 28)
                 .padding(.trailing, 16)
                 .frame(maxWidth: columnMaxWidth, alignment: .leading)
@@ -103,9 +81,7 @@ struct SourceSectionView<BelowContent: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, headerOutset > 0 ? -headerOutset : 0)
 
-            Divider()
-
-            belowContent(formVisibility)
+            belowContent()
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(parchmentBackground)

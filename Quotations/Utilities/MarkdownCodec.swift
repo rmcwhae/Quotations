@@ -12,6 +12,7 @@ enum MarkdownCodec {
     static let quotationFontSize: CGFloat = 16
     /// Matches the SwiftUI `.lineSpacing(6)` used in display mode.
     static let quotationLineSpacing: CGFloat = 6
+    static let quotationFont = Font.system(size: quotationFontSize, design: .serif)
 
     static var quotationBaseFont: NSFont {
         if let serif = NSFont.systemFont(ofSize: quotationFontSize).fontDescriptor.withDesign(.serif) {
@@ -101,13 +102,13 @@ enum MarkdownCodec {
             let traits = fontTraits(from: attributes)
 
             if traits.bold && traits.italic {
-                result += "***\(substring)***"
+                result += "***\(escapeMarkdown(substring))***"
             } else if traits.bold {
-                result += "**\(substring)**"
+                result += "**\(escapeMarkdown(substring))**"
             } else if traits.italic {
-                result += "*\(substring)*"
+                result += "*\(escapeMarkdown(substring))*"
             } else {
-                result += substring
+                result += escapeMarkdown(substring)
             }
 
             index = effectiveRange.location + effectiveRange.length
@@ -165,5 +166,12 @@ enum MarkdownCodec {
         guard let font = attributes[.font] as? NSFont else { return (false, false) }
         let traits = font.fontDescriptor.symbolicTraits
         return (traits.contains(.bold), traits.contains(.italic))
+    }
+
+    private static func escapeMarkdown(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "*", with: "\\*")
+            .replacingOccurrences(of: "_", with: "\\_")
     }
 }

@@ -40,10 +40,18 @@ struct QuotationListView: View {
     /// Natural width of a quotation row: leading 28 + quote mark 36 + text
     /// padding 16 + text 520 + trailing 16. Constraining to this and centering
     /// gives the column a `margin: 0 auto` layout within the window.
-    private let columnMaxWidth: CGFloat = 616
+    fileprivate let columnMaxWidth: CGFloat = 616
 
     var body: some View {
-        if quotationIdsFilter != nil && displayedQuotations.isEmpty {
+        if quotationIdsFilter == nil && quotations.isEmpty {
+            VStack {
+                Spacer()
+                Text("No quotations yet.")
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, minHeight: 200)
+        } else if quotationIdsFilter != nil && displayedQuotations.isEmpty {
             Text("No matching quotations.")
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -66,37 +74,20 @@ struct QuotationListView: View {
             }
             .frame(maxWidth: columnMaxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
-            .deselectQuotationOnBackgroundTap($selectedQuotationId)
         }
     }
 
     private func saveQuotation(_ quotation: Quotation) {
         quotation.updatedAt = Date()
         try? modelContext.save()
+        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
     }
 
     private func deleteQuotation(id: PersistentIdentifier) {
-        guard let quotation = quotations.first(where: { $0.id == id }) else { return }
+        guard let quotation = modelContext.model(for: id) as? Quotation else { return }
         quotation.deletedAt = Date()
         quotation.updatedAt = Date()
         try? modelContext.save()
-    }
-}
-
-extension View {
-    /// Clears quotation selection when the user clicks empty space or presses Escape.
-    func deselectQuotationOnBackgroundTap(_ selectedQuotationId: Binding<PersistentIdentifier?>) -> some View {
-        background {
-            Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    selectedQuotationId.wrappedValue = nil
-                }
-        }
-        .onKeyPress(.escape) {
-            guard selectedQuotationId.wrappedValue != nil else { return .ignored }
-            selectedQuotationId.wrappedValue = nil
-            return .handled
-        }
+        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
     }
 }

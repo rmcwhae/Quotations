@@ -8,6 +8,8 @@ import SwiftData
 
 struct AuthorFormView: View {
     @Environment(\.modelContext) private var modelContext
+    @Query(filter: #Predicate<Author> { $0.deletedAt == nil }, sort: \Author.name)
+    private var authors: [Author]
 
     var existingAuthor: Author?
     var onSuccess: () -> Void
@@ -51,6 +53,11 @@ struct AuthorFormView: View {
             onError("Name is required.")
             return
         }
+        if existingAuthor == nil,
+           authors.contains(where: { $0.name.lowercased() == n.lowercased() }) {
+            onError("An author with this name already exists.")
+            return
+        }
         do {
             if let existing = existingAuthor {
                 existing.name = n
@@ -60,6 +67,7 @@ struct AuthorFormView: View {
                 modelContext.insert(author)
             }
             try modelContext.save()
+            NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
             onSuccess()
         } catch {
             onError(error.localizedDescription)

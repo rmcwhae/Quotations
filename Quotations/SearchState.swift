@@ -7,9 +7,9 @@ import Foundation
 import SwiftData
 import Observation
 
-struct SearchResultItem {
-    let quotation: Quotation
-    let source: Source
+struct SearchResultItem: Hashable {
+    let quotationId: PersistentIdentifier
+    let sourceId: PersistentIdentifier
 }
 
 struct MatchSets {
@@ -27,6 +27,10 @@ final class SearchState {
 
     private let debounceInterval: TimeInterval = 0.2
     private var searchTask: Task<Void, Never>?
+
+    deinit {
+        searchTask?.cancel()
+    }
 
     func runSearchIfNeeded(modelContext: ModelContext) {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -55,6 +59,9 @@ final class SearchState {
 
             let lower = q.lowercased()
             var results: [SearchResultItem] = []
+            var authorIds = Set<PersistentIdentifier>()
+            var sourceIds = Set<PersistentIdentifier>()
+            var quotationIds = Set<PersistentIdentifier>()
             for quotation in allQuotations {
                 guard let source = quotation.source, source.deletedAt == nil,
                       let author = source.author, author.deletedAt == nil else { continue }
@@ -62,22 +69,19 @@ final class SearchState {
                 let titleMatch = source.title.lowercased().contains(lower)
                 let authorMatch = author.name.lowercased().contains(lower)
                 if contentMatch || titleMatch || authorMatch {
-                    results.append(SearchResultItem(quotation: quotation, source: source))
+                    results.append(SearchResultItem(
+                        quotationId: quotation.persistentModelID,
+                        sourceId: source.persistentModelID
+                    ))
+                    authorIds.insert(author.persistentModelID)
+                    sourceIds.insert(source.persistentModelID)
+                    quotationIds.insert(quotation.persistentModelID)
                 }
             }
 
             guard !Task.isCancelled else { return }
             searchResults = results
             isSearching = false
-
-            var authorIds = Set<PersistentIdentifier>()
-            var sourceIds = Set<PersistentIdentifier>()
-            var quotationIds = Set<PersistentIdentifier>()
-            for r in results {
-                if let aid = r.source.author?.id { authorIds.insert(aid) }
-                sourceIds.insert(r.source.id)
-                quotationIds.insert(r.quotation.id)
-            }
             matchSets = MatchSets(authorIds: authorIds, sourceIds: sourceIds, quotationIds: quotationIds)
         }
     }

@@ -22,11 +22,17 @@ struct AuthorListView: View {
     @State private var errorMessage: String?
     @State private var showError = false
 
-    private func sourceCount(for author: Author) -> Int {
-        sources.filter { $0.author?.id == author.id }.count
+    private var sourceCountsByAuthor: [PersistentIdentifier: Int] {
+        var counts: [PersistentIdentifier: Int] = [:]
+        for source in sources {
+            guard let authorId = source.author?.id else { continue }
+            counts[authorId, default: 0] += 1
+        }
+        return counts
     }
 
     var body: some View {
+        let counts = sourceCountsByAuthor
         VStack(spacing: 0) {
             HStack {
                 Text("Authors")
@@ -56,7 +62,7 @@ struct AuthorListView: View {
             } else {
                 List {
                     ForEach(authors) { author in
-                        let count = sourceCount(for: author)
+                        let count = counts[author.id] ?? 0
                         VStack(alignment: .leading, spacing: 2) {
                             Text(author.name)
                             Text(count == 1 ? "1 source" : "\(count) sources")
@@ -66,7 +72,7 @@ struct AuthorListView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                         .contextMenu {
-                            Button("Edit...") {
+                            Button("Edit…") {
                                 authorToEdit = author
                             }
                             Button("Delete", role: .destructive) {
@@ -99,8 +105,13 @@ struct AuthorListView: View {
         .confirmationDialog("Delete Author?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let author = authorToDelete {
-                    author.deletedAt = Date()
-                    try? modelContext.save()
+                    do {
+                        try SoftDelete.author(author, in: modelContext)
+                        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        showError = true
+                    }
                 }
                 authorToDelete = nil
             }
@@ -109,9 +120,9 @@ struct AuthorListView: View {
             }
         } message: {
             if let author = authorToDelete {
-                let count = sourceCount(for: author)
+                let count = sourceCountsByAuthor[author.id] ?? 0
                 if count > 0 {
-                    Text("\(author.name) is used by \(count == 1 ? "1 source" : "\(count) sources"). The author will be removed but those sources will remain.")
+                    Text("\(author.name) and \(count == 1 ? "1 source" : "\(count) sources") with all quotations will be removed.")
                 } else {
                     Text("\(author.name) will be removed.")
                 }

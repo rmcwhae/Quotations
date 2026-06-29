@@ -6,6 +6,8 @@
 import SwiftData
 import SwiftUI
 
+private let locationDebounceInterval: Duration = .milliseconds(500)
+
 struct QuotationInspectorView: View {
     let quotation: Quotation?
     @Binding var selectedQuotationId: PersistentIdentifier?
@@ -13,6 +15,7 @@ struct QuotationInspectorView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var location = ""
     @State private var showDeleteConfirmation = false
+    @State private var locationSaveTask: Task<Void, Never>?
     @FocusState private var isLocationFocused: Bool
 
     var body: some View {
@@ -40,14 +43,13 @@ struct QuotationInspectorView: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 FormFieldRow(label: "Location") {
-                    TextField("", text: $location)
+                    TextField("Location", text: $location)
                         .textFieldStyle(.plain)
                         .tint(AppColors.highlightColor)
-                        .focused($isLocationFocused)
-                        .formInputStyle(maxWidth: 160)
+                        .formInputStyle(maxWidth: 160, isFocused: $isLocationFocused)
                         .accessibilityHint("Page number or percentage")
                         .onChange(of: location) { _, _ in
-                            applyLocation(to: quotation)
+                            scheduleLocationSave(for: quotation)
                         }
                 }
 
@@ -95,21 +97,34 @@ struct QuotationInspectorView: View {
         .onAppear {
             syncFromQuotation(quotation)
         }
-        .onChange(of: selectedQuotationId) { _, _ in
-            if let q = self.quotation {
-                syncFromQuotation(q)
+        .onChange(of: selectedQuotationId) { _, newId in
+            guard let newId,
+                  let resolved = modelContext.model(for: newId) as? Quotation else { return }
+            syncFromQuotation(resolved)
+        }
+        .onChange(of: isLocationFocused) { _, focused in
+            if !focused {
+                locationSaveTask?.cancel()
+                applyLocation(to: quotation)
             }
         }
-        .confirmationDialog("Delete this quotation?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                quotation.deletedAt = Date()
-                quotation.updatedAt = Date()
-                try? modelContext.save()
+        .onDisappear {
+            locationSaveTask?.cancel()
+            applyLocation(to: quotation)
+        }
+        .confirmationDialog("Remove quotation?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) {
+                do {
+                    try SoftDelete.quotation(quotation, in: modelContext)
+                    NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
+                } catch {
+                    print("Failed to delete quotation: \(error)")
+                }
                 selectedQuotationId = nil
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This action cannot be undone.")
+            Text("This quotation will be removed from your library.")
         }
     }
 
@@ -130,11 +145,23 @@ struct QuotationInspectorView: View {
         location = quotation.location ?? ""
     }
 
+    private func scheduleLocationSave(for quotation: Quotation) {
+        locationSaveTask?.cancel()
+        locationSaveTask = Task {
+            try? await Task.sleep(for: locationDebounceInterval)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                applyLocation(to: quotation)
+            }
+        }
+    }
+
     private func applyLocation(to quotation: Quotation) {
         let trimmed = location.trimmingCharacters(in: .whitespacesAndNewlines)
         quotation.location = trimmed.isEmpty ? nil : trimmed
         quotation.updatedAt = Date()
         try? modelContext.save()
+        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
     }
 }
 
