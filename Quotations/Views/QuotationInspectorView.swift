@@ -37,12 +37,11 @@ struct QuotationInspectorView: View {
     @ViewBuilder
     private func inspectorForm(for quotation: Quotation) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            inspectorRow(label: "Page number or percentage") {
+            FormFieldRow(label: "Page number or percentage") {
                 TextField("", text: $location)
-                    .textFieldStyle(.roundedBorder)
+                    .textFieldStyle(.plain)
                     .tint(AppColors.highlightColor)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 160, alignment: .trailing)
+                    .formInputStyle(maxWidth: 160)
                     .onChange(of: location) { _, _ in
                         applyLocation(to: quotation)
                     }
@@ -96,15 +95,6 @@ struct QuotationInspectorView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This action cannot be undone.")
-        }
-    }
-
-    private func inspectorRow<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text(label)
-                .font(.subheadline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            content()
         }
     }
 

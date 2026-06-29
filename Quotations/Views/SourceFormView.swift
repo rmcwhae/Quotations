@@ -47,79 +47,99 @@ struct SourceFormView: View {
     }
 
     private let monthSymbols = Calendar.current.monthSymbols
+    /// Reading years limited to the last 15 years (most recent first).
     private var yearRange: [Int] {
         let currentYear = Calendar.current.component(.year, from: Date())
-        return Array((1950...(currentYear + 1)).reversed())
+        return Array(((currentYear - 15)...currentYear).reversed())
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            TextField("Author", text: $authorText)
-                .textContentType(.name)
-                .focused($isAuthorFieldFocused)
-                .textInputSuggestions {
-                    if authorInputChangedSinceFocus {
-                        ForEach(authorSuggestions, id: \.id) { author in
-                            Text(author.name)
-                                .textInputCompletion(author.name)
+            FormFieldRow(label: "Author") {
+                TextField("", text: $authorText)
+                    .textFieldStyle(.plain)
+                    .textContentType(.name)
+                    .focused($isAuthorFieldFocused)
+                    .textInputSuggestions {
+                        if authorInputChangedSinceFocus {
+                            ForEach(authorSuggestions, id: \.id) { author in
+                                Text(author.name)
+                                    .textInputCompletion(author.name)
+                            }
                         }
                     }
-                }
-                .onChange(of: isAuthorFieldFocused) { _, newValue in
-                    if newValue { authorInputChangedSinceFocus = false }
-                }
-                .onChange(of: authorText) { _, newValue in
-                    if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
-                    if let sel = selectedAuthor, sel.name != newValue {
-                        selectedAuthorId = nil
+                    .onChange(of: isAuthorFieldFocused) { _, newValue in
+                        if newValue { authorInputChangedSinceFocus = false }
                     }
-                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if let author = authors.first(where: { $0.name == trimmed }) {
-                        selectedAuthorId = author.id
-                        isAuthorFieldFocused = false
+                    .onChange(of: authorText) { _, newValue in
+                        if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
+                        if let sel = selectedAuthor, sel.name != newValue {
+                            selectedAuthorId = nil
+                        }
+                        let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if let author = authors.first(where: { $0.name == trimmed }) {
+                            selectedAuthorId = author.id
+                            isAuthorFieldFocused = false
+                        }
                     }
-                }
-                .onChange(of: selectedAuthorId) { _, newValue in
-                    if let id = newValue, let a = authors.first(where: { $0.id == id }) {
-                        authorText = a.name
+                    .onChange(of: selectedAuthorId) { _, newValue in
+                        if let id = newValue, let a = authors.first(where: { $0.id == id }) {
+                            authorText = a.name
+                        }
                     }
-                }
-
-            TextField("Title", text: $title)
-
-            TextField("URL (optional)", text: $url)
-                .textContentType(.URL)
-
-            TextField("Year", text: $publicationYear)
-                .frame(width: 80)
-
-            Picker("Format", selection: $format) {
-                Text("—").tag(Optional<SourceFormat>.none)
-                ForEach(SourceFormat.allCases) { option in
-                    Text(option.rawValue).tag(Optional(option))
-                }
+                    .formInputStyle()
             }
 
-            HStack {
-                Text("Date read")
-                Spacer()
-                Picker("Month", selection: $dateReadMonth) {
-                    Text("—").tag(Optional<Int>.none)
-                    ForEach(1...12, id: \.self) { month in
-                        Text(monthSymbols[month - 1]).tag(Optional(month))
+            FormFieldRow(label: "Title") {
+                TextField("", text: $title)
+                    .textFieldStyle(.plain)
+                    .formInputStyle()
+            }
+
+            FormFieldRow(label: "URL") {
+                TextField("", text: $url)
+                    .textFieldStyle(.plain)
+                    .textContentType(.URL)
+                    .formInputStyle()
+            }
+
+            FormFieldRow(label: "Publication year") {
+                TextField("", text: $publicationYear)
+                    .textFieldStyle(.plain)
+                    .formInputStyle(maxWidth: 80)
+            }
+
+            FormFieldRow(label: "Format") {
+                Picker("", selection: $format) {
+                    Text("—").tag(Optional<SourceFormat>.none)
+                    ForEach(SourceFormat.allCases) { option in
+                        Text(option.rawValue).tag(Optional(option))
                     }
                 }
                 .labelsHidden()
-                .frame(width: 120)
+                .frame(maxWidth: 160, alignment: .trailing)
+            }
 
-                Picker("Year", selection: $dateReadYear) {
+            FormFieldRow(label: "Year read") {
+                Picker("", selection: $dateReadYear) {
                     Text("—").tag(Optional<Int>.none)
                     ForEach(yearRange, id: \.self) { year in
                         Text(String(year)).tag(Optional(year))
                     }
                 }
                 .labelsHidden()
-                .frame(width: 80)
+                .frame(maxWidth: 120, alignment: .trailing)
+            }
+
+            FormFieldRow(label: "Month read") {
+                Picker("", selection: $dateReadMonth) {
+                    Text("—").tag(Optional<Int>.none)
+                    ForEach(1...12, id: \.self) { month in
+                        Text(monthSymbols[month - 1]).tag(Optional(month))
+                    }
+                }
+                .labelsHidden()
+                .frame(maxWidth: 140, alignment: .trailing)
             }
 
             HStack {

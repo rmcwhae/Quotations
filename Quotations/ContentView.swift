@@ -239,7 +239,7 @@ struct ContentView: View {
                 }
             )
             .padding()
-            .frame(minWidth: 320, minHeight: 380)
+            .frame(minWidth: 360, minHeight: 420)
         }
         .confirmationDialog("Delete Source?", isPresented: $showDeleteSourceConfirmation, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
