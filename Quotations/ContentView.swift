@@ -196,6 +196,7 @@ struct ContentView: View {
                 AppColors.mainBackground(colorScheme: colorScheme)
                     .ignoresSafeArea(.container, edges: .top)
             )
+            .toolbarBackground(.hidden, for: .windowToolbar)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
