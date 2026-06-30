@@ -14,7 +14,7 @@ enum LibraryFilterResolver {
     ) -> [Source] {
         let active = sources.filter { $0.deletedAt == nil }
         switch filter {
-        case .recentReads:
+        case .quotationsBySource:
             return active.sorted(by: Source.compareByDateReadDescending)
         case .format(let format):
             return active
@@ -50,7 +50,7 @@ enum LibraryFilterResolver {
                     .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
             }
             return []
-        case .recentReads, .format:
+        case .quotationsBySource, .format:
             return []
         }
     }

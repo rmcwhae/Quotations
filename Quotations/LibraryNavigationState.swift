@@ -9,7 +9,7 @@ import SwiftData
 
 @Observable
 final class LibraryNavigationState {
-    var selectedFilter: LibraryFilter = .recentReads
+    var selectedFilter: LibraryFilter = .quotationsBySource
     var selectedSourceId: PersistentIdentifier?
     var selectedQuotationId: PersistentIdentifier?
 

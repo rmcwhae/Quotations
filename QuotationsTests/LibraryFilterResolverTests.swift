@@ -59,7 +59,7 @@ final class LibraryFilterResolverTests: XCTestCase {
 
     func testRecentReadsSortsByDateReadDescending() {
         let sources = [printSource!, koboSource!]
-        let result = LibraryFilterResolver.sources(for: .recentReads, from: sources)
+        let result = LibraryFilterResolver.sources(for: .quotationsBySource, from: sources)
         XCTAssertEqual(result.map(\.title), ["Letters", "Essays"])
     }
 
