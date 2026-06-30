@@ -1,0 +1,6 @@
+excluded:
+  - build
+  - DerivedData
+
+disabled_rules:
+  - implicit_optional_initialization

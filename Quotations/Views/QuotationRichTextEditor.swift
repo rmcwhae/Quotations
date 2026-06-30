@@ -87,7 +87,11 @@ struct QuotationRichTextEditor: NSViewRepresentable {
                 let selectAll = selectAllOnFocus
                 DispatchQueue.main.async { [weak textView] in
                     guard let textView else { return }
-                    Coordinator.applySelection(in: textView, clickWindowLocation: windowPoint, selectAllOnFocus: selectAll)
+                    Coordinator.applySelection(
+                        in: textView,
+                        clickWindowLocation: windowPoint,
+                        selectAllOnFocus: selectAll
+                    )
                 }
             }
         } else {

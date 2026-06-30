@@ -74,7 +74,11 @@ enum MarkdownCodec {
             [.font: quotationBaseFont, .paragraphStyle: paragraph, .foregroundColor: NSColor.textColor],
             range: fullRange
         )
-        source.enumerateAttribute(.font, in: NSRange(location: 0, length: source.length), options: []) { value, range, _ in
+        source.enumerateAttribute(
+            .font,
+            in: NSRange(location: 0, length: source.length),
+            options: []
+        ) { value, range, _ in
             guard let font = value as? NSFont else { return }
             let traits = font.fontDescriptor.symbolicTraits
             result.addAttribute(

@@ -40,14 +40,18 @@ struct HighlightMatch: View {
 
     private func buildAttributedString() -> AttributedString {
         var result = useMarkdown ? MarkdownCodec.attributedString(from: text) : AttributedString(text)
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return result }
+        let trimmedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedQuery.isEmpty else { return result }
 
         let plainText = String(result.characters)
         var searchStart = plainText.startIndex
 
         while searchStart < plainText.endIndex,
-              let range = plainText.range(of: q, options: .caseInsensitive, range: searchStart..<plainText.endIndex) {
+              let range = plainText.range(
+                of: trimmedQuery,
+                options: .caseInsensitive,
+                range: searchStart..<plainText.endIndex
+              ) {
             let lowerOffset = plainText.distance(from: plainText.startIndex, to: range.lowerBound)
             let upperOffset = plainText.distance(from: plainText.startIndex, to: range.upperBound)
             let attrStart = result.index(result.startIndex, offsetByCharacters: lowerOffset)

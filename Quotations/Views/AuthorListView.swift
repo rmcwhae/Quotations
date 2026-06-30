@@ -121,7 +121,10 @@ struct AuthorListView: View {
             if let author = authorToDelete {
                 let count = sourceCountsByAuthor[author.id] ?? 0
                 if count > 0 {
-                    Text("\(author.name) and \(count == 1 ? "1 source" : "\(count) sources") with all quotations will be removed.")
+                    Text(
+                        "\(author.name) and \(count == 1 ? "1 source" : "\(count) sources") " +
+                        "with all quotations will be removed."
+                    )
                 } else {
                     Text("\(author.name) will be removed.")
                 }

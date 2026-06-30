@@ -36,7 +36,17 @@ struct QuotationRowView: View {
     /// triple-click arriving right after the double-click that started editing).
     @State private var selectionRequestID = 0
 
-    init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, beginEditing: Bool = false, newQuotationId: PersistentIdentifier? = nil, onSelect: (() -> Void)? = nil, onDeselect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
+    init(
+        quotation: Quotation,
+        searchQuery: String,
+        isSelected: Bool = false,
+        beginEditing: Bool = false,
+        newQuotationId: PersistentIdentifier? = nil,
+        onSelect: (() -> Void)? = nil,
+        onDeselect: (() -> Void)? = nil,
+        onEdit: @escaping (Quotation) -> Void,
+        onDelete: @escaping (PersistentIdentifier) -> Void
+    ) {
         self.quotation = quotation
         self.searchQuery = searchQuery
         self.isSelected = isSelected
@@ -170,7 +180,7 @@ struct QuotationRowView: View {
                 editedContent = newValue
             }
         }
-        .onChange(of: editedContent) { _, newValue in
+        .onChange(of: editedContent) { _, _ in
             scheduleDebouncedSave()
         }
         .onKeyPress(.escape) {
@@ -226,10 +236,12 @@ struct QuotationRowView: View {
             .frame(maxWidth: textFieldWidth, alignment: .leading)
         }
     }
+}
 
+private extension QuotationRowView {
     /// Uses `NSEvent.clickCount` so double-clicks stay intact across the re-render from
     /// selecting a previously unselected quotation. Single-click select is immediate.
-    private func handleClick(windowPoint: CGPoint, clickCount: Int) {
+    func handleClick(windowPoint: CGPoint, clickCount: Int) {
         switch clickCount {
         case 1:
             // Always select on single click.
@@ -245,7 +257,7 @@ struct QuotationRowView: View {
         }
     }
 
-    private func beginEditing(windowPoint: CGPoint?, selectAll: Bool) {
+    func beginEditing(windowPoint: CGPoint?, selectAll: Bool) {
         if !isSelected {
             onSelect?()
         }
@@ -255,7 +267,7 @@ struct QuotationRowView: View {
         isTextFocused = true
     }
 
-    private func scheduleDebouncedSave() {
+    func scheduleDebouncedSave() {
         saveTask?.cancel()
         saveTask = Task {
             try? await Task.sleep(for: debounceInterval)
@@ -266,7 +278,7 @@ struct QuotationRowView: View {
         }
     }
 
-    private func commitEdit() {
+    func commitEdit() {
         let trimmed = editedContent.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             if isNewDraft {
@@ -283,7 +295,7 @@ struct QuotationRowView: View {
         }
     }
 
-    private func copyQuotation() {
+    func copyQuotation() {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(quotation.content, forType: .string)
     }

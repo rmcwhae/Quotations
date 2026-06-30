@@ -42,40 +42,8 @@ struct QuotationInspectorView: View {
     @ViewBuilder
     private func inspectorForm(for quotation: Quotation) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                FormFieldRow(label: "Location") {
-                    TextField("Location", text: $location)
-                        .textFieldStyle(.plain)
-                        .tint(AppColors.highlightColor)
-                        .formInputStyle(maxWidth: 160, isFocused: $isLocationFocused)
-                        .accessibilityHint("Page number or percentage")
-                        .onChange(of: location) { _, _ in
-                            scheduleLocationSave(for: quotation)
-                        }
-                }
-
-                if isLocationFocused {
-                    HStack {
-                        Spacer(minLength: 8)
-                        Text("Page number or percentage")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: 160, alignment: .trailing)
-                    }
-                }
-            }
-
-            if let source = quotation.source {
-                Text("Source Details")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                    .padding(.top, 4)
-
-                readOnlyRow(label: "Format", value: source.format ?? "—")
-                readOnlyRow(label: "Date read", value: source.formattedDateRead ?? "—")
-            }
+            locationField(for: quotation)
+            sourceDetailsSection(for: quotation)
 
             if let updated = quotation.updatedAt {
                 Text("Last updated: \(updated, style: .date) \(updated, style: .time)")
@@ -85,14 +53,7 @@ struct QuotationInspectorView: View {
 
             Spacer()
 
-            Button(role: .destructive) {
-                showDeleteConfirmation = true
-            } label: {
-                Label("Delete Quotation", systemImage: "trash")
-                    .frame(maxWidth: .infinity)
-            }
-            .accessibilityLabel("Delete quotation")
-            .help("Delete this quotation")
+            deleteQuotationButton
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .id(quotation.persistentModelID)
@@ -100,15 +61,7 @@ struct QuotationInspectorView: View {
             syncFromQuotation(quotation)
         }
         .onChange(of: selectedQuotationId) { oldId, newId in
-            if let oldId, oldId != newId,
-               let previous = modelContext.model(for: oldId) as? Quotation {
-                locationSaveTask?.cancel()
-                applyLocation(to: previous)
-            }
-            if let newId,
-               let resolved = modelContext.model(for: newId) as? Quotation {
-                syncFromQuotation(resolved)
-            }
+            handleQuotationSelectionChange(from: oldId, to: newId)
         }
         .onChange(of: isLocationFocused) { _, focused in
             if !focused {
@@ -120,19 +73,94 @@ struct QuotationInspectorView: View {
             locationSaveTask?.cancel()
             applyLocation(to: quotation)
         }
-        .confirmationDialog("Remove quotation?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+        .confirmationDialog(
+            "Remove quotation?",
+            isPresented: $showDeleteConfirmation,
+            titleVisibility: .visible
+        ) {
             Button("Remove", role: .destructive) {
-                do {
-                    try SoftDelete.quotation(quotation, in: modelContext)
-                } catch {
-                    print("Failed to delete quotation: \(error)")
-                }
-                selectedQuotationId = nil
+                deleteQuotation(quotation)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This quotation will be removed from your library.")
         }
+    }
+
+    @ViewBuilder
+    private func locationField(for quotation: Quotation) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            FormFieldRow(label: "Location") {
+                TextField("Location", text: $location)
+                    .textFieldStyle(.plain)
+                    .tint(AppColors.highlightColor)
+                    .formInputStyle(maxWidth: 160, isFocused: $isLocationFocused)
+                    .accessibilityHint("Page number or percentage")
+                    .onChange(of: location) { _, _ in
+                        scheduleLocationSave(for: quotation)
+                    }
+            }
+
+            if isLocationFocused {
+                HStack {
+                    Spacer(minLength: 8)
+                    Text("Page number or percentage")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: 160, alignment: .trailing)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func sourceDetailsSection(for quotation: Quotation) -> some View {
+        if let source = quotation.source {
+            Text("Source Details")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+                .padding(.top, 4)
+
+            readOnlyRow(label: "Format", value: source.format ?? "—")
+            readOnlyRow(label: "Date read", value: source.formattedDateRead ?? "—")
+        }
+    }
+
+    private var deleteQuotationButton: some View {
+        Button(role: .destructive) {
+            showDeleteConfirmation = true
+        } label: {
+            Label("Delete Quotation", systemImage: "trash")
+                .frame(maxWidth: .infinity)
+        }
+        .accessibilityLabel("Delete quotation")
+        .help("Delete this quotation")
+    }
+
+    private func handleQuotationSelectionChange(
+        from oldId: PersistentIdentifier?,
+        to newId: PersistentIdentifier?
+    ) {
+        if let oldId, oldId != newId,
+           let previous = modelContext.model(for: oldId) as? Quotation {
+            locationSaveTask?.cancel()
+            applyLocation(to: previous)
+        }
+        if let newId,
+           let resolved = modelContext.model(for: newId) as? Quotation {
+            syncFromQuotation(resolved)
+        }
+    }
+
+    private func deleteQuotation(_ quotation: Quotation) {
+        do {
+            try SoftDelete.quotation(quotation, in: modelContext)
+        } catch {
+            print("Failed to delete quotation: \(error)")
+        }
+        selectedQuotationId = nil
     }
 
     private func readOnlyRow(label: String, value: String) -> some View {

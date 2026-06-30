@@ -48,22 +48,22 @@ struct AuthorFormView: View {
     }
 
     private func submit() {
-        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !n.isEmpty else {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty else {
             onError("Name is required.")
             return
         }
         if existingAuthor == nil,
-           authors.contains(where: { $0.name.lowercased() == n.lowercased() }) {
+           authors.contains(where: { $0.name.lowercased() == trimmedName.lowercased() }) {
             onError("An author with this name already exists.")
             return
         }
         do {
             if let existing = existingAuthor {
-                existing.name = n
+                existing.name = trimmedName
                 existing.updatedAt = Date()
             } else {
-                let author = Author(name: n)
+                let author = Author(name: trimmedName)
                 modelContext.insert(author)
             }
             try modelContext.saveAndNotify()

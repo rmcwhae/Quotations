@@ -15,7 +15,7 @@ struct QuotationsApp: App {
         let schema = Schema([
             Author.self,
             Source.self,
-            Quotation.self,
+            Quotation.self
         ])
         let persistentConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -38,7 +38,9 @@ struct QuotationsApp: App {
                     storeURL: fallbackConfiguration.url
                 )
                 sharedModelContainer = container
-                containerLoadWarning = "Your library could not be opened (\(error.localizedDescription)). A temporary in-memory library is being used instead."
+                containerLoadWarning =
+                    "Your library could not be opened (\(error.localizedDescription)). " +
+                    "A temporary in-memory library is being used instead."
             } catch {
                 fatalError("Could not create ModelContainer: \(error)")
             }

@@ -47,7 +47,13 @@ struct QuotationListView: View {
     @Query private var quotations: [Quotation]
     @Environment(\.modelContext) private var modelContext
 
-    init(source: Source, searchQuery: String, quotationIdsFilter: Set<PersistentIdentifier>? = nil, selectedQuotationId: Binding<PersistentIdentifier?>, newQuotationId: PersistentIdentifier? = nil) {
+    init(
+        source: Source,
+        searchQuery: String,
+        quotationIdsFilter: Set<PersistentIdentifier>? = nil,
+        selectedQuotationId: Binding<PersistentIdentifier?>,
+        newQuotationId: PersistentIdentifier? = nil
+    ) {
         self.source = source
         self.searchQuery = searchQuery
         self.quotationIdsFilter = quotationIdsFilter
@@ -55,8 +61,8 @@ struct QuotationListView: View {
         self.newQuotationId = newQuotationId
         let sourceId = source.persistentModelID
         _quotations = Query(
-            filter: #Predicate<Quotation> { q in
-                q.deletedAt == nil && q.source?.persistentModelID == sourceId
+            filter: #Predicate<Quotation> { quotation in
+                quotation.deletedAt == nil && quotation.source?.persistentModelID == sourceId
             },
             sort: [SortDescriptor(\.createdAt, order: .reverse)]
         )

@@ -39,8 +39,8 @@ final class SearchState {
     }
 
     func runSearchIfNeeded(modelContext: ModelContext) {
-        let q = trimmedQuery
-        if q.isEmpty {
+        let trimmed = trimmedQuery
+        if trimmed.isEmpty {
             searchTask?.cancel()
             searchTask = nil
             clearResults()
@@ -58,7 +58,7 @@ final class SearchState {
             guard !Task.isCancelled else { return }
 
             let descriptor = FetchDescriptor<Quotation>(
-                predicate: #Predicate<Quotation> { q in q.deletedAt == nil },
+                predicate: #Predicate<Quotation> { quotation in quotation.deletedAt == nil },
                 sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
             )
 
@@ -66,7 +66,7 @@ final class SearchState {
                 let allQuotations = try modelContext.fetch(descriptor)
                 guard !Task.isCancelled else { return }
 
-                let match = SearchMatcher.match(quotations: allQuotations, query: q)
+                let match = SearchMatcher.match(quotations: allQuotations, query: trimmed)
                 searchResults = match.results
                 matchSets = match.matchSets
                 quotationsBySourceId = match.quotationsBySourceId

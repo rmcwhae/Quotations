@@ -22,7 +22,8 @@ struct SourceFormView: View {
     @State private var dateReadMonth: Int?
     @State private var dateReadYear: Int?
     @State private var hasPrefilled = false
-    /// Only true after the user has changed the author text while the field is focused (not on initial focus or prefill).
+    /// Only true after the user has changed the author text while the field is focused
+    /// (not on initial focus or prefill).
     @State private var authorInputChangedSinceFocus = false
     @FocusState private var isAuthorFieldFocused: Bool
 
@@ -82,8 +83,8 @@ struct SourceFormView: View {
                         }
                     }
                     .onChange(of: selectedAuthorId) { _, newValue in
-                        if let id = newValue, let a = authors.first(where: { $0.id == id }) {
-                            authorText = a.name
+                        if let id = newValue, let author = authors.first(where: { $0.id == id }) {
+                            authorText = author.name
                         }
                     }
                     .formInputStyle(isFocused: $isAuthorFieldFocused)
@@ -180,36 +181,39 @@ struct SourceFormView: View {
         }
     }
 
+    private func resolveAuthor(named authorName: String) -> Author {
+        let normalizedAuthorName = authorName.lowercased()
+        if let existing = selectedAuthor, existing.name.lowercased() == normalizedAuthorName {
+            return existing
+        }
+        if let existing = authors.first(where: { $0.name.lowercased() == normalizedAuthorName }) {
+            return existing
+        }
+        let author = Author(name: authorName)
+        modelContext.insert(author)
+        return author
+    }
+
     private func submit() {
         let authorName = authorText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !authorName.isEmpty else {
             onError("Author is required.")
             return
         }
-        let t = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty else {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTitle.isEmpty else {
             onError("Title is required.")
             return
         }
 
-        let author: Author
-        let normalizedAuthorName = authorName.lowercased()
-        if let existing = selectedAuthor, existing.name.lowercased() == normalizedAuthorName {
-            author = existing
-        } else if let existing = authors.first(where: { $0.name.lowercased() == normalizedAuthorName }) {
-            author = existing
-        } else {
-            author = Author(name: authorName)
-            modelContext.insert(author)
-        }
-
+        let author = resolveAuthor(named: authorName)
         let year = Int(publicationYear.trimmingCharacters(in: .whitespacesAndNewlines))
-        let u = url.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
 
         if let existing = existingSource {
-            existing.title = t
+            existing.title = trimmedTitle
             existing.author = author
-            existing.url = u.isEmpty ? nil : u
+            existing.url = trimmedURL.isEmpty ? nil : trimmedURL
             existing.publicationYear = year
             existing.format = format?.rawValue
             existing.dateReadMonth = dateReadMonth
@@ -217,9 +221,9 @@ struct SourceFormView: View {
             existing.updatedAt = Date()
         } else {
             let source = Source(
-                title: t,
+                title: trimmedTitle,
                 author: author,
-                url: u.isEmpty ? nil : u,
+                url: trimmedURL.isEmpty ? nil : trimmedURL,
                 publicationYear: year,
                 format: format?.rawValue,
                 dateReadMonth: dateReadMonth,

@@ -87,151 +87,9 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            List {
-                if showSourceForm {
-                    SourceFormView(
-                        onSuccess: {
-                            showSourceForm = false
-                        },
-                        onCancel: {
-                            showSourceForm = false
-                        },
-                        onError: { message in
-                            errorMessage = message
-                            showError = true
-                        }
-                    )
-                    .listRowSeparator(.hidden)
-                }
-
-                ForEach(filteredSources) { source in
-                    SourceListRowView(
-                        source: source,
-                        searchQuery: searchState.query,
-                        isSelected: source.id == selectedSourceId
-                    )
-                    .tag(source.id)
-                    .listRowBackground(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(source.id == selectedSourceId ? AppColors.selectionBackground : Color.clear)
-                            .padding(.horizontal, 4)
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedSourceId = source.id
-                    }
-                    .contextMenu {
-                        Button("Edit…") {
-                            sourceToEdit = source
-                        }
-                        Button("Delete", role: .destructive) {
-                            sourceToDelete = source
-                            showDeleteSourceConfirmation = true
-                        }
-                    }
-                }
-            }
-            .overlay {
-                if sources.isEmpty && !showSourceForm
-                    && searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Text("No sources yet.")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .overlay(alignment: .top) {
-                if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                   !searchState.isSearching,
-                   searchState.searchResults.isEmpty {
-                    Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
-                        .foregroundStyle(.secondary)
-                        .font(.caption)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 300, max: 500)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showSourceForm = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Create source")
-                    .help("Add source")
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showAuthorList = true
-                    } label: {
-                        Image(systemName: "person.2")
-                    }
-                    .accessibilityLabel("Manage authors")
-                    .help("Manage authors")
-                }
-            }
+            sourceSidebar
         } detail: {
-            Group {
-                if isSearchActive {
-                    UnifiedSearchResultsView(
-                        sources: filteredSources,
-                        searchQuery: searchState.query,
-                        quotationsBySourceId: searchState.quotationsBySourceId,
-                        selectedQuotationId: $selectedQuotationId,
-                        newQuotationId: newQuotationId,
-                        statusMessage: filteredSources.isEmpty
-                            ? (searchState.isSearching ? "Searching…" : "No results")
-                            : nil
-                    )
-                } else if let source = selectedSource {
-                    SourceDetailView(
-                        source: source,
-                        searchQuery: searchState.query,
-                        quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds,
-                        selectedQuotationId: $selectedQuotationId,
-                        newQuotationId: newQuotationId
-                    )
-                } else {
-                    emptyDetail("Select a source")
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                AppColors.mainBackground(colorScheme: colorScheme)
-                    .ignoresSafeArea(.container, edges: .top)
-            )
-            .toolbarBackground(.hidden, for: .windowToolbar)
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        addQuotation()
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                    .accessibilityLabel("Add quotation")
-                    .help("Add quotation")
-                    .disabled(selectedSource == nil || isSearchActive)
-                    .opacity(selectedSource == nil || isSearchActive ? 0 : 1)
-                    .accessibilityHidden(selectedSource == nil || isSearchActive)
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { isInspectorShown.toggle() }) {
-                        Label("Toggle Inspector", systemImage: "sidebar.trailing")
-                    }
-                    .accessibilityLabel(isInspectorShown ? "Hide inspector" : "Show inspector")
-                    .help(isInspectorShown ? "Hide Inspector" : "Show Inspector")
-                }
-            }
-            .inspector(isPresented: $isInspectorShown) {
-                QuotationInspectorView(
-                    quotation: selectedQuotation,
-                    selectedQuotationId: $selectedQuotationId
-                )
-                .padding()
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .inspectorColumnWidth(min: 220, ideal: 300, max: 420)
-            }
+            detailPane
         }
         .onKeyPress(.escape) {
             guard selectedQuotationId != nil else { return .ignored }
@@ -261,49 +119,240 @@ struct ContentView: View {
             }
         }
         .navigationTitle("")
-        .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            if let errorMessage {
-                Text(errorMessage)
+        .modifier(ContentViewSheetsModifier(
+            showError: $showError,
+            errorMessage: errorMessage,
+            showAuthorList: $showAuthorList,
+            sourceToEdit: $sourceToEdit,
+            showDeleteSourceConfirmation: $showDeleteSourceConfirmation,
+            sourceToDelete: $sourceToDelete,
+            selectedSourceId: $selectedSourceId,
+            selectedQuotationId: $selectedQuotationId,
+            modelContext: modelContext,
+            onEditError: { message in
+                errorMessage = message
+                showError = true
             }
-        }
-        .sheet(isPresented: $showAuthorList) {
-            AuthorListView(onDismiss: { showAuthorList = false })
-        }
-        .sheet(item: $sourceToEdit) { source in
-            SourceFormView(
-                existingSource: source,
-                onSuccess: {
-                    sourceToEdit = nil
-                },
-                onCancel: {
-                    sourceToEdit = nil
-                },
-                onError: { message in
-                    errorMessage = message
-                    showError = true
-                }
-            )
-            .padding()
-            .frame(minWidth: 360, minHeight: 420)
-        }
-        .confirmationDialog("Delete Source?", isPresented: $showDeleteSourceConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive) {
-                if let source = sourceToDelete {
-                    let sourceId = source.persistentModelID
-                    do {
-                        try SoftDelete.source(source, in: modelContext)
-                    } catch {
-                        errorMessage = error.localizedDescription
+        ))
+    }
+}
+
+private extension ContentView {
+    var sourceSidebar: some View {
+        List {
+            if showSourceForm {
+                SourceFormView(
+                    onSuccess: {
+                        showSourceForm = false
+                    },
+                    onCancel: {
+                        showSourceForm = false
+                    },
+                    onError: { message in
+                        errorMessage = message
                         showError = true
                     }
-                    if selectedSourceId == sourceId {
-                        selectedSourceId = nil
-                        selectedQuotationId = nil
+                )
+                .listRowSeparator(.hidden)
+            }
+
+            ForEach(filteredSources) { source in
+                SourceListRowView(
+                    source: source,
+                    searchQuery: searchState.query,
+                    isSelected: source.id == selectedSourceId
+                )
+                .tag(source.id)
+                .listRowBackground(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(source.id == selectedSourceId ? AppColors.selectionBackground : Color.clear)
+                        .padding(.horizontal, 4)
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedSourceId = source.id
+                }
+                .contextMenu {
+                    Button("Edit…") {
+                        sourceToEdit = source
+                    }
+                    Button("Delete", role: .destructive) {
+                        sourceToDelete = source
+                        showDeleteSourceConfirmation = true
                     }
                 }
-                sourceToDelete = nil
+            }
+        }
+        .overlay {
+            if sources.isEmpty && !showSourceForm
+                && searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text("No sources yet.")
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .overlay(alignment: .top) {
+            if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               !searchState.isSearching,
+               searchState.searchResults.isEmpty {
+                Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .navigationSplitViewColumnWidth(min: 200, ideal: 300, max: 500)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showSourceForm = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Create source")
+                .help("Add source")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showAuthorList = true
+                } label: {
+                    Image(systemName: "person.2")
+                }
+                .accessibilityLabel("Manage authors")
+                .help("Manage authors")
+            }
+        }
+    }
+
+    var detailPane: some View {
+        Group {
+            if isSearchActive {
+                UnifiedSearchResultsView(
+                    sources: filteredSources,
+                    searchQuery: searchState.query,
+                    quotationsBySourceId: searchState.quotationsBySourceId,
+                    selectedQuotationId: $selectedQuotationId,
+                    newQuotationId: newQuotationId,
+                    statusMessage: filteredSources.isEmpty
+                        ? (searchState.isSearching ? "Searching…" : "No results")
+                        : nil
+                )
+            } else if let source = selectedSource {
+                SourceDetailView(
+                    source: source,
+                    searchQuery: searchState.query,
+                    quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds,
+                    selectedQuotationId: $selectedQuotationId,
+                    newQuotationId: newQuotationId
+                )
+            } else {
+                emptyDetail("Select a source")
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(
+            AppColors.mainBackground(colorScheme: colorScheme)
+                .ignoresSafeArea(.container, edges: .top)
+        )
+        .toolbarBackground(.hidden, for: .windowToolbar)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    addQuotation()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add quotation")
+                .help("Add quotation")
+                .disabled(selectedSource == nil || isSearchActive)
+                .opacity(selectedSource == nil || isSearchActive ? 0 : 1)
+                .accessibilityHidden(selectedSource == nil || isSearchActive)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button(
+                    action: { isInspectorShown.toggle() },
+                    label: {
+                        Label("Toggle Inspector", systemImage: "sidebar.trailing")
+                    }
+                )
+                .accessibilityLabel(isInspectorShown ? "Hide inspector" : "Show inspector")
+                .help(isInspectorShown ? "Hide Inspector" : "Show Inspector")
+            }
+        }
+        .inspector(isPresented: $isInspectorShown) {
+            QuotationInspectorView(
+                quotation: selectedQuotation,
+                selectedQuotationId: $selectedQuotationId
+            )
+            .padding()
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .inspectorColumnWidth(min: 220, ideal: 300, max: 420)
+        }
+    }
+}
+
+private struct ContentViewSheetsModifier: ViewModifier {
+    @Binding var showError: Bool
+    let errorMessage: String?
+    @Binding var showAuthorList: Bool
+    @Binding var sourceToEdit: Source?
+    @Binding var showDeleteSourceConfirmation: Bool
+    @Binding var sourceToDelete: Source?
+    @Binding var selectedSourceId: PersistentIdentifier?
+    @Binding var selectedQuotationId: PersistentIdentifier?
+    let modelContext: ModelContext
+    let onEditError: (String) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let errorMessage {
+                    Text(errorMessage)
+                }
+            }
+            .sheet(isPresented: $showAuthorList) {
+                AuthorListView(onDismiss: { showAuthorList = false })
+            }
+            .sheet(item: $sourceToEdit) { source in
+                SourceFormView(
+                    existingSource: source,
+                    onSuccess: { sourceToEdit = nil },
+                    onCancel: { sourceToEdit = nil },
+                    onError: onEditError
+                )
+                .padding()
+                .frame(minWidth: 360, minHeight: 420)
+            }
+            .modifier(DeleteSourceConfirmationModifier(
+                isPresented: $showDeleteSourceConfirmation,
+                sourceToDelete: $sourceToDelete,
+                selectedSourceId: $selectedSourceId,
+                selectedQuotationId: $selectedQuotationId,
+                modelContext: modelContext,
+                onEditError: onEditError
+            ))
+    }
+}
+
+private struct DeleteSourceConfirmationModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    @Binding var sourceToDelete: Source?
+    @Binding var selectedSourceId: PersistentIdentifier?
+    @Binding var selectedQuotationId: PersistentIdentifier?
+    let modelContext: ModelContext
+    let onEditError: (String) -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(
+            "Delete Source?",
+            isPresented: $isPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                deleteSelectedSource()
             }
             Button("Cancel", role: .cancel) {
                 sourceToDelete = nil
@@ -314,10 +363,25 @@ struct ContentView: View {
             }
         }
     }
+
+    private func deleteSelectedSource() {
+        if let source = sourceToDelete {
+            let sourceId = source.persistentModelID
+            do {
+                try SoftDelete.source(source, in: modelContext)
+            } catch {
+                onEditError(error.localizedDescription)
+            }
+            if selectedSourceId == sourceId {
+                selectedSourceId = nil
+                selectedQuotationId = nil
+            }
+        }
+        sourceToDelete = nil
+    }
 }
 
 #Preview {
     ContentView()
         .modelContainer(for: [Author.self, Source.self, Quotation.self], inMemory: true)
 }
-
