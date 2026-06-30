@@ -52,7 +52,7 @@ struct ContentView: View {
         VStack(spacing: 12) {
             Text("Quotations")
                 .font(.system(size: 56, weight: .regular, design: .serif).italic())
-                .foregroundStyle(AppColors.quoteGlyph)
+                .foregroundStyle(.tertiary)
             Text(message)
                 .font(.title2)
                 .foregroundStyle(.secondary)
