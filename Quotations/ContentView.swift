@@ -233,8 +233,6 @@ private extension ContentView {
                 .accessibilityLabel("Add quotation")
                 .help("Add quotation")
                 .disabled(selectedSource == nil)
-                .opacity(selectedSource == nil ? 0 : 1)
-                .accessibilityHidden(selectedSource == nil)
             }
             ToolbarItem(placement: .primaryAction) {
                 Button(
