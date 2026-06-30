@@ -75,4 +75,25 @@ final class Source {
             return nil
         }
     }
+
+    /// Higher values sort earlier when ordering by date read (reverse chronological).
+    var dateReadSortKey: Int {
+        switch (dateReadYear, dateReadMonth) {
+        case let (year?, month?) where (1...12).contains(month):
+            return year * 100 + month
+        case let (year?, nil):
+            return year * 100
+        case let (nil, month?) where (1...12).contains(month):
+            return month
+        default:
+            return Int.min
+        }
+    }
+
+    static func compareByDateReadDescending(_ lhs: Source, _ rhs: Source) -> Bool {
+        if lhs.dateReadSortKey != rhs.dateReadSortKey {
+            return lhs.dateReadSortKey > rhs.dateReadSortKey
+        }
+        return (lhs.createdAt ?? .distantPast) > (rhs.createdAt ?? .distantPast)
+    }
 }

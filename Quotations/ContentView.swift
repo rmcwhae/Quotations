@@ -12,8 +12,7 @@ struct ContentView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(BackupManager.self) private var backupManager
 
-    @Query(filter: #Predicate<Source> { $0.deletedAt == nil },
-           sort: [SortDescriptor(\.createdAt, order: .reverse)])
+    @Query(filter: #Predicate<Source> { $0.deletedAt == nil })
     private var sources: [Source]
 
     @State private var searchState = SearchState()
@@ -38,8 +37,9 @@ struct ContentView: View {
     }
 
     private var filteredSources: [Source] {
-        guard let sets = searchState.matchSetsForQuery() else { return sources }
-        return sources.filter { sets.sourceIds.contains($0.id) }
+        let sorted = sources.sorted(by: Source.compareByDateReadDescending)
+        guard let sets = searchState.matchSetsForQuery() else { return sorted }
+        return sorted.filter { sets.sourceIds.contains($0.id) }
     }
 
     private var selectedSource: Source? {
