@@ -65,7 +65,7 @@ struct LibraryContextListView: View {
             if !filter.showsQuotations {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: onAddSource) {
-                        Image(systemName: "plus")
+                        Image(systemName: "book.badge.plus")
                     }
                     .accessibilityLabel("Create source")
                     .help("Add source")

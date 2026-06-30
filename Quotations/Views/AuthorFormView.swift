@@ -26,7 +26,9 @@ struct AuthorFormView: View {
             TextField("Author name", text: $name)
         }
         .formStyle(.grouped)
-        .frame(minWidth: 280, minHeight: 120)
+        .contentMargins(.bottom, 0, for: .scrollContent)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(minWidth: 280)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { onCancel() }

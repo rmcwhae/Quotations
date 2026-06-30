@@ -26,7 +26,7 @@ enum LibraryFilter: Hashable, Identifiable {
 
     var title: String {
         switch self {
-        case .allQuotes: "All Quotes"
+        case .allQuotes: "All Quotations"
         case .quotationsBySource: "Quotations by Source"
         case .recentlyAdded: "Recently Added"
         case .format(let format): format.rawValue

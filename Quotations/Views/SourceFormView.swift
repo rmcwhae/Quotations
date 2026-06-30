@@ -116,7 +116,9 @@ struct SourceFormView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(minWidth: 360, minHeight: 420)
+        .contentMargins(.bottom, 0, for: .scrollContent)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(minWidth: 360)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { onCancel() }
