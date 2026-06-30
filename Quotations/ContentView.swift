@@ -120,7 +120,6 @@ struct ContentView: View {
             LibraryFilterSidebarView(
                 navigation: navigation,
                 isSearchActive: isSearchActive,
-                onManageAuthors: { showAuthorList = true },
                 onSelectFilter: selectFilter
             )
         } content: {
@@ -132,6 +131,7 @@ struct ContentView: View {
                 selectedSourceId: $navigation.selectedSourceId,
                 selectedQuotationId: $navigation.selectedQuotationId,
                 showSourceForm: $showSourceForm,
+                onManageAuthors: { showAuthorList = true },
                 onSourceEdit: { sourceToEdit = $0 },
                 onSourceDelete: { source in
                     sourceToDelete = source

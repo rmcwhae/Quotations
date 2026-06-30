@@ -10,7 +10,6 @@ import SwiftUI
 struct LibraryFilterSidebarView: View {
     @Bindable var navigation: LibraryNavigationState
     let isSearchActive: Bool
-    var onManageAuthors: () -> Void
     var onSelectFilter: (LibraryFilter) -> Void
 
     var body: some View {
@@ -34,15 +33,6 @@ struct LibraryFilterSidebarView: View {
             }
         }
         .navigationSplitViewColumnWidth(min: 160, ideal: 200, max: 260)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: onManageAuthors) {
-                    Image(systemName: "person.2")
-                }
-                .accessibilityLabel("Manage authors")
-                .help("Manage authors")
-            }
-        }
     }
 
     @ViewBuilder

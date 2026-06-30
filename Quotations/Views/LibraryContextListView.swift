@@ -16,6 +16,7 @@ struct LibraryContextListView: View {
     @Binding var selectedSourceId: PersistentIdentifier?
     @Binding var selectedQuotationId: PersistentIdentifier?
     @Binding var showSourceForm: Bool
+    var onManageAuthors: () -> Void
     var onSourceEdit: (Source) -> Void
     var onSourceDelete: (Source) -> Void
     var onError: (String) -> Void
@@ -64,6 +65,13 @@ struct LibraryContextListView: View {
         .overlay { emptyOverlay }
         .navigationSplitViewColumnWidth(min: 220, ideal: 300, max: 420)
         .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: onManageAuthors) {
+                    Image(systemName: "person.2")
+                }
+                .accessibilityLabel("Manage authors")
+                .help("Manage authors")
+            }
             ToolbarItem(placement: .primaryAction) {
                 Button { showSourceForm = true } label: {
                     Image(systemName: "plus")
