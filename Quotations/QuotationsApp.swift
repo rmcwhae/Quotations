@@ -10,6 +10,7 @@ import SwiftData
 struct QuotationsApp: App {
     private let sharedModelContainer: ModelContainer
     private let containerLoadWarning: String?
+    private let backupManager: BackupManager
 
     init() {
         let schema = Schema([
@@ -18,6 +19,8 @@ struct QuotationsApp: App {
             Quotation.self
         ])
         let persistentConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+        BackupManager.applyPendingRestoreIfNeeded(storeURL: persistentConfiguration.url)
 
         do {
             let container = try ModelContainer(for: schema, configurations: [persistentConfiguration])
@@ -45,12 +48,23 @@ struct QuotationsApp: App {
                 fatalError("Could not create ModelContainer: \(error)")
             }
         }
+
+        backupManager = BackupManager(storeURL: persistentConfiguration.url)
     }
 
     var body: some Scene {
         WindowGroup("Quotations", id: "MainQuotationsWindow") {
             RootView(loadWarning: containerLoadWarning)
                 .modelContainer(sharedModelContainer)
+                .environment(backupManager)
+        }
+        .commands {
+            CommandGroup(after: .saveItem) {
+                Button("Backups…") {
+                    NotificationCenter.default.post(name: .showBackupsPanel, object: nil)
+                }
+                .keyboardShortcut("B", modifiers: [.command, .shift])
+            }
         }
     }
 }

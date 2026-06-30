@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var searchState = SearchState()
     @State private var showSourceForm = false
     @State private var showAuthorList = false
+    @State private var showBackups = false
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var selectedSourceId: PersistentIdentifier?
@@ -109,6 +110,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .quotationsDataDidChange)) { _ in
             searchState.runSearchIfNeeded(modelContext: modelContext)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .showBackupsPanel)) { _ in
+            showBackups = true
+        }
         .onChange(of: selectedSourceId) { _, _ in
             cleanupNewQuotationIfEmpty()
             selectedQuotationId = nil
@@ -123,6 +127,7 @@ struct ContentView: View {
             showError: $showError,
             errorMessage: errorMessage,
             showAuthorList: $showAuthorList,
+            showBackups: $showBackups,
             sourceToEdit: $sourceToEdit,
             showDeleteSourceConfirmation: $showDeleteSourceConfirmation,
             sourceToDelete: $sourceToDelete,
@@ -215,6 +220,15 @@ private extension ContentView {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    showBackups = true
+                } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                }
+                .accessibilityLabel("Manage backups")
+                .help("Manage backups")
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
                     showAuthorList = true
                 } label: {
                     Image(systemName: "person.2")
@@ -289,95 +303,6 @@ private extension ContentView {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .inspectorColumnWidth(min: 220, ideal: 300, max: 420)
         }
-    }
-}
-
-private struct ContentViewSheetsModifier: ViewModifier {
-    @Binding var showError: Bool
-    let errorMessage: String?
-    @Binding var showAuthorList: Bool
-    @Binding var sourceToEdit: Source?
-    @Binding var showDeleteSourceConfirmation: Bool
-    @Binding var sourceToDelete: Source?
-    @Binding var selectedSourceId: PersistentIdentifier?
-    @Binding var selectedQuotationId: PersistentIdentifier?
-    let modelContext: ModelContext
-    let onEditError: (String) -> Void
-
-    func body(content: Content) -> some View {
-        content
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                if let errorMessage {
-                    Text(errorMessage)
-                }
-            }
-            .sheet(isPresented: $showAuthorList) {
-                AuthorListView(onDismiss: { showAuthorList = false })
-            }
-            .sheet(item: $sourceToEdit) { source in
-                SourceFormView(
-                    existingSource: source,
-                    onSuccess: { sourceToEdit = nil },
-                    onCancel: { sourceToEdit = nil },
-                    onError: onEditError
-                )
-                .padding()
-                .frame(minWidth: 360, minHeight: 420)
-            }
-            .modifier(DeleteSourceConfirmationModifier(
-                isPresented: $showDeleteSourceConfirmation,
-                sourceToDelete: $sourceToDelete,
-                selectedSourceId: $selectedSourceId,
-                selectedQuotationId: $selectedQuotationId,
-                modelContext: modelContext,
-                onEditError: onEditError
-            ))
-    }
-}
-
-private struct DeleteSourceConfirmationModifier: ViewModifier {
-    @Binding var isPresented: Bool
-    @Binding var sourceToDelete: Source?
-    @Binding var selectedSourceId: PersistentIdentifier?
-    @Binding var selectedQuotationId: PersistentIdentifier?
-    let modelContext: ModelContext
-    let onEditError: (String) -> Void
-
-    func body(content: Content) -> some View {
-        content.confirmationDialog(
-            "Delete Source?",
-            isPresented: $isPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                deleteSelectedSource()
-            }
-            Button("Cancel", role: .cancel) {
-                sourceToDelete = nil
-            }
-        } message: {
-            if let source = sourceToDelete {
-                Text("\"\(source.title)\" and all its quotations will be removed.")
-            }
-        }
-    }
-
-    private func deleteSelectedSource() {
-        if let source = sourceToDelete {
-            let sourceId = source.persistentModelID
-            do {
-                try SoftDelete.source(source, in: modelContext)
-            } catch {
-                onEditError(error.localizedDescription)
-            }
-            if selectedSourceId == sourceId {
-                selectedSourceId = nil
-                selectedQuotationId = nil
-            }
-        }
-        sourceToDelete = nil
     }
 }
 
