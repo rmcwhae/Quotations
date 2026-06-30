@@ -46,7 +46,7 @@ struct QuotationsApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("Quotations") {
+        WindowGroup("Quotations", id: "MainQuotationsWindow") {
             RootView(loadWarning: containerLoadWarning)
                 .modelContainer(sharedModelContainer)
         }
