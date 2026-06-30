@@ -250,15 +250,6 @@ private extension ContentView {
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    showBackups = true
-                } label: {
-                    Image(systemName: "clock.arrow.circlepath")
-                }
-                .accessibilityLabel("Manage backups")
-                .help("Manage backups")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
                     showAuthorList = true
                 } label: {
                     Image(systemName: "person.2")
