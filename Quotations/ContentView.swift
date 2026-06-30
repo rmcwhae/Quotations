@@ -49,10 +49,15 @@ struct ContentView: View {
 
     /// Centered placeholder text; the detail container supplies the parchment background.
     private func emptyDetail(_ message: String) -> some View {
-        Text(message)
-            .font(.title2)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack(spacing: 12) {
+            Text("Quotations")
+                .font(.system(size: 56, weight: .regular, design: .serif).italic())
+                .foregroundStyle(AppColors.quoteGlyph)
+            Text(message)
+                .font(.title2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Adds a new empty quotation to the selected source and selects it so it
