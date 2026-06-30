@@ -16,8 +16,8 @@ struct FormFieldRow<Content: View>: View {
                 .font(.subheadline)
                 .frame(maxWidth: .infinity, alignment: .leading)
             content()
-                .accessibilityLabel(label)
         }
+        .accessibilityElement(children: .combine)
     }
 }
 

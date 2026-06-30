@@ -22,8 +22,8 @@ struct SourceDetailView: View {
             SourceSectionView(
                 source: source,
                 searchQuery: searchQuery,
-                quotationIdsFilter: quotationIdsFilter,
-                selectedQuotationId: $selectedQuotationId
+                selectedQuotationId: $selectedQuotationId,
+                showsBackground: false
             ) {
                 QuotationListView(
                     source: source,
@@ -32,8 +32,8 @@ struct SourceDetailView: View {
                     selectedQuotationId: $selectedQuotationId,
                     newQuotationId: newQuotationId
                 )
-                .padding(.top, 4)
-                .padding(.bottom, 16)
+                .padding(.top, LayoutMetrics.quotationListTopPadding)
+                .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
             }
         }
         .scrollContentBackground(.hidden)

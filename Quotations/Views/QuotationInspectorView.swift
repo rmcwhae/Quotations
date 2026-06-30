@@ -31,6 +31,7 @@ struct QuotationInspectorView: View {
             Text("\u{201C}")
                 .font(.system(size: 96, design: .serif))
                 .foregroundStyle(AppColors.quoteGlyph)
+                .accessibilityHidden(true)
                 .padding(.bottom, -40)
             Text("Select a quotation to view details")
                 .foregroundStyle(.secondary)
@@ -94,13 +95,20 @@ struct QuotationInspectorView: View {
             .help("Delete this quotation")
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .id(quotation.persistentModelID)
         .onAppear {
             syncFromQuotation(quotation)
         }
-        .onChange(of: selectedQuotationId) { _, newId in
-            guard let newId,
-                  let resolved = modelContext.model(for: newId) as? Quotation else { return }
-            syncFromQuotation(resolved)
+        .onChange(of: selectedQuotationId) { oldId, newId in
+            if let oldId, oldId != newId,
+               let previous = modelContext.model(for: oldId) as? Quotation {
+                locationSaveTask?.cancel()
+                applyLocation(to: previous)
+            }
+            if let newId,
+               let resolved = modelContext.model(for: newId) as? Quotation {
+                syncFromQuotation(resolved)
+            }
         }
         .onChange(of: isLocationFocused) { _, focused in
             if !focused {
@@ -116,7 +124,6 @@ struct QuotationInspectorView: View {
             Button("Remove", role: .destructive) {
                 do {
                     try SoftDelete.quotation(quotation, in: modelContext)
-                    NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
                 } catch {
                     print("Failed to delete quotation: \(error)")
                 }
@@ -160,8 +167,7 @@ struct QuotationInspectorView: View {
         let trimmed = location.trimmingCharacters(in: .whitespacesAndNewlines)
         quotation.location = trimmed.isEmpty ? nil : trimmed
         quotation.updatedAt = Date()
-        try? modelContext.save()
-        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
+        try? modelContext.saveAndNotify()
     }
 }
 

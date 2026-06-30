@@ -24,70 +24,69 @@ final class SearchState {
     var searchResults: [SearchResultItem] = []
     var isSearching: Bool = false
     var matchSets: MatchSets?
+    /// Quotation IDs grouped by source, for search results rendering without per-section `@Query`.
+    var quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]] = [:]
 
-    private let debounceInterval: TimeInterval = 0.2
+    private let debounceInterval: Duration = .milliseconds(200)
     private var searchTask: Task<Void, Never>?
 
     deinit {
         searchTask?.cancel()
     }
 
+    private var trimmedQuery: String {
+        query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     func runSearchIfNeeded(modelContext: ModelContext) {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let q = trimmedQuery
         if q.isEmpty {
-            searchResults = []
-            isSearching = false
-            matchSets = nil
+            searchTask?.cancel()
+            searchTask = nil
+            clearResults()
             return
         }
 
         searchTask?.cancel()
         isSearching = true
+        searchResults = []
+        matchSets = nil
+        quotationsBySourceId = [:]
 
         searchTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(debounceInterval * 1_000_000_000))
+            try? await Task.sleep(for: debounceInterval)
             guard !Task.isCancelled else { return }
 
             let descriptor = FetchDescriptor<Quotation>(
                 predicate: #Predicate<Quotation> { q in q.deletedAt == nil },
                 sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
             )
-            guard let allQuotations = try? modelContext.fetch(descriptor) else {
+
+            do {
+                let allQuotations = try modelContext.fetch(descriptor)
+                guard !Task.isCancelled else { return }
+
+                let match = SearchMatcher.match(quotations: allQuotations, query: q)
+                searchResults = match.results
+                matchSets = match.matchSets
+                quotationsBySourceId = match.quotationsBySourceId
                 isSearching = false
-                return
+            } catch {
+                guard !Task.isCancelled else { return }
+                clearResults()
             }
-
-            let lower = q.lowercased()
-            var results: [SearchResultItem] = []
-            var authorIds = Set<PersistentIdentifier>()
-            var sourceIds = Set<PersistentIdentifier>()
-            var quotationIds = Set<PersistentIdentifier>()
-            for quotation in allQuotations {
-                guard let source = quotation.source, source.deletedAt == nil,
-                      let author = source.author, author.deletedAt == nil else { continue }
-                let contentMatch = quotation.content.lowercased().contains(lower)
-                let titleMatch = source.title.lowercased().contains(lower)
-                let authorMatch = author.name.lowercased().contains(lower)
-                if contentMatch || titleMatch || authorMatch {
-                    results.append(SearchResultItem(
-                        quotationId: quotation.persistentModelID,
-                        sourceId: source.persistentModelID
-                    ))
-                    authorIds.insert(author.persistentModelID)
-                    sourceIds.insert(source.persistentModelID)
-                    quotationIds.insert(quotation.persistentModelID)
-                }
-            }
-
-            guard !Task.isCancelled else { return }
-            searchResults = results
-            isSearching = false
-            matchSets = MatchSets(authorIds: authorIds, sourceIds: sourceIds, quotationIds: quotationIds)
         }
     }
 
     func matchSetsForQuery() -> MatchSets? {
-        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        guard !trimmedQuery.isEmpty else { return nil }
         return matchSets
+    }
+
+    private func clearResults() {
+        searchResults = []
+        isSearching = false
+        matchSets = nil
+        quotationsBySourceId = [:]
     }
 }

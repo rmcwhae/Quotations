@@ -87,9 +87,10 @@ struct ContentView: View {
         guard let id = newQuotationId,
               let quotation = modelContext.model(for: id) as? Quotation else { return }
         if quotation.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            quotation.deletedAt = Date()
-            quotation.updatedAt = Date()
-            try? modelContext.save()
+            try? SoftDelete.quotation(quotation, in: modelContext)
+            if selectedQuotationId == id {
+                selectedQuotationId = nil
+            }
         }
     }
 
@@ -186,7 +187,7 @@ struct ContentView: View {
                         UnifiedSearchResultsView(
                             sources: filteredSources,
                             searchQuery: searchState.query,
-                            quotationIdsFilter: matchSets.quotationIds,
+                            quotationsBySourceId: searchState.quotationsBySourceId,
                             selectedQuotationId: $selectedQuotationId,
                             newQuotationId: newQuotationId
                         )
@@ -207,16 +208,17 @@ struct ContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .toolbar {
-                if selectedSource != nil, !isSearchActive {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button {
-                            addQuotation()
-                        } label: {
-                            Image(systemName: "plus")
-                        }
-                        .accessibilityLabel("Add quotation")
-                        .help("Add quotation")
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        addQuotation()
+                    } label: {
+                        Image(systemName: "plus")
                     }
+                    .accessibilityLabel("Add quotation")
+                    .help("Add quotation")
+                    .disabled(selectedSource == nil || isSearchActive)
+                    .opacity(selectedSource == nil || isSearchActive ? 0 : 1)
+                    .accessibilityHidden(selectedSource == nil || isSearchActive)
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { isInspectorShown.toggle() }) {
@@ -297,7 +299,6 @@ struct ContentView: View {
                     let sourceId = source.persistentModelID
                     do {
                         try SoftDelete.source(source, in: modelContext)
-                        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
                     } catch {
                         errorMessage = error.localizedDescription
                         showError = true

@@ -12,19 +12,14 @@ import SwiftUI
 struct SourceSectionView<BelowContent: View>: View {
     let source: Source
     let searchQuery: String
-    var quotationIdsFilter: Set<PersistentIdentifier>?
-    /// When set (e.g. to parent horizontal padding), the header is inset so its background extends to the edges.
-    var headerOutset: CGFloat = 0
     /// When set, tapping the source header clears the selected quotation.
     var selectedQuotationId: Binding<PersistentIdentifier?>? = nil
+    /// When false, section background is transparent (parent provides parchment).
+    var showsBackground: Bool = true
 
     @ViewBuilder let belowContent: () -> BelowContent
 
     @Environment(\.colorScheme) private var colorScheme
-
-    /// Matches `QuotationListView.columnMaxWidth` so the header lines up with the
-    /// centered quotation column.
-    private let columnMaxWidth: CGFloat = 616
 
     private var parchmentBackground: Color {
         AppColors.mainBackground(colorScheme: colorScheme)
@@ -70,7 +65,7 @@ struct SourceSectionView<BelowContent: View>: View {
                 .padding(.bottom, 2)
                 .padding(.leading, 28)
                 .padding(.trailing, 16)
-                .frame(maxWidth: columnMaxWidth, alignment: .leading)
+                .frame(maxWidth: LayoutMetrics.quotationColumnMaxWidth, alignment: .leading)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -78,11 +73,10 @@ struct SourceSectionView<BelowContent: View>: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, headerOutset > 0 ? -headerOutset : 0)
 
             belowContent()
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .background(parchmentBackground)
+        .background(showsBackground ? parchmentBackground : Color.clear)
     }
 }

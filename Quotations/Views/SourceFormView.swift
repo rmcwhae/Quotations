@@ -116,6 +116,7 @@ struct SourceFormView: View {
                     }
                 }
                 .labelsHidden()
+                .accessibilityLabel("Format")
                 .frame(maxWidth: 160, alignment: .trailing)
             }
 
@@ -127,6 +128,7 @@ struct SourceFormView: View {
                     }
                 }
                 .labelsHidden()
+                .accessibilityLabel("Year read")
                 .frame(maxWidth: 120, alignment: .trailing)
             }
 
@@ -138,6 +140,7 @@ struct SourceFormView: View {
                     }
                 }
                 .labelsHidden()
+                .accessibilityLabel("Month read")
                 .frame(maxWidth: 140, alignment: .trailing)
             }
 
@@ -226,8 +229,7 @@ struct SourceFormView: View {
         }
 
         do {
-            try modelContext.save()
-            NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
+            try modelContext.saveAndNotify()
             title = ""
             publicationYear = ""
             url = ""

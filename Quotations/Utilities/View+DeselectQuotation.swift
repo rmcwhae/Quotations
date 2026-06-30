@@ -7,7 +7,7 @@ import SwiftData
 import SwiftUI
 
 extension View {
-    /// Clears quotation selection when the user clicks empty space or presses Escape.
+    /// Clears quotation selection when the user clicks empty space in the detail pane.
     func deselectQuotationOnBackgroundTap(_ selectedQuotationId: Binding<PersistentIdentifier?>) -> some View {
         background {
             Color.clear
@@ -15,11 +15,6 @@ extension View {
                 .onTapGesture {
                     selectedQuotationId.wrappedValue = nil
                 }
-        }
-        .onKeyPress(.escape) {
-            guard selectedQuotationId.wrappedValue != nil else { return .ignored }
-            selectedQuotationId.wrappedValue = nil
-            return .handled
         }
     }
 }

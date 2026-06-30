@@ -22,8 +22,13 @@ enum AppColors {
     /// Soft tan for the decorative opening-quote glyph.
     static let quoteGlyph = highlightColor.opacity(0.5)
 
-    /// Yellow background for search term matches.
-    static let searchHighlight = Color.yellow.opacity(0.4)
+    /// Yellow background for search term matches (adaptive contrast).
+    static let searchHighlight = Color(nsColor: NSColor(name: nil) { appearance in
+        let isDark = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        return isDark
+            ? NSColor(red: 0.75, green: 0.65, blue: 0.15, alpha: 0.45)
+            : NSColor(red: 1.0, green: 0.95, blue: 0.4, alpha: 0.65)
+    })
 
     /// Main content column background (lighter tint in light mode).
     static func mainBackground(colorScheme: ColorScheme) -> Color {

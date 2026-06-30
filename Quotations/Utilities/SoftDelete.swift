@@ -13,16 +13,13 @@ enum SoftDelete {
         let now = Date()
         source.deletedAt = now
         source.updatedAt = now
-        let sourceId = source.persistentModelID
-        let descriptor = FetchDescriptor<Quotation>(
-            predicate: #Predicate { q in q.source?.persistentModelID == sourceId && q.deletedAt == nil }
-        )
-        let quotations = try context.fetch(descriptor)
-        for quotation in quotations {
+
+        for quotation in source.quotations where quotation.deletedAt == nil {
             quotation.deletedAt = now
             quotation.updatedAt = now
         }
-        try context.save()
+
+        try context.saveAndNotify()
     }
 
     /// Soft-deletes an author and cascades to all of their sources and quotations.
@@ -30,25 +27,17 @@ enum SoftDelete {
         let now = Date()
         author.deletedAt = now
         author.updatedAt = now
-        let authorId = author.persistentModelID
-        let sourceDescriptor = FetchDescriptor<Source>(
-            predicate: #Predicate { s in s.author?.persistentModelID == authorId && s.deletedAt == nil }
-        )
-        let sources = try context.fetch(sourceDescriptor)
-        for source in sources {
+
+        for source in author.sources where source.deletedAt == nil {
             source.deletedAt = now
             source.updatedAt = now
-            let sourceId = source.persistentModelID
-            let quotationDescriptor = FetchDescriptor<Quotation>(
-                predicate: #Predicate { q in q.source?.persistentModelID == sourceId && q.deletedAt == nil }
-            )
-            let quotations = try context.fetch(quotationDescriptor)
-            for quotation in quotations {
+            for quotation in source.quotations where quotation.deletedAt == nil {
                 quotation.deletedAt = now
                 quotation.updatedAt = now
             }
         }
-        try context.save()
+
+        try context.saveAndNotify()
     }
 
     /// Soft-deletes a single quotation.
@@ -56,7 +45,7 @@ enum SoftDelete {
         let now = Date()
         quotation.deletedAt = now
         quotation.updatedAt = now
-        try context.save()
+        try context.saveAndNotify()
     }
 }
 

@@ -7,13 +7,23 @@ import Foundation
 import SwiftData
 
 enum QuotationLocationMigration {
-    private static let didMigrateKey = "didMigrateQuotationLocation"
+    private static let didMigrateKeyPrefix = "didMigrateQuotationLocation."
 
-    static func migrateIfNeeded(context: ModelContext) {
-        guard !UserDefaults.standard.bool(forKey: didMigrateKey) else { return }
+    static func migrateIfNeeded(context: ModelContext, storeURL: URL? = nil) {
+        let migrationKey = didMigrateKey(for: storeURL)
+        guard !UserDefaults.standard.bool(forKey: migrationKey) else { return }
 
-        let descriptor = FetchDescriptor<Quotation>()
-        guard let quotations = try? context.fetch(descriptor) else { return }
+        let descriptor = FetchDescriptor<Quotation>(
+            predicate: #Predicate<Quotation> { $0.deletedAt == nil }
+        )
+
+        let quotations: [Quotation]
+        do {
+            quotations = try context.fetch(descriptor)
+        } catch {
+            print("QuotationLocationMigration fetch failed: \(error)")
+            return
+        }
 
         var didChange = false
         for quotation in quotations {
@@ -36,7 +46,7 @@ enum QuotationLocationMigration {
                 return
             }
         }
-        UserDefaults.standard.set(true, forKey: didMigrateKey)
+        UserDefaults.standard.set(true, forKey: migrationKey)
     }
 
     static func migratedLocation(startPage: Int?, endPage: Int?) -> String? {
@@ -50,5 +60,10 @@ enum QuotationLocationMigration {
         default:
             return nil
         }
+    }
+
+    private static func didMigrateKey(for storeURL: URL?) -> String {
+        let identity = storeURL?.absoluteString ?? "inMemory"
+        return didMigrateKeyPrefix + identity
     }
 }

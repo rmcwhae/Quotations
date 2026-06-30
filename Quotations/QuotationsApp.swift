@@ -22,13 +22,22 @@ struct QuotationsApp: App {
         do {
             let container = try ModelContainer(for: schema, configurations: [persistentConfiguration])
             let context = ModelContext(container)
-            QuotationLocationMigration.migrateIfNeeded(context: context)
+            QuotationLocationMigration.migrateIfNeeded(
+                context: context,
+                storeURL: persistentConfiguration.url
+            )
             sharedModelContainer = container
             containerLoadWarning = nil
         } catch {
             let fallbackConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
             do {
-                sharedModelContainer = try ModelContainer(for: schema, configurations: [fallbackConfiguration])
+                let container = try ModelContainer(for: schema, configurations: [fallbackConfiguration])
+                let context = ModelContext(container)
+                QuotationLocationMigration.migrateIfNeeded(
+                    context: context,
+                    storeURL: fallbackConfiguration.url
+                )
+                sharedModelContainer = container
                 containerLoadWarning = "Your library could not be opened (\(error.localizedDescription)). A temporary in-memory library is being used instead."
             } catch {
                 fatalError("Could not create ModelContainer: \(error)")

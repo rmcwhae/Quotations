@@ -66,8 +66,7 @@ struct AuthorFormView: View {
                 let author = Author(name: n)
                 modelContext.insert(author)
             }
-            try modelContext.save()
-            NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
+            try modelContext.saveAndNotify()
             onSuccess()
         } catch {
             onError(error.localizedDescription)

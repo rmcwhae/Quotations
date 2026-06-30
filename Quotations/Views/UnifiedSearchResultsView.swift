@@ -11,13 +11,12 @@ import SwiftUI
 struct UnifiedSearchResultsView: View {
     let sources: [Source]
     let searchQuery: String
-    var quotationIdsFilter: Set<PersistentIdentifier>?
+    var quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]]
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
 
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
-
-    private let horizontalPadding: CGFloat = 16
 
     var body: some View {
         ScrollView {
@@ -27,10 +26,9 @@ struct UnifiedSearchResultsView: View {
                         SingleSourceSearchSection(
                             source: source,
                             searchQuery: searchQuery,
-                            quotationIdsFilter: quotationIdsFilter,
+                            quotationIds: quotationsBySourceId[source.persistentModelID] ?? [],
                             selectedQuotationId: $selectedQuotationId,
-                            newQuotationId: newQuotationId,
-                            horizontalPadding: horizontalPadding
+                            newQuotationId: newQuotationId
                         )
                     }
                 }
@@ -38,39 +36,69 @@ struct UnifiedSearchResultsView: View {
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
-            .deselectQuotationOnBackgroundTap($selectedQuotationId)
         }
+        .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
             AppColors.mainBackground(colorScheme: colorScheme)
                 .ignoresSafeArea(.container, edges: .top)
         )
+        .deselectQuotationOnBackgroundTap($selectedQuotationId)
     }
 }
 
 private struct SingleSourceSearchSection: View {
     let source: Source
     let searchQuery: String
-    var quotationIdsFilter: Set<PersistentIdentifier>?
+    let quotationIds: [PersistentIdentifier]
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
-    var horizontalPadding: CGFloat
+
+    @Environment(\.modelContext) private var modelContext
+
+    private var resolvedQuotations: [Quotation] {
+        quotationIds.compactMap { modelContext.model(for: $0) as? Quotation }
+            .filter { $0.deletedAt == nil }
+    }
 
     var body: some View {
         SourceSectionView(
             source: source,
             searchQuery: searchQuery,
-            quotationIdsFilter: quotationIdsFilter,
-            selectedQuotationId: $selectedQuotationId
+            selectedQuotationId: $selectedQuotationId,
+            showsBackground: false
         ) {
-            QuotationListView(
-                source: source,
-                searchQuery: searchQuery,
-                quotationIdsFilter: quotationIdsFilter,
-                selectedQuotationId: $selectedQuotationId,
-                newQuotationId: newQuotationId
-            )
-            .padding(.top, 8)
+            if resolvedQuotations.isEmpty {
+                Text("No matching quotations.")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 16)
+            } else {
+                QuotationRowsContent(
+                    quotations: resolvedQuotations,
+                    searchQuery: searchQuery,
+                    newQuotationId: newQuotationId,
+                    selectedQuotationIdBinding: $selectedQuotationId,
+                    onEdit: saveQuotation,
+                    onDelete: deleteQuotation
+                )
+                .padding(.top, LayoutMetrics.quotationListTopPadding)
+                .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
+            }
+        }
+    }
+
+    private func saveQuotation(_ quotation: Quotation) {
+        quotation.updatedAt = Date()
+        try? modelContext.saveAndNotify()
+    }
+
+    private func deleteQuotation(id: PersistentIdentifier) {
+        guard let quotation = modelContext.model(for: id) as? Quotation,
+              quotation.deletedAt == nil else { return }
+        try? SoftDelete.quotation(quotation, in: modelContext)
+        if selectedQuotationId == id {
+            selectedQuotationId = nil
         }
     }
 }

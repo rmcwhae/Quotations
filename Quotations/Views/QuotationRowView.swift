@@ -18,6 +18,7 @@ struct QuotationRowView: View {
     var isSelected: Bool = false
     /// When true, the row enters edit mode on appear (used for a freshly added quotation).
     var beginEditing: Bool = false
+    var newQuotationId: PersistentIdentifier? = nil
     var onSelect: (() -> Void)? = nil
     var onDeselect: (() -> Void)? = nil
     var onEdit: (Quotation) -> Void
@@ -35,11 +36,12 @@ struct QuotationRowView: View {
     /// triple-click arriving right after the double-click that started editing).
     @State private var selectionRequestID = 0
 
-    init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, beginEditing: Bool = false, onSelect: (() -> Void)? = nil, onDeselect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
+    init(quotation: Quotation, searchQuery: String, isSelected: Bool = false, beginEditing: Bool = false, newQuotationId: PersistentIdentifier? = nil, onSelect: (() -> Void)? = nil, onDeselect: (() -> Void)? = nil, onEdit: @escaping (Quotation) -> Void, onDelete: @escaping (PersistentIdentifier) -> Void) {
         self.quotation = quotation
         self.searchQuery = searchQuery
         self.isSelected = isSelected
         self.beginEditing = beginEditing
+        self.newQuotationId = newQuotationId
         self.onSelect = onSelect
         self.onDeselect = onDeselect
         self.onEdit = onEdit
@@ -74,6 +76,17 @@ struct QuotationRowView: View {
         if isSelected { return 3 }
         if isHovering { return 2 }
         return 0
+    }
+
+    private var isNewDraft: Bool {
+        newQuotationId == quotation.id
+    }
+
+    private var accessibilitySummary: String {
+        if quotation.content.isEmpty { return "New quotation" }
+        let trimmed = quotation.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count <= 120 { return trimmed }
+        return String(trimmed.prefix(120)) + "…"
     }
 
     var body: some View {
@@ -123,7 +136,7 @@ struct QuotationRowView: View {
         .padding(.leading, 28)
         .padding(.trailing, 16)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(quotation.content.isEmpty ? "New quotation" : quotation.content)
+        .accessibilityLabel(accessibilitySummary)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityHint(isTextFocused ? "Editing quotation" : "Double-click to edit")
         .onAppear {
@@ -161,9 +174,8 @@ struct QuotationRowView: View {
             scheduleDebouncedSave()
         }
         .onKeyPress(.escape) {
-            if isTextFocused || isSelected {
-                if isTextFocused { isTextFocused = false }
-                if isSelected { onDeselect?() }
+            if isTextFocused {
+                isTextFocused = false
                 return .handled
             }
             return .ignored
@@ -199,7 +211,6 @@ struct QuotationRowView: View {
                 onFocusChange: { isTextFocused = $0 },
                 onEscape: {
                     isTextFocused = false
-                    onDeselect?()
                 }
             )
             .frame(maxWidth: textFieldWidth, alignment: .leading)
@@ -257,7 +268,15 @@ struct QuotationRowView: View {
 
     private func commitEdit() {
         let trimmed = editedContent.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
+        if trimmed.isEmpty {
+            if isNewDraft {
+                onDelete(quotation.id)
+            } else {
+                quotation.content = ""
+                quotation.updatedAt = Date()
+                onEdit(quotation)
+            }
+        } else {
             quotation.content = trimmed
             quotation.updatedAt = Date()
             onEdit(quotation)

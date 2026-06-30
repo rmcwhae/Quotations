@@ -6,12 +6,42 @@
 import SwiftUI
 import SwiftData
 
+/// Renders quotation rows for a fixed list of models (search results; no live `@Query`).
+struct QuotationRowsContent: View {
+    let quotations: [Quotation]
+    let searchQuery: String
+    var newQuotationId: PersistentIdentifier?
+    @Binding var selectedQuotationIdBinding: PersistentIdentifier?
+    var onEdit: (Quotation) -> Void
+    var onDelete: (PersistentIdentifier) -> Void
+
+    var body: some View {
+        LazyVStack(alignment: .leading, spacing: 0) {
+            ForEach(quotations) { quotation in
+                QuotationRowView(
+                    quotation: quotation,
+                    searchQuery: searchQuery,
+                    isSelected: quotation.id == selectedQuotationIdBinding,
+                    beginEditing: quotation.id == newQuotationId,
+                    newQuotationId: newQuotationId,
+                    onSelect: { selectedQuotationIdBinding = quotation.id },
+                    onDeselect: { selectedQuotationIdBinding = nil },
+                    onEdit: onEdit,
+                    onDelete: onDelete
+                )
+                .padding(.vertical, 2)
+            }
+        }
+        .frame(maxWidth: LayoutMetrics.quotationColumnMaxWidth, alignment: .leading)
+        .frame(maxWidth: .infinity)
+    }
+}
+
 struct QuotationListView: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     @Binding var selectedQuotationId: PersistentIdentifier?
-    /// The id of a freshly added quotation that should open in edit mode.
     var newQuotationId: PersistentIdentifier?
 
     @Query private var quotations: [Quotation]
@@ -37,11 +67,6 @@ struct QuotationListView: View {
         return quotations.filter { filter.contains($0.id) }
     }
 
-    /// Natural width of a quotation row: leading 28 + quote mark 36 + text
-    /// padding 16 + text 520 + trailing 16. Constraining to this and centering
-    /// gives the column a `margin: 0 auto` layout within the window.
-    fileprivate let columnMaxWidth: CGFloat = 616
-
     var body: some View {
         if quotationIdsFilter == nil && quotations.isEmpty {
             VStack {
@@ -57,37 +82,28 @@ struct QuotationListView: View {
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.vertical, 16)
         } else {
-            VStack(alignment: .leading, spacing: 0) {
-                ForEach(displayedQuotations) { quotation in
-                    QuotationRowView(
-                        quotation: quotation,
-                        searchQuery: searchQuery,
-                        isSelected: quotation.id == selectedQuotationId,
-                        beginEditing: quotation.id == newQuotationId,
-                        onSelect: { selectedQuotationId = quotation.id },
-                        onDeselect: { selectedQuotationId = nil },
-                        onEdit: saveQuotation,
-                        onDelete: deleteQuotation
-                    )
-                    .padding(.vertical, 2)
-                }
-            }
-            .frame(maxWidth: columnMaxWidth, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            QuotationRowsContent(
+                quotations: displayedQuotations,
+                searchQuery: searchQuery,
+                newQuotationId: newQuotationId,
+                selectedQuotationIdBinding: $selectedQuotationId,
+                onEdit: saveQuotation,
+                onDelete: deleteQuotation
+            )
         }
     }
 
     private func saveQuotation(_ quotation: Quotation) {
         quotation.updatedAt = Date()
-        try? modelContext.save()
-        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
+        try? modelContext.saveAndNotify()
     }
 
     private func deleteQuotation(id: PersistentIdentifier) {
-        guard let quotation = modelContext.model(for: id) as? Quotation else { return }
-        quotation.deletedAt = Date()
-        quotation.updatedAt = Date()
-        try? modelContext.save()
-        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
+        guard let quotation = modelContext.model(for: id) as? Quotation,
+              quotation.deletedAt == nil else { return }
+        try? SoftDelete.quotation(quotation, in: modelContext)
+        if selectedQuotationId == id {
+            selectedQuotationId = nil
+        }
     }
 }

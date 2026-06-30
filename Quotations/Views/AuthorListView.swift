@@ -107,7 +107,6 @@ struct AuthorListView: View {
                 if let author = authorToDelete {
                     do {
                         try SoftDelete.author(author, in: modelContext)
-                        NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
                     } catch {
                         errorMessage = error.localizedDescription
                         showError = true
