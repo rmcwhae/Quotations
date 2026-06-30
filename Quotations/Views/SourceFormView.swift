@@ -27,7 +27,7 @@ struct SourceFormView: View {
     @State private var authorInputChangedSinceFocus = false
     @FocusState private var isAuthorFieldFocused: Bool
 
-    var onSuccess: () -> Void
+    var onSuccess: (PersistentIdentifier?) -> Void
     var onCancel: () -> Void
     var onError: (String) -> Void
 
@@ -144,26 +144,22 @@ struct SourceFormView: View {
                 .accessibilityLabel("Month read")
                 .frame(maxWidth: 140, alignment: .trailing)
             }
-
-            HStack {
-                Spacer()
-                Button("Cancel") {
-                    onCancel()
-                }
-                .buttonStyle(.bordered)
-                .accessibilityLabel("Cancel")
-                .help("Cancel")
-                Button(isEditing ? "Save" : "Add") {
-                    submit()
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(!authorNameIsValid || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .accessibilityLabel(isEditing ? "Save source" : "Add source")
-                .help(isEditing ? "Save changes" : "Add source")
-            }
         }
         .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .frame(minWidth: 360, minHeight: 420)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { onCancel() }
+                    .accessibilityLabel("Cancel")
+                    .help("Cancel")
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button(isEditing ? "Save" : "Add") { submit() }
+                    .accessibilityLabel(isEditing ? "Save source" : "Add source")
+                    .help(isEditing ? "Save changes" : "Add source")
+                    .disabled(!authorNameIsValid || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
         .onAppear {
             guard let source = existingSource, !hasPrefilled else { return }
             title = source.title
@@ -210,6 +206,7 @@ struct SourceFormView: View {
         let year = Int(publicationYear.trimmingCharacters(in: .whitespacesAndNewlines))
         let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        let savedSourceId: PersistentIdentifier
         if let existing = existingSource {
             existing.title = trimmedTitle
             existing.author = author
@@ -219,6 +216,7 @@ struct SourceFormView: View {
             existing.dateReadMonth = dateReadMonth
             existing.dateReadYear = dateReadYear
             existing.updatedAt = Date()
+            savedSourceId = existing.id
         } else {
             let source = Source(
                 title: trimmedTitle,
@@ -230,19 +228,12 @@ struct SourceFormView: View {
                 dateReadYear: dateReadYear
             )
             modelContext.insert(source)
+            savedSourceId = source.id
         }
 
         do {
             try modelContext.saveAndNotify()
-            title = ""
-            publicationYear = ""
-            url = ""
-            format = nil
-            dateReadMonth = nil
-            dateReadYear = nil
-            authorText = ""
-            selectedAuthorId = nil
-            onSuccess()
+            onSuccess(savedSourceId)
         } catch {
             onError(error.localizedDescription)
         }

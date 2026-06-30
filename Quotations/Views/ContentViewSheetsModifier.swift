@@ -13,6 +13,7 @@ struct ContentViewSheetsModifier: ViewModifier {
     let importSuccessMessage: String?
     @Binding var showAuthorList: Bool
     @Binding var showBackups: Bool
+    @Binding var showSourceCreateForm: Bool
     @Binding var sourceToEdit: Source?
     @Binding var showDeleteSourceConfirmation: Bool
     @Binding var sourceToDelete: Source?
@@ -20,6 +21,7 @@ struct ContentViewSheetsModifier: ViewModifier {
     @Binding var selectedQuotationId: PersistentIdentifier?
     let modelContext: ModelContext
     let onEditError: (String) -> Void
+    let onSourceCreated: (PersistentIdentifier) -> Void
 
     func body(content: Content) -> some View {
         content
@@ -43,15 +45,25 @@ struct ContentViewSheetsModifier: ViewModifier {
             .sheet(isPresented: $showBackups) {
                 BackupManagementView(onDismiss: { showBackups = false })
             }
+            .sheet(isPresented: $showSourceCreateForm) {
+                SourceFormView(
+                    onSuccess: { sourceId in
+                        showSourceCreateForm = false
+                        if let sourceId {
+                            onSourceCreated(sourceId)
+                        }
+                    },
+                    onCancel: { showSourceCreateForm = false },
+                    onError: onEditError
+                )
+            }
             .sheet(item: $sourceToEdit) { source in
                 SourceFormView(
                     existingSource: source,
-                    onSuccess: { sourceToEdit = nil },
+                    onSuccess: { _ in sourceToEdit = nil },
                     onCancel: { sourceToEdit = nil },
                     onError: onEditError
                 )
-                .padding()
-                .frame(minWidth: 360, minHeight: 420)
             }
             .modifier(DeleteSourceConfirmationModifier(
                 isPresented: $showDeleteSourceConfirmation,

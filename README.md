@@ -6,7 +6,7 @@ Quotations is a native macOS app for collecting and revisiting passages from boo
 
 ![Dark mode](documentation/dark-mode.png)
 
-I also made a terminal alias to automate app builds outside of Xcode (update `path/to/repo` accordingly):
+I also made a terminal alias to automate app builds outside of Xcode (update `path/to/repo` accordingly). Note that you’ll need to set your development team within Xcode first.
 
 ```bash
 alias qab="cd path/to/repo && \

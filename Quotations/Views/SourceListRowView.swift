@@ -12,13 +12,29 @@ struct SourceListRowView: View {
     let source: Source
     let searchQuery: String
     var isSelected: Bool = false
+    var showsQuotationCount: Bool = false
+
+    private var activeQuotationCount: Int {
+        source.quotations.filter { $0.deletedAt == nil }.count
+    }
 
     private var accessibilitySummary: String {
+        var summary: String
         if let author = source.author {
             let year = source.publicationYear.map { " (\($0))" } ?? ""
-            return "\(source.title), \(author.name)\(year)"
+            summary = "\(source.title), \(author.name)\(year)"
+        } else {
+            summary = source.title
         }
-        return source.title
+        if showsQuotationCount {
+            let count = activeQuotationCount
+            summary += ", \(count == 1 ? "1 quotation" : "\(count) quotations")"
+        }
+        return summary
+    }
+
+    private func quotationCountLabel(_ count: Int) -> String {
+        count == 1 ? "1 quotation" : "\(count) quotations"
     }
 
     var body: some View {
@@ -29,14 +45,24 @@ struct SourceListRowView: View {
                 .truncationMode(.tail)
 
             if let author = source.author {
-                HighlightMatch(
-                    text: author.name + (source.publicationYear.map { " (\($0))" } ?? ""),
-                    query: searchQuery
-                )
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    HighlightMatch(
+                        text: author.name + (source.publicationYear.map { " (\($0))" } ?? ""),
+                        query: searchQuery
+                    )
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if showsQuotationCount {
+                        Text(quotationCountLabel(activeQuotationCount))
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                            .fixedSize()
+                    }
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

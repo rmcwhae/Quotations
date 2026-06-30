@@ -15,11 +15,10 @@ struct LibraryContextListView: View {
     let searchState: SearchState
     @Binding var selectedSourceId: PersistentIdentifier?
     @Binding var selectedQuotationId: PersistentIdentifier?
-    @Binding var showSourceForm: Bool
     var onManageAuthors: () -> Void
+    var onAddSource: () -> Void
     var onSourceEdit: (Source) -> Void
     var onSourceDelete: (Source) -> Void
-    var onError: (String) -> Void
 
     private var trimmedSearchQuery: String {
         searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -46,15 +45,6 @@ struct LibraryContextListView: View {
         let resolved = listContent
 
         List {
-            if showSourceForm {
-                SourceFormView(
-                    onSuccess: { showSourceForm = false },
-                    onCancel: { showSourceForm = false },
-                    onError: onError
-                )
-                .listRowSeparator(.hidden)
-            }
-
             if filter.showsQuotations {
                 quotationRows(resolved.quotations)
             } else {
@@ -72,12 +62,14 @@ struct LibraryContextListView: View {
                 .accessibilityLabel("Manage authors")
                 .help("Manage authors")
             }
-            ToolbarItem(placement: .primaryAction) {
-                Button { showSourceForm = true } label: {
-                    Image(systemName: "plus")
+            if !filter.showsQuotations {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: onAddSource) {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("Create source")
+                    .help("Add source")
                 }
-                .accessibilityLabel("Create source")
-                .help("Add source")
             }
         }
     }
@@ -88,7 +80,8 @@ struct LibraryContextListView: View {
             SourceListRowView(
                 source: source,
                 searchQuery: searchState.query,
-                isSelected: source.id == selectedSourceId
+                isSelected: source.id == selectedSourceId,
+                showsQuotationCount: filter == .quotationsBySource
             )
             .tag(source.id)
             .listRowBackground(selectionBackground(isSelected: source.id == selectedSourceId))
@@ -140,11 +133,11 @@ struct LibraryContextListView: View {
                     .padding()
             }
         } else if filter.showsQuotations {
-            if quotations.isEmpty && !showSourceForm {
+            if quotations.isEmpty {
                 Text("No quotations yet.")
                     .foregroundStyle(.secondary)
             }
-        } else if sources.isEmpty && !showSourceForm {
+        } else if sources.isEmpty {
             Text(emptySourcesMessage)
                 .foregroundStyle(.secondary)
         }

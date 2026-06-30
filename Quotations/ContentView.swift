@@ -20,7 +20,7 @@ struct ContentView: View {
 
     @State private var navigation = LibraryNavigationState()
     @State private var searchState = SearchState()
-    @State private var showSourceForm = false
+    @State private var showSourceCreateForm = false
     @State private var showAuthorList = false
     @State private var showBackups = false
     @State private var isImporting = false
@@ -98,6 +98,14 @@ struct ContentView: View {
         }
     }
 
+    private func handleSourceCreated(_ sourceId: PersistentIdentifier) {
+        navigation.selectedSourceId = sourceId
+        navigation.selectedQuotationId = nil
+        if navigation.selectedFilter.showsQuotations {
+            navigation.selectedFilter = .quotationsBySource
+        }
+    }
+
     private func importFromAppleBooks() {
         guard !isImporting else { return }
         isImporting = true
@@ -135,16 +143,12 @@ struct ContentView: View {
                 searchState: searchState,
                 selectedSourceId: $navigation.selectedSourceId,
                 selectedQuotationId: $navigation.selectedQuotationId,
-                showSourceForm: $showSourceForm,
                 onManageAuthors: { showAuthorList = true },
+                onAddSource: { showSourceCreateForm = true },
                 onSourceEdit: { sourceToEdit = $0 },
                 onSourceDelete: { source in
                     sourceToDelete = source
                     showDeleteSourceConfirmation = true
-                },
-                onError: { message in
-                    errorMessage = message
-                    showError = true
                 }
             )
         } detail: {
@@ -190,6 +194,7 @@ struct ContentView: View {
             importSuccessMessage: importSuccessMessage,
             showAuthorList: $showAuthorList,
             showBackups: $showBackups,
+            showSourceCreateForm: $showSourceCreateForm,
             sourceToEdit: $sourceToEdit,
             showDeleteSourceConfirmation: $showDeleteSourceConfirmation,
             sourceToDelete: $sourceToDelete,
@@ -199,7 +204,8 @@ struct ContentView: View {
             onEditError: { message in
                 errorMessage = message
                 showError = true
-            }
+            },
+            onSourceCreated: handleSourceCreated
         ))
     }
 }
