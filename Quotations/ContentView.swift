@@ -87,11 +87,15 @@ struct ContentView: View {
     }
 
     private func selectFilter(_ filter: LibraryFilter) {
+        guard filter != navigation.selectedFilter || isSearchActive else { return }
         if filter != .searchResults {
             searchState.query = ""
         }
-        navigation.selectFilter(filter)
-        cleanupNewQuotationIfEmpty()
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            navigation.selectFilter(filter)
+        }
     }
 
     private func importFromAppleBooks() {
@@ -118,10 +122,11 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView {
             LibraryFilterSidebarView(
-                navigation: navigation,
+                selectedFilter: navigation.selectedFilter,
                 isSearchActive: isSearchActive,
                 onSelectFilter: selectFilter
             )
+            .equatable()
         } content: {
             LibraryContextListView(
                 filter: effectiveFilter,
@@ -176,9 +181,6 @@ struct ContentView: View {
             if let newId = newQuotationId, newValue != newId {
                 cleanupNewQuotationIfEmpty()
             }
-        }
-        .onChange(of: navigation.selectedFilter) { _, _ in
-            cleanupNewQuotationIfEmpty()
         }
         .navigationTitle("")
         .modifier(ContentViewSheetsModifier(

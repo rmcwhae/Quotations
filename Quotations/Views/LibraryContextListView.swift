@@ -21,30 +21,30 @@ struct LibraryContextListView: View {
     var onSourceDelete: (Source) -> Void
     var onError: (String) -> Void
 
-    private var resolvedSources: [Source] {
-        if filter == .searchResults {
-            return LibraryFilterResolver.searchResultSources(
-                from: sources,
-                matchSets: searchState.matchSetsForQuery()
-            )
-        }
-        return LibraryFilterResolver.sources(for: filter, from: sources)
-    }
-
-    private var resolvedQuotations: [Quotation] {
-        LibraryFilterResolver.quotations(
-            for: filter,
-            from: quotations,
-            matchSets: searchState.matchSetsForQuery(),
-            searchResultIds: LibraryFilterResolver.searchResultQuotationIds(from: searchState)
-        )
-    }
-
     private var trimmedSearchQuery: String {
         searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var listContent: (sources: [Source], quotations: [Quotation]) {
+        let matchSets = searchState.matchSetsForQuery()
+        let sources: [Source]
+        if filter == .searchResults {
+            sources = LibraryFilterResolver.searchResultSources(from: self.sources, matchSets: matchSets)
+        } else {
+            sources = LibraryFilterResolver.sources(for: filter, from: self.sources)
+        }
+        let quotations = LibraryFilterResolver.quotations(
+            for: filter,
+            from: self.quotations,
+            matchSets: matchSets,
+            searchResultIds: LibraryFilterResolver.searchResultQuotationIds(from: searchState)
+        )
+        return (sources, quotations)
+    }
+
     var body: some View {
+        let resolved = listContent
+
         List {
             if showSourceForm {
                 SourceFormView(
@@ -56,13 +56,13 @@ struct LibraryContextListView: View {
             }
 
             if filter.showsQuotations {
-                quotationRows
+                quotationRows(resolved.quotations)
             } else {
-                sourceRows
+                sourceRows(resolved.sources)
             }
         }
         .navigationTitle(filter.title)
-        .overlay { emptyOverlay }
+        .overlay { emptyOverlay(sources: resolved.sources, quotations: resolved.quotations) }
         .navigationSplitViewColumnWidth(min: 220, ideal: 300, max: 420)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -83,7 +83,7 @@ struct LibraryContextListView: View {
     }
 
     @ViewBuilder
-    private var sourceRows: some View {
+    private func sourceRows(_ resolvedSources: [Source]) -> some View {
         ForEach(resolvedSources) { source in
             SourceListRowView(
                 source: source,
@@ -105,7 +105,7 @@ struct LibraryContextListView: View {
     }
 
     @ViewBuilder
-    private var quotationRows: some View {
+    private func quotationRows(_ resolvedQuotations: [Quotation]) -> some View {
         ForEach(resolvedQuotations) { quotation in
             QuotationListRowView(
                 quotation: quotation,
@@ -125,14 +125,14 @@ struct LibraryContextListView: View {
     }
 
     @ViewBuilder
-    private var emptyOverlay: some View {
+    private func emptyOverlay(sources: [Source], quotations: [Quotation]) -> some View {
         if filter == .searchResults {
             if searchState.isSearching {
                 Text("Searching…")
                     .foregroundStyle(.secondary)
             } else if !trimmedSearchQuery.isEmpty,
-                      resolvedQuotations.isEmpty,
-                      resolvedSources.isEmpty {
+                      quotations.isEmpty,
+                      sources.isEmpty {
                 Text("No results for \"\(trimmedSearchQuery)\".")
                     .foregroundStyle(.secondary)
                     .font(.caption)
@@ -140,11 +140,11 @@ struct LibraryContextListView: View {
                     .padding()
             }
         } else if filter.showsQuotations {
-            if resolvedQuotations.isEmpty && !showSourceForm {
+            if quotations.isEmpty && !showSourceForm {
                 Text("No quotations yet.")
                     .foregroundStyle(.secondary)
             }
-        } else if resolvedSources.isEmpty && !showSourceForm {
+        } else if sources.isEmpty && !showSourceForm {
             Text(emptySourcesMessage)
                 .foregroundStyle(.secondary)
         }
