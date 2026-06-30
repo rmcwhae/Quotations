@@ -30,6 +30,21 @@ struct SourceSectionView<BelowContent: View>: View {
         return URL(string: urlString)
     }
 
+    /// "Author (Year) • Format • Date read", omitting any missing pieces.
+    private var metadataText: String? {
+        var components: [String] = []
+        if let author = source.author {
+            components.append(author.name + (source.publicationYear.map { " (\($0))" } ?? ""))
+        }
+        if let format = source.format, !format.isEmpty {
+            components.append(format)
+        }
+        if let dateRead = source.formattedDateRead {
+            components.append(dateRead)
+        }
+        return components.isEmpty ? nil : components.joined(separator: " • ")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 0) {
@@ -38,11 +53,11 @@ struct SourceSectionView<BelowContent: View>: View {
                         HighlightMatch(text: source.title, query: searchQuery)
                             .font(.system(size: 24, weight: .regular, design: .serif))
                             .multilineTextAlignment(.leading)
-                        if source.author != nil || sourceURL != nil {
+                        if metadataText != nil || sourceURL != nil {
                             HStack(spacing: 6) {
-                                if let author = source.author {
+                                if let metadataText {
                                     HighlightMatch(
-                                        text: author.name + (source.publicationYear.map { " (\($0))" } ?? ""),
+                                        text: metadataText,
                                         query: searchQuery
                                     )
                                     .font(.system(size: 14, design: .serif).italic())
