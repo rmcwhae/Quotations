@@ -55,97 +55,67 @@ struct SourceFormView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            FormFieldRow(label: "Author") {
-                TextField("", text: $authorText)
-                    .textFieldStyle(.plain)
-                    .textContentType(.name)
-                    .textInputSuggestions {
-                        if authorInputChangedSinceFocus {
-                            ForEach(authorSuggestions, id: \.id) { author in
-                                Text(author.name)
-                                    .textInputCompletion(author.name)
-                            }
+        Form {
+            TextField("Author", text: $authorText)
+                .textContentType(.name)
+                .focused($isAuthorFieldFocused)
+                .textInputSuggestions {
+                    if authorInputChangedSinceFocus {
+                        ForEach(authorSuggestions, id: \.id) { author in
+                            Text(author.name)
+                                .textInputCompletion(author.name)
                         }
-                    }
-                    .onChange(of: isAuthorFieldFocused) { _, newValue in
-                        if newValue { authorInputChangedSinceFocus = false }
-                    }
-                    .onChange(of: authorText) { _, newValue in
-                        if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
-                        if let sel = selectedAuthor, sel.name != newValue {
-                            selectedAuthorId = nil
-                        }
-                        let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if let author = authors.first(where: { $0.name.lowercased() == trimmed.lowercased() }) {
-                            selectedAuthorId = author.id
-                            isAuthorFieldFocused = false
-                        }
-                    }
-                    .onChange(of: selectedAuthorId) { _, newValue in
-                        if let id = newValue, let author = authors.first(where: { $0.id == id }) {
-                            authorText = author.name
-                        }
-                    }
-                    .formInputStyle(isFocused: $isAuthorFieldFocused)
-            }
-
-            FormFieldRow(label: "Title") {
-                TextField("", text: $title)
-                    .textFieldStyle(.plain)
-                    .formInputStyle()
-            }
-
-            FormFieldRow(label: "URL") {
-                TextField("", text: $url)
-                    .textFieldStyle(.plain)
-                    .textContentType(.URL)
-                    .formInputStyle()
-            }
-
-            FormFieldRow(label: "Publication year") {
-                TextField("", text: $publicationYear)
-                    .textFieldStyle(.plain)
-                    .formInputStyle(maxWidth: 80)
-            }
-
-            FormFieldRow(label: "Format") {
-                Picker("", selection: $format) {
-                    Text("—").tag(Optional<SourceFormat>.none)
-                    ForEach(SourceFormat.allCases) { option in
-                        Text(option.rawValue).tag(Optional(option))
                     }
                 }
-                .labelsHidden()
-                .accessibilityLabel("Format")
-                .frame(maxWidth: 160, alignment: .trailing)
-            }
-
-            FormFieldRow(label: "Year read") {
-                Picker("", selection: $dateReadYear) {
-                    Text("—").tag(Optional<Int>.none)
-                    ForEach(yearRange, id: \.self) { year in
-                        Text(String(year)).tag(Optional(year))
+                .onChange(of: isAuthorFieldFocused) { _, newValue in
+                    if newValue { authorInputChangedSinceFocus = false }
+                }
+                .onChange(of: authorText) { _, newValue in
+                    if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
+                    if let sel = selectedAuthor, sel.name != newValue {
+                        selectedAuthorId = nil
+                    }
+                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if let author = authors.first(where: { $0.name.lowercased() == trimmed.lowercased() }) {
+                        selectedAuthorId = author.id
+                        isAuthorFieldFocused = false
                     }
                 }
-                .labelsHidden()
-                .accessibilityLabel("Year read")
-                .frame(maxWidth: 120, alignment: .trailing)
-            }
-
-            FormFieldRow(label: "Month read") {
-                Picker("", selection: $dateReadMonth) {
-                    Text("—").tag(Optional<Int>.none)
-                    ForEach(1...12, id: \.self) { month in
-                        Text(monthSymbols[month - 1]).tag(Optional(month))
+                .onChange(of: selectedAuthorId) { _, newValue in
+                    if let id = newValue, let author = authors.first(where: { $0.id == id }) {
+                        authorText = author.name
                     }
                 }
-                .labelsHidden()
-                .accessibilityLabel("Month read")
-                .frame(maxWidth: 140, alignment: .trailing)
+
+            TextField("Title", text: $title)
+
+            TextField("URL", text: $url)
+                .textContentType(.URL)
+
+            TextField("Publication year", text: $publicationYear)
+
+            Picker("Format", selection: $format) {
+                Text("—").tag(Optional<SourceFormat>.none)
+                ForEach(SourceFormat.allCases) { option in
+                    Text(option.rawValue).tag(Optional(option))
+                }
+            }
+
+            Picker("Year read", selection: $dateReadYear) {
+                Text("—").tag(Optional<Int>.none)
+                ForEach(yearRange, id: \.self) { year in
+                    Text(String(year)).tag(Optional(year))
+                }
+            }
+
+            Picker("Month read", selection: $dateReadMonth) {
+                Text("—").tag(Optional<Int>.none)
+                ForEach(1...12, id: \.self) { month in
+                    Text(monthSymbols[month - 1]).tag(Optional(month))
+                }
             }
         }
-        .padding()
+        .formStyle(.grouped)
         .frame(minWidth: 360, minHeight: 420)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
