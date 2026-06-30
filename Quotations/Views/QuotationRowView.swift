@@ -271,12 +271,12 @@ struct QuotationRowView: View {
         if trimmed.isEmpty {
             if isNewDraft {
                 onDelete(quotation.id)
-            } else {
+            } else if quotation.content != "" {
                 quotation.content = ""
                 quotation.updatedAt = Date()
                 onEdit(quotation)
             }
-        } else {
+        } else if trimmed != quotation.content {
             quotation.content = trimmed
             quotation.updatedAt = Date()
             onEdit(quotation)

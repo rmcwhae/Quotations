@@ -15,8 +15,6 @@ struct SourceDetailView: View {
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
 
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
         ScrollView {
             SourceSectionView(
@@ -38,10 +36,6 @@ struct SourceDetailView: View {
         }
         .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(
-            AppColors.mainBackground(colorScheme: colorScheme)
-                .ignoresSafeArea(.container, edges: .top)
-        )
         .deselectQuotationOnBackgroundTap($selectedQuotationId)
     }
 }

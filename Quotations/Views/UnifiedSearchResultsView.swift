@@ -14,22 +14,31 @@ struct UnifiedSearchResultsView: View {
     var quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]]
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
+    /// Centered placeholder shown when there are no matching sources (searching / no results).
+    var statusMessage: String?
 
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(sources) { source in
-                        SingleSourceSearchSection(
-                            source: source,
-                            searchQuery: searchQuery,
-                            quotationIds: quotationsBySourceId[source.persistentModelID] ?? [],
-                            selectedQuotationId: $selectedQuotationId,
-                            newQuotationId: newQuotationId
-                        )
+                if let statusMessage {
+                    Text(statusMessage)
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 80)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(sources) { source in
+                            SingleSourceSearchSection(
+                                source: source,
+                                searchQuery: searchQuery,
+                                quotationIds: quotationsBySourceId[source.persistentModelID] ?? [],
+                                selectedQuotationId: $selectedQuotationId,
+                                newQuotationId: newQuotationId
+                            )
+                        }
                     }
                 }
 
@@ -39,10 +48,6 @@ struct UnifiedSearchResultsView: View {
         }
         .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(
-            AppColors.mainBackground(colorScheme: colorScheme)
-                .ignoresSafeArea(.container, edges: .top)
-        )
         .deselectQuotationOnBackgroundTap($selectedQuotationId)
     }
 }

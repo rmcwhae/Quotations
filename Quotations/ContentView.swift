@@ -47,26 +47,12 @@ struct ContentView: View {
         return modelContext.model(for: id) as? Quotation
     }
 
-    /// Centered placeholder text on a continuous parchment background (matches detail panes).
+    /// Centered placeholder text; the detail container supplies the parchment background.
     private func emptyDetail(_ message: String) -> some View {
-        GeometryReader { proxy in
-            ScrollView {
-                VStack {
-                    Spacer()
-                    Text(message)
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-                .frame(width: proxy.size.width, height: proxy.size.height)
-            }
-            .scrollContentBackground(.hidden)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            AppColors.mainBackground(colorScheme: colorScheme)
-                .ignoresSafeArea(.container, edges: .top)
-        )
+        Text(message)
+            .font(.title2)
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     /// Adds a new empty quotation to the selected source and selects it so it
@@ -183,17 +169,16 @@ struct ContentView: View {
         } detail: {
             Group {
                 if isSearchActive {
-                    if let matchSets = searchState.matchSetsForQuery(), !filteredSources.isEmpty {
-                        UnifiedSearchResultsView(
-                            sources: filteredSources,
-                            searchQuery: searchState.query,
-                            quotationsBySourceId: searchState.quotationsBySourceId,
-                            selectedQuotationId: $selectedQuotationId,
-                            newQuotationId: newQuotationId
-                        )
-                    } else {
-                        emptyDetail(searchState.isSearching ? "Searching…" : "No results")
-                    }
+                    UnifiedSearchResultsView(
+                        sources: filteredSources,
+                        searchQuery: searchState.query,
+                        quotationsBySourceId: searchState.quotationsBySourceId,
+                        selectedQuotationId: $selectedQuotationId,
+                        newQuotationId: newQuotationId,
+                        statusMessage: filteredSources.isEmpty
+                            ? (searchState.isSearching ? "Searching…" : "No results")
+                            : nil
+                    )
                 } else if let source = selectedSource {
                     SourceDetailView(
                         source: source,
@@ -207,6 +192,10 @@ struct ContentView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                AppColors.mainBackground(colorScheme: colorScheme)
+                    .ignoresSafeArea(.container, edges: .top)
+            )
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
