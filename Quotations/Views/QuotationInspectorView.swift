@@ -193,7 +193,9 @@ struct QuotationInspectorView: View {
 
     private func applyLocation(to quotation: Quotation) {
         let trimmed = location.trimmingCharacters(in: .whitespacesAndNewlines)
-        quotation.location = trimmed.isEmpty ? nil : trimmed
+        let newValue = trimmed.isEmpty ? nil : trimmed
+        guard newValue != quotation.location else { return }
+        quotation.location = newValue
         quotation.updatedAt = Date()
         try? modelContext.saveAndNotify()
     }
