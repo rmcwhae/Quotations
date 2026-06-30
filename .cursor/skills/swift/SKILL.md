@@ -106,6 +106,8 @@ xcodebuild -scheme AppName test
 
 # 3. Does it launch? (if UI changed)
 open ./build/Build/Products/Debug/AppName.app
+
+swiftlint
 ```
 
 Report to the user:
@@ -113,6 +115,7 @@ Report to the user:
 - "Build: ✓"
 - "Tests: 12 pass, 0 fail"
 - "App launches, ready for you to check [specific thing]"
+- swiftlint passes with no new issues
   </verification_loop>
 
 <when_to_test>
