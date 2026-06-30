@@ -26,19 +26,19 @@ enum SearchMatcher {
         var quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]] = [:]
 
         for quotation in quotations {
-            guard let source = quotation.source, source.deletedAt == nil,
-                  let author = source.author, author.deletedAt == nil else { continue }
+            guard let source = quotation.source, source.deletedAt == nil else { continue }
+            let author = source.author.flatMap { $0.deletedAt == nil ? $0 : nil }
 
             let contentMatch = quotation.content.lowercased().contains(lower)
             let titleMatch = source.title.lowercased().contains(lower)
-            let authorMatch = author.name.lowercased().contains(lower)
+            let authorMatch = author?.name.lowercased().contains(lower) ?? false
             let locationMatch = quotation.location?.lowercased().contains(lower) ?? false
 
             if contentMatch || titleMatch || authorMatch || locationMatch {
                 let quotationId = quotation.persistentModelID
                 let sourceId = source.persistentModelID
                 results.append(SearchResultItem(quotationId: quotationId, sourceId: sourceId))
-                authorIds.insert(author.persistentModelID)
+                if let author { authorIds.insert(author.persistentModelID) }
                 sourceIds.insert(sourceId)
                 quotationIds.insert(quotationId)
                 quotationsBySourceId[sourceId, default: []].append(quotationId)
