@@ -15,6 +15,10 @@ struct ContentView: View {
     @Query(filter: #Predicate<Source> { $0.deletedAt == nil })
     private var sources: [Source]
 
+    @Query(filter: #Predicate<Quotation> { $0.deletedAt == nil })
+    private var quotations: [Quotation]
+
+    @State private var navigation = LibraryNavigationState()
     @State private var searchState = SearchState()
     @State private var showSourceForm = false
     @State private var showAuthorList = false
@@ -24,35 +28,30 @@ struct ContentView: View {
     @State private var importSuccessMessage: String?
     @State private var errorMessage: String?
     @State private var showError = false
-    @State private var selectedSourceId: PersistentIdentifier?
     @State private var sourceToEdit: Source?
     @State private var sourceToDelete: Source?
     @State private var showDeleteSourceConfirmation = false
-    @State private var isInspectorShown = true
-    @State private var selectedQuotationId: PersistentIdentifier?
+    @State private var isInspectorShown = false
     @State private var newQuotationId: PersistentIdentifier?
 
     private var isSearchActive: Bool {
         !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private var filteredSources: [Source] {
-        let sorted = sources.sorted(by: Source.compareByDateReadDescending)
-        guard let sets = searchState.matchSetsForQuery() else { return sorted }
-        return sorted.filter { sets.sourceIds.contains($0.id) }
+    private var effectiveFilter: LibraryFilter {
+        navigation.effectiveFilter(isSearchActive: isSearchActive)
     }
 
     private var selectedSource: Source? {
-        sources.first { $0.id == selectedSourceId }
-            ?? filteredSources.first { $0.id == selectedSourceId }
+        guard let id = navigation.selectedSourceId else { return nil }
+        return sources.first { $0.id == id }
     }
 
     private var selectedQuotation: Quotation? {
-        guard let id = selectedQuotationId else { return nil }
+        guard let id = navigation.selectedQuotationId else { return nil }
         return modelContext.model(for: id) as? Quotation
     }
 
-    /// Centered placeholder text; the detail container supplies the parchment background.
     private func emptyDetail(_ message: String) -> some View {
         VStack(spacing: 12) {
             Text("Quotations")
@@ -65,8 +64,6 @@ struct ContentView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Adds a new empty quotation to the selected source and selects it so it
-    /// opens inline in edit mode, looking exactly like an existing quotation.
     private func addQuotation() {
         guard let source = selectedSource else { return }
         cleanupNewQuotationIfEmpty()
@@ -74,20 +71,27 @@ struct ContentView: View {
         modelContext.insert(quotation)
         try? modelContext.save()
         newQuotationId = quotation.id
-        selectedQuotationId = quotation.id
+        navigation.selectedQuotationId = quotation.id
     }
 
-    /// Removes a freshly added quotation that was left empty (abandoned).
     private func cleanupNewQuotationIfEmpty() {
         defer { newQuotationId = nil }
         guard let id = newQuotationId,
               let quotation = modelContext.model(for: id) as? Quotation else { return }
         if quotation.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             try? SoftDelete.quotation(quotation, in: modelContext)
-            if selectedQuotationId == id {
-                selectedQuotationId = nil
+            if navigation.selectedQuotationId == id {
+                navigation.selectedQuotationId = nil
             }
         }
+    }
+
+    private func selectFilter(_ filter: LibraryFilter) {
+        if filter != .searchResults {
+            searchState.query = ""
+        }
+        navigation.selectFilter(filter)
+        cleanupNewQuotationIfEmpty()
     }
 
     private func importFromAppleBooks() {
@@ -113,13 +117,37 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            sourceSidebar
+            LibraryFilterSidebarView(
+                navigation: navigation,
+                isSearchActive: isSearchActive,
+                onManageAuthors: { showAuthorList = true },
+                onSelectFilter: selectFilter
+            )
+        } content: {
+            LibraryContextListView(
+                filter: effectiveFilter,
+                sources: sources,
+                quotations: quotations,
+                searchState: searchState,
+                selectedSourceId: $navigation.selectedSourceId,
+                selectedQuotationId: $navigation.selectedQuotationId,
+                showSourceForm: $showSourceForm,
+                onSourceEdit: { sourceToEdit = $0 },
+                onSourceDelete: { source in
+                    sourceToDelete = source
+                    showDeleteSourceConfirmation = true
+                },
+                onError: { message in
+                    errorMessage = message
+                    showError = true
+                }
+            )
         } detail: {
             detailPane
         }
         .onKeyPress(.escape) {
-            guard selectedQuotationId != nil else { return .ignored }
-            selectedQuotationId = nil
+            guard navigation.selectedQuotationId != nil else { return .ignored }
+            navigation.clearQuotationSelection()
             return .handled
         }
         .searchable(
@@ -141,14 +169,16 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .importFromAppleBooks)) { _ in
             importFromAppleBooks()
         }
-        .onChange(of: selectedSourceId) { _, _ in
+        .onChange(of: navigation.selectedSourceId) { _, _ in
             cleanupNewQuotationIfEmpty()
-            selectedQuotationId = nil
         }
-        .onChange(of: selectedQuotationId) { _, newValue in
+        .onChange(of: navigation.selectedQuotationId) { _, newValue in
             if let newId = newQuotationId, newValue != newId {
                 cleanupNewQuotationIfEmpty()
             }
+        }
+        .onChange(of: navigation.selectedFilter) { _, _ in
+            cleanupNewQuotationIfEmpty()
         }
         .navigationTitle("")
         .modifier(ContentViewSheetsModifier(
@@ -161,8 +191,8 @@ struct ContentView: View {
             sourceToEdit: $sourceToEdit,
             showDeleteSourceConfirmation: $showDeleteSourceConfirmation,
             sourceToDelete: $sourceToDelete,
-            selectedSourceId: $selectedSourceId,
-            selectedQuotationId: $selectedQuotationId,
+            selectedSourceId: $navigation.selectedSourceId,
+            selectedQuotationId: $navigation.selectedQuotationId,
             modelContext: modelContext,
             onEditError: { message in
                 errorMessage = message
@@ -173,116 +203,20 @@ struct ContentView: View {
 }
 
 private extension ContentView {
-    var sourceSidebar: some View {
-        List {
-            if showSourceForm {
-                SourceFormView(
-                    onSuccess: {
-                        showSourceForm = false
-                    },
-                    onCancel: {
-                        showSourceForm = false
-                    },
-                    onError: { message in
-                        errorMessage = message
-                        showError = true
-                    }
-                )
-                .listRowSeparator(.hidden)
-            }
-
-            ForEach(filteredSources) { source in
-                SourceListRowView(
-                    source: source,
-                    searchQuery: searchState.query,
-                    isSelected: source.id == selectedSourceId
-                )
-                .tag(source.id)
-                .listRowBackground(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(source.id == selectedSourceId ? AppColors.selectionBackground : Color.clear)
-                        .padding(.horizontal, 4)
-                )
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    selectedSourceId = source.id
-                }
-                .contextMenu {
-                    Button("Edit…") {
-                        sourceToEdit = source
-                    }
-                    Button("Delete", role: .destructive) {
-                        sourceToDelete = source
-                        showDeleteSourceConfirmation = true
-                    }
-                }
-            }
-        }
-        .overlay {
-            if sources.isEmpty && !showSourceForm
-                && searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("No sources yet.")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .overlay(alignment: .top) {
-            if !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-               !searchState.isSearching,
-               searchState.searchResults.isEmpty {
-                Text("No results for \"\(searchState.query.trimmingCharacters(in: .whitespacesAndNewlines))\".")
-                    .foregroundStyle(.secondary)
-                    .font(.caption)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .navigationSplitViewColumnWidth(min: 200, ideal: 300, max: 500)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showSourceForm = true
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel("Create source")
-                .help("Add source")
-            }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    showAuthorList = true
-                } label: {
-                    Image(systemName: "person.2")
-                }
-                .accessibilityLabel("Manage authors")
-                .help("Manage authors")
-            }
-        }
-    }
-
     var detailPane: some View {
         Group {
-            if isSearchActive {
-                UnifiedSearchResultsView(
-                    sources: filteredSources,
-                    searchQuery: searchState.query,
-                    quotationsBySourceId: searchState.quotationsBySourceId,
-                    selectedQuotationId: $selectedQuotationId,
-                    newQuotationId: newQuotationId,
-                    statusMessage: filteredSources.isEmpty
-                        ? (searchState.isSearching ? "Searching…" : "No results")
-                        : nil
-                )
-            } else if let source = selectedSource {
+            if let source = selectedSource {
                 SourceDetailView(
                     source: source,
                     searchQuery: searchState.query,
-                    quotationIdsFilter: searchState.matchSetsForQuery()?.quotationIds,
-                    selectedQuotationId: $selectedQuotationId,
+                    quotationIdsFilter: isSearchActive
+                        ? searchState.matchSetsForQuery()?.quotationIds
+                        : nil,
+                    selectedQuotationId: $navigation.selectedQuotationId,
                     newQuotationId: newQuotationId
                 )
             } else {
-                emptyDetail("Select a source")
+                emptyDetail(detailPlaceholderMessage)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -293,16 +227,14 @@ private extension ContentView {
         .toolbarBackground(.hidden, for: .windowToolbar)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button {
-                    addQuotation()
-                } label: {
+                Button(action: addQuotation) {
                     Image(systemName: "plus")
                 }
                 .accessibilityLabel("Add quotation")
                 .help("Add quotation")
-                .disabled(selectedSource == nil || isSearchActive)
-                .opacity(selectedSource == nil || isSearchActive ? 0 : 1)
-                .accessibilityHidden(selectedSource == nil || isSearchActive)
+                .disabled(selectedSource == nil)
+                .opacity(selectedSource == nil ? 0 : 1)
+                .accessibilityHidden(selectedSource == nil)
             }
             ToolbarItem(placement: .primaryAction) {
                 Button(
@@ -318,12 +250,19 @@ private extension ContentView {
         .inspector(isPresented: $isInspectorShown) {
             QuotationInspectorView(
                 quotation: selectedQuotation,
-                selectedQuotationId: $selectedQuotationId
+                selectedQuotationId: $navigation.selectedQuotationId
             )
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .inspectorColumnWidth(min: 220, ideal: 300, max: 420)
         }
+    }
+
+    var detailPlaceholderMessage: String {
+        if effectiveFilter.showsQuotations {
+            return "Select a quotation"
+        }
+        return "Select a source"
     }
 }
 

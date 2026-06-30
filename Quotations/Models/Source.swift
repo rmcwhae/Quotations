@@ -9,7 +9,6 @@ import SwiftData
 enum SourceFormat: String, CaseIterable, Identifiable {
     case kobo = "Kobo"
     case appleBooks = "Apple Books"
-    case audiobook = "Audiobook"
     case printBook = "Print Book"
 
     var id: String { rawValue }
