@@ -9,6 +9,8 @@ import SwiftData
 struct ContentViewSheetsModifier: ViewModifier {
     @Binding var showError: Bool
     let errorMessage: String?
+    @Binding var showImportSuccess: Bool
+    let importSuccessMessage: String?
     @Binding var showAuthorList: Bool
     @Binding var showBackups: Bool
     @Binding var sourceToEdit: Source?
@@ -26,6 +28,13 @@ struct ContentViewSheetsModifier: ViewModifier {
             } message: {
                 if let errorMessage {
                     Text(errorMessage)
+                }
+            }
+            .alert("Import Complete", isPresented: $showImportSuccess) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let importSuccessMessage {
+                    Text(importSuccessMessage)
                 }
             }
             .sheet(isPresented: $showAuthorList) {

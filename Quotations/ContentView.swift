@@ -10,6 +10,7 @@ import Combine
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(BackupManager.self) private var backupManager
 
     @Query(filter: #Predicate<Source> { $0.deletedAt == nil },
            sort: [SortDescriptor(\.createdAt, order: .reverse)])
@@ -19,6 +20,9 @@ struct ContentView: View {
     @State private var showSourceForm = false
     @State private var showAuthorList = false
     @State private var showBackups = false
+    @State private var isImporting = false
+    @State private var showImportSuccess = false
+    @State private var importSuccessMessage: String?
     @State private var errorMessage: String?
     @State private var showError = false
     @State private var selectedSourceId: PersistentIdentifier?
@@ -86,6 +90,27 @@ struct ContentView: View {
         }
     }
 
+    private func importFromAppleBooks() {
+        guard !isImporting else { return }
+        isImporting = true
+        defer { isImporting = false }
+
+        do {
+            let result = try AppleBooksImportService.importFromAppleBooks(
+                modelContext: modelContext,
+                backupManager: backupManager
+            )
+            importSuccessMessage = result.summaryMessage
+            showImportSuccess = true
+            searchState.runSearchIfNeeded(modelContext: modelContext)
+        } catch let error as AppleBooksImportError where error == .userCancelled {
+            // User dismissed the file picker; no alert needed.
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
     var body: some View {
         NavigationSplitView {
             sourceSidebar
@@ -113,6 +138,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .showBackupsPanel)) { _ in
             showBackups = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .importFromAppleBooks)) { _ in
+            importFromAppleBooks()
+        }
         .onChange(of: selectedSourceId) { _, _ in
             cleanupNewQuotationIfEmpty()
             selectedQuotationId = nil
@@ -126,6 +154,8 @@ struct ContentView: View {
         .modifier(ContentViewSheetsModifier(
             showError: $showError,
             errorMessage: errorMessage,
+            showImportSuccess: $showImportSuccess,
+            importSuccessMessage: importSuccessMessage,
             showAuthorList: $showAuthorList,
             showBackups: $showBackups,
             sourceToEdit: $sourceToEdit,
@@ -309,4 +339,5 @@ private extension ContentView {
 #Preview {
     ContentView()
         .modelContainer(for: [Author.self, Source.self, Quotation.self], inMemory: true)
+        .environment(BackupManager(storeURL: URL(fileURLWithPath: "/tmp/default.store")))
 }

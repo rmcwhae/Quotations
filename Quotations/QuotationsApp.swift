@@ -60,6 +60,9 @@ struct QuotationsApp: App {
         }
         .commands {
             CommandGroup(after: .saveItem) {
+                Button("Import from Apple Books…") {
+                    NotificationCenter.default.post(name: .importFromAppleBooks, object: nil)
+                }
                 Button("Backups…") {
                     NotificationCenter.default.post(name: .showBackupsPanel, object: nil)
                 }

@@ -23,6 +23,8 @@ final class Source {
     var format: String?
     var dateReadMonth: Int?
     var dateReadYear: Int?
+    /// Stable ID from an external import source (e.g. Apple Books asset ID).
+    var externalIdentifier: String?
     var createdAt: Date?
     var updatedAt: Date?
     var deletedAt: Date?
@@ -39,7 +41,8 @@ final class Source {
         publicationYear: Int? = nil,
         format: String? = nil,
         dateReadMonth: Int? = nil,
-        dateReadYear: Int? = nil
+        dateReadYear: Int? = nil,
+        externalIdentifier: String? = nil
     ) {
         self.title = title
         self.author = author
@@ -48,6 +51,7 @@ final class Source {
         self.format = format
         self.dateReadMonth = dateReadMonth
         self.dateReadYear = dateReadYear
+        self.externalIdentifier = externalIdentifier
         self.createdAt = Date()
         self.updatedAt = Date()
         self.deletedAt = nil
