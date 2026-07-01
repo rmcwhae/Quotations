@@ -14,7 +14,6 @@ struct SourceFormView: View {
     var existingSource: Source?
 
     @State private var authorText = ""
-    @State private var selectedAuthorId: PersistentIdentifier?
     @State private var title = ""
     @State private var publicationYear = ""
     @State private var url = ""
@@ -33,14 +32,16 @@ struct SourceFormView: View {
 
     private var isEditing: Bool { existingSource != nil }
 
-    private var selectedAuthor: Author? {
-        authors.first { $0.id == selectedAuthorId }
-    }
-
     private var authorSuggestions: [Author] {
         let query = authorText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !query.isEmpty else { return [] }
         return authors.filter { $0.name.lowercased().contains(query) }
+    }
+
+    private var showsAuthorSuggestions: Bool {
+        isAuthorFieldFocused
+            && authorInputChangedSinceFocus
+            && !authorSuggestions.isEmpty
     }
 
     private var authorNameIsValid: Bool {
@@ -57,30 +58,28 @@ struct SourceFormView: View {
     var body: some View {
         Form {
             TextField("Author", text: $authorText)
-                .textContentType(.name)
                 .focused($isAuthorFieldFocused)
-                .textInputSuggestions {
-                    if authorInputChangedSinceFocus {
-                        ForEach(authorSuggestions, id: \.id) { author in
-                            Text(author.name)
-                                .textInputCompletion(author.name)
-                        }
-                    }
-                }
                 .onChange(of: isAuthorFieldFocused) { _, newValue in
                     if newValue { authorInputChangedSinceFocus = false }
                 }
-                .onChange(of: authorText) { _, newValue in
+                .onChange(of: authorText) { _, _ in
                     if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
-                    if let sel = selectedAuthor, sel.name != newValue {
-                        selectedAuthorId = nil
+                }
+
+            if showsAuthorSuggestions {
+                Section {
+                    ForEach(authorSuggestions.prefix(6)) { author in
+                        Button {
+                            authorText = author.name
+                            authorInputChangedSinceFocus = false
+                        } label: {
+                            Text(author.name)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
-                .onChange(of: selectedAuthorId) { _, newValue in
-                    if let id = newValue, let author = authors.first(where: { $0.id == id }) {
-                        authorText = author.name
-                    }
-                }
+            }
 
             TextField("Title", text: $title)
 
@@ -137,7 +136,6 @@ struct SourceFormView: View {
             dateReadYear = source.dateReadYear
             if let author = source.author {
                 authorText = author.name
-                selectedAuthorId = author.id
             }
             hasPrefilled = true
             authorInputChangedSinceFocus = false
@@ -146,9 +144,6 @@ struct SourceFormView: View {
 
     private func resolveAuthor(named authorName: String) -> Author {
         let normalizedAuthorName = authorName.lowercased()
-        if let existing = selectedAuthor, existing.name.lowercased() == normalizedAuthorName {
-            return existing
-        }
         if let existing = authors.first(where: { $0.name.lowercased() == normalizedAuthorName }) {
             return existing
         }

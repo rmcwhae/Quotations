@@ -13,7 +13,7 @@ struct ContentViewSheetsModifier: ViewModifier {
     let importSuccessMessage: String?
     @Binding var showAuthorList: Bool
     @Binding var showBackups: Bool
-    @Binding var showSourceCreateForm: Bool
+    @Binding var newSourceSession: NewSourceSheetSession?
     @Binding var sourceToEdit: Source?
     @Binding var showDeleteSourceConfirmation: Bool
     @Binding var sourceToDelete: Source?
@@ -46,15 +46,15 @@ struct ContentViewSheetsModifier: ViewModifier {
             .sheet(isPresented: $showBackups) {
                 BackupManagementView(onDismiss: { showBackups = false })
             }
-            .sheet(isPresented: $showSourceCreateForm) {
+            .sheet(item: $newSourceSession) { _ in
                 SourceFormView(
                     onSuccess: { sourceId in
-                        showSourceCreateForm = false
+                        newSourceSession = nil
                         if let sourceId {
                             onSourceCreated(sourceId)
                         }
                     },
-                    onCancel: { showSourceCreateForm = false },
+                    onCancel: { newSourceSession = nil },
                     onError: onEditError
                 )
             }

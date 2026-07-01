@@ -21,7 +21,7 @@ struct ContentView: View {
 
     @State private var navigation = LibraryNavigationState()
     @State private var searchState = SearchState()
-    @State private var showSourceCreateForm = false
+    @State private var newSourceSession: NewSourceSheetSession?
     @State private var showAuthorList = false
     @State private var showBackups = false
     @State private var isImporting = false
@@ -195,7 +195,7 @@ struct ContentView: View {
                 selectedSourceId: $navigation.selectedSourceId,
                 selectedQuotationId: $navigation.selectedQuotationId,
                 onManageAuthors: { showAuthorList = true },
-                onAddSource: { showSourceCreateForm = true },
+                onAddSource: { newSourceSession = NewSourceSheetSession() },
                 onSourceEdit: { sourceToEdit = $0 },
                 onSourceDelete: { source in
                     sourceToDelete = source
@@ -236,6 +236,9 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .importQuotationsFromCSV)) { _ in
             beginCSVImport()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .addQuotation)) { _ in
+            addQuotation()
+        }
         .fileImporter(
             isPresented: $showCSVImporter,
             allowedContentTypes: [.commaSeparatedText, .plainText, .text],
@@ -266,7 +269,7 @@ struct ContentView: View {
             importSuccessMessage: importSuccessMessage,
             showAuthorList: $showAuthorList,
             showBackups: $showBackups,
-            showSourceCreateForm: $showSourceCreateForm,
+            newSourceSession: $newSourceSession,
             sourceToEdit: $sourceToEdit,
             showDeleteSourceConfirmation: $showDeleteSourceConfirmation,
             sourceToDelete: $sourceToDelete,
@@ -312,7 +315,8 @@ private extension ContentView {
                     Image(systemName: "plus")
                 }
                 .accessibilityLabel("Add quotation")
-                .help("Add quotation")
+                .help("Add quotation (⌘⇧N)")
+                .keyboardShortcut("n", modifiers: [.command, .shift])
                 .disabled(selectedSource == nil)
             }
             ToolbarItem(placement: .primaryAction) {

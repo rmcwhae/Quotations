@@ -20,6 +20,7 @@ struct QuotationRichTextEditor: NSViewRepresentable {
     var selectionRequestID: Int = 0
     var onFocusChange: (Bool) -> Void
     var onEscape: (() -> Void)? = nil
+    var onCommit: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -60,6 +61,7 @@ struct QuotationRichTextEditor: NSViewRepresentable {
     func updateNSView(_ textView: QuotationTextView, context: Context) {
         context.coordinator.parent = self
         textView.onEscape = onEscape
+        textView.onCommit = onCommit
 
         if textView.frame.width != maxWidth {
             textView.frame.size.width = maxWidth
@@ -182,6 +184,7 @@ struct QuotationRichTextEditor: NSViewRepresentable {
 /// NSTextView that reports its laid-out height for inline SwiftUI sizing.
 final class QuotationTextView: NSTextView {
     var onEscape: (() -> Void)?
+    var onCommit: (() -> Void)?
 
     override func cancelOperation(_ sender: Any?) {
         if let onEscape {
@@ -234,6 +237,23 @@ final class QuotationTextView: NSTextView {
         textStorage?.replaceCharacters(in: range, with: normalized)
         typingAttributes = MarkdownCodec.editorTypingAttributes
         didChangeText()
+    }
+
+    override func keyDown(with event: NSEvent) {
+        if isEditable,
+           window?.firstResponder === self,
+           event.keyCode == 36 || event.keyCode == 76 {
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if flags.contains(.shift) {
+                super.keyDown(with: event)
+            } else if let onCommit {
+                onCommit()
+            } else {
+                super.keyDown(with: event)
+            }
+            return
+        }
+        super.keyDown(with: event)
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {

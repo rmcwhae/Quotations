@@ -148,7 +148,7 @@ struct QuotationRowView: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilitySummary)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityHint(isTextFocused ? "Editing quotation" : "Double-click to edit")
+        .accessibilityHint(isTextFocused ? "Return to save, Shift-Return for new line" : "Double-click to edit")
         .onAppear {
             if beginEditing, !didBeginEditing {
                 didBeginEditing = true
@@ -220,6 +220,11 @@ struct QuotationRowView: View {
                 selectionRequestID: selectionRequestID,
                 onFocusChange: { isTextFocused = $0 },
                 onEscape: {
+                    isTextFocused = false
+                },
+                onCommit: {
+                    saveTask?.cancel()
+                    commitEdit()
                     isTextFocused = false
                 }
             )

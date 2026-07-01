@@ -59,6 +59,12 @@ struct QuotationsApp: App {
                 .environment(backupManager)
         }
         .commands {
+            CommandGroup(after: .newItem) {
+                Button("New Quotation") {
+                    NotificationCenter.default.post(name: .addQuotation, object: nil)
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+            }
             CommandGroup(after: .saveItem) {
                 Button("Import from Apple Books…") {
                     NotificationCenter.default.post(name: .importFromAppleBooks, object: nil)

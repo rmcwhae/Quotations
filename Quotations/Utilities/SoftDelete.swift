@@ -51,4 +51,5 @@ enum SoftDelete {
 
 extension Notification.Name {
     static let quotationsDataDidChange = Notification.Name("quotationsDataDidChange")
+    static let addQuotation = Notification.Name("addQuotation")
 }
