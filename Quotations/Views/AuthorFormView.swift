@@ -23,7 +23,9 @@ struct AuthorFormView: View {
 
     var body: some View {
         Form {
-            TextField("Author name", text: $name)
+            LabeledContent("Author name") {
+                MacFormTextField(placeholder: "", text: $name)
+            }
         }
         .formStyle(.grouped)
         .contentMargins(.bottom, 0, for: .scrollContent)

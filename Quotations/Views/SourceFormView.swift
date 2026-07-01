@@ -24,7 +24,7 @@ struct SourceFormView: View {
     /// Only true after the user has changed the author text while the field is focused
     /// (not on initial focus or prefill).
     @State private var authorInputChangedSinceFocus = false
-    @FocusState private var isAuthorFieldFocused: Bool
+    @State private var isAuthorFieldFocused = false
 
     var onSuccess: (PersistentIdentifier?) -> Void
     var onCancel: () -> Void
@@ -57,14 +57,15 @@ struct SourceFormView: View {
 
     var body: some View {
         Form {
-            TextField("Author", text: $authorText)
-                .focused($isAuthorFieldFocused)
-                .onChange(of: isAuthorFieldFocused) { _, newValue in
-                    if newValue { authorInputChangedSinceFocus = false }
+            LabeledContent("Author") {
+                MacFormTextField(placeholder: "", text: $authorText) { focused in
+                    isAuthorFieldFocused = focused
+                    if focused { authorInputChangedSinceFocus = false }
                 }
                 .onChange(of: authorText) { _, _ in
                     if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
                 }
+            }
 
             if showsAuthorSuggestions {
                 Section {
@@ -81,10 +82,13 @@ struct SourceFormView: View {
                 }
             }
 
-            TextField("Title", text: $title)
+            LabeledContent("Title") {
+                MacFormTextField(placeholder: "", text: $title)
+            }
 
-            TextField("URL", text: $url)
-                .textContentType(.URL)
+            LabeledContent("URL") {
+                MacFormTextField(placeholder: "", text: $url)
+            }
 
             TextField("Publication year", text: $publicationYear)
 

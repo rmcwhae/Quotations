@@ -6,6 +6,16 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		BA6FDD882F49062900A76E1C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BA6FDD692F49062600A76E1C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BA6FDD702F49062600A76E1C;
+			remoteInfo = Quotations;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		BA6FDD712F49062600A76E1C /* Quotations.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Quotations.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BA6FDD812F49062900A76E1C /* QuotationsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QuotationsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -62,16 +72,6 @@
 		};
 /* End PBXGroup section */
 
-/* Begin PBXContainerItemProxy section */
-		BA6FDD882F49062900A76E1C /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = BA6FDD692F49062600A76E1C /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = BA6FDD702F49062600A76E1C;
-			remoteInfo = Quotations;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXNativeTarget section */
 		BA6FDD702F49062600A76E1C /* Quotations */ = {
 			isa = PBXNativeTarget;
@@ -120,14 +120,6 @@
 		};
 /* End PBXNativeTarget section */
 
-/* Begin PBXTargetDependency section */
-		BA6FDD872F49062900A76E1C /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = BA6FDD702F49062600A76E1C /* Quotations */;
-			targetProxy = BA6FDD882F49062900A76E1C /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin PBXProject section */
 		BA6FDD692F49062600A76E1C /* Project object */ = {
 			isa = PBXProject;
@@ -169,9 +161,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-/* End PBXResourcesBuildPhase section */
-
-/* Begin PBXResourcesBuildPhase section */
 		BA6FDD862F49062900A76E1C /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -182,6 +171,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		BA6FDD6D2F49062600A76E1C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		BA6FDD842F49062900A76E1C /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -191,15 +187,13 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
-/* Begin PBXSourcesBuildPhase section */
-		BA6FDD6D2F49062600A76E1C /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
+/* Begin PBXTargetDependency section */
+		BA6FDD872F49062900A76E1C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BA6FDD702F49062600A76E1C /* Quotations */;
+			targetProxy = BA6FDD882F49062900A76E1C /* PBXContainerItemProxy */;
 		};
-/* End PBXSourcesBuildPhase section */
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		BA6FDD7C2F49062800A76E1C /* Debug */ = {
