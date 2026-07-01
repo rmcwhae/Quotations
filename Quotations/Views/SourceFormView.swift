@@ -75,11 +75,6 @@ struct SourceFormView: View {
                     if let sel = selectedAuthor, sel.name != newValue {
                         selectedAuthorId = nil
                     }
-                    let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if let author = authors.first(where: { $0.name.lowercased() == trimmed.lowercased() }) {
-                        selectedAuthorId = author.id
-                        isAuthorFieldFocused = false
-                    }
                 }
                 .onChange(of: selectedAuthorId) { _, newValue in
                     if let id = newValue, let author = authors.first(where: { $0.id == id }) {

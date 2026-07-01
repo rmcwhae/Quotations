@@ -8,6 +8,7 @@ import SwiftData
 
 enum SourceFormat: String, CaseIterable, Identifiable {
     case kobo = "Kobo"
+    case libby = "Libby"
     case appleBooks = "Apple Books"
     case printBook = "Print Book"
 
