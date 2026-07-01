@@ -66,6 +66,9 @@ struct SourceFormView: View {
     /// (not on initial focus or prefill).
     @State private var authorInputChangedSinceFocus = false
     @State private var isAuthorFieldFocused = false
+    /// Suppresses the next `authorText` onChange so selecting a suggestion doesn't
+    /// immediately re-trigger `authorInputChangedSinceFocus` and reopen the dropdown.
+    @State private var didSelectAuthorSuggestion = false
 
     var onSuccess: (PersistentIdentifier?) -> Void
     var onCancel: () -> Void
@@ -104,6 +107,10 @@ struct SourceFormView: View {
                     if focused { authorInputChangedSinceFocus = false }
                 }
                 .onChange(of: authorText) { _, _ in
+                    if didSelectAuthorSuggestion {
+                        didSelectAuthorSuggestion = false
+                        return
+                    }
                     if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
                 }
             }
@@ -151,6 +158,7 @@ struct SourceFormView: View {
                     AuthorSuggestionsDropdown(
                         suggestions: Array(authorSuggestions.prefix(6)),
                         onSelect: { author in
+                            didSelectAuthorSuggestion = true
                             authorText = author.name
                             authorInputChangedSinceFocus = false
                         }
