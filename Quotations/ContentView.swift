@@ -6,6 +6,7 @@
 import SwiftUI
 import SwiftData
 import Combine
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -24,6 +25,8 @@ struct ContentView: View {
     @State private var showAuthorList = false
     @State private var showBackups = false
     @State private var isImporting = false
+    @State private var showCSVImporter = false
+    @State private var csvImportSourceId: PersistentIdentifier?
     @State private var showImportSuccess = false
     @State private var importSuccessMessage: String?
     @State private var errorMessage: String?
@@ -106,6 +109,53 @@ struct ContentView: View {
         }
     }
 
+    private func beginCSVImport() {
+        guard let source = selectedSource else {
+            errorMessage = "Select a source before importing quotations from CSV."
+            showError = true
+            return
+        }
+        csvImportSourceId = source.persistentModelID
+        showCSVImporter = true
+    }
+
+    private func importCSV(from url: URL) {
+        guard !isImporting else { return }
+        guard let sourceId = csvImportSourceId,
+              let source = modelContext.model(for: sourceId) as? Source else {
+            errorMessage = "Select a source before importing quotations from CSV."
+            showError = true
+            return
+        }
+        isImporting = true
+        defer {
+            isImporting = false
+            csvImportSourceId = nil
+        }
+
+        let accessGranted = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessGranted {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            let result = try QuotationCSVImportService.importCSV(
+                url: url,
+                into: source,
+                modelContext: modelContext,
+                backupManager: backupManager
+            )
+            importSuccessMessage = result.summaryMessage
+            showImportSuccess = true
+            searchState.runSearchIfNeeded(modelContext: modelContext)
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
     private func importFromAppleBooks() {
         guard !isImporting else { return }
         isImporting = true
@@ -178,6 +228,23 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .importFromAppleBooks)) { _ in
             importFromAppleBooks()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .importQuotationsFromCSV)) { _ in
+            beginCSVImport()
+        }
+        .fileImporter(
+            isPresented: $showCSVImporter,
+            allowedContentTypes: [.commaSeparatedText, .plainText, .text],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                importCSV(from: url)
+            case .failure(let error):
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
         .onChange(of: navigation.selectedSourceId) { _, _ in
             cleanupNewQuotationIfEmpty()
         }
@@ -240,6 +307,14 @@ private extension ContentView {
                 }
                 .accessibilityLabel("Add quotation")
                 .help("Add quotation")
+                .disabled(selectedSource == nil)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: beginCSVImport) {
+                    Image(systemName: "square.and.arrow.down")
+                }
+                .accessibilityLabel("Import quotations from CSV")
+                .help("Import quotations from CSV")
                 .disabled(selectedSource == nil)
             }
             ToolbarItem(placement: .primaryAction) {

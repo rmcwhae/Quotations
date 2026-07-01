@@ -63,6 +63,9 @@ struct QuotationsApp: App {
                 Button("Import from Apple Books…") {
                     NotificationCenter.default.post(name: .importFromAppleBooks, object: nil)
                 }
+                Button("Import Quotations from CSV…") {
+                    NotificationCenter.default.post(name: .importQuotationsFromCSV, object: nil)
+                }
                 Button("Backups…") {
                     NotificationCenter.default.post(name: .showBackupsPanel, object: nil)
                 }
