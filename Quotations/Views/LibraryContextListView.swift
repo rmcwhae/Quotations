@@ -26,7 +26,13 @@ struct LibraryContextListView: View {
         searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private var listContent: (sources: [Source], quotations: [Quotation]) {
+    private struct ResolvedListContent {
+        let sources: [Source]
+        let quotations: [Quotation]
+        let stats: LibraryStats
+    }
+
+    private var listContent: ResolvedListContent {
         let matchSets = searchState.matchSetsForQuery()
         let sources: [Source]
         if filter == .searchResults {
@@ -40,7 +46,8 @@ struct LibraryContextListView: View {
             matchSets: matchSets,
             searchResultIds: LibraryFilterResolver.searchResultQuotationIds(from: searchState)
         )
-        return (sources, quotations)
+        let stats = LibraryFilterResolver.stats(for: filter, resolvedSources: sources, resolvedQuotations: quotations)
+        return ResolvedListContent(sources: sources, quotations: quotations, stats: stats)
     }
 
     var body: some View {
@@ -56,6 +63,9 @@ struct LibraryContextListView: View {
         .navigationTitle(filter.title)
         .scrollUnderTitleFade()
         .overlay { emptyOverlay(sources: resolved.sources, quotations: resolved.quotations) }
+        .safeAreaInset(edge: .bottom) {
+            LibraryStatsFooterView(stats: resolved.stats)
+        }
         .navigationSplitViewColumnWidth(min: 220, ideal: 300, max: 420)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -171,5 +181,37 @@ struct LibraryContextListView: View {
         RoundedRectangle(cornerRadius: 6)
             .fill(isSelected ? AppColors.selectionBackground : Color.clear)
             .padding(.horizontal, 4)
+    }
+}
+
+/// Context-aware counts for whatever filter/search is currently active in column 2.
+private struct LibraryStatsFooterView: View {
+    let stats: LibraryStats
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Divider()
+            Text(summary)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(.bar)
+    }
+
+    private var summary: String {
+        [
+            pluralize(stats.quotationCount, "quotation"),
+            pluralize(stats.sourceCount, "source"),
+            pluralize(stats.authorCount, "author")
+        ].joined(separator: " · ")
+    }
+
+    private func pluralize(_ count: Int, _ noun: String) -> String {
+        count == 1 ? "1 \(noun)" : "\(count) \(noun)s"
     }
 }

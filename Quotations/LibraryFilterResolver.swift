@@ -70,4 +70,36 @@ enum LibraryFilterResolver {
             .filter { sets.sourceIds.contains($0.id) }
             .sorted(by: Source.compareByDateReadDescending)
     }
+
+    static func stats(
+        for filter: LibraryFilter,
+        resolvedSources: [Source],
+        resolvedQuotations: [Quotation]
+    ) -> LibraryStats {
+        if filter.showsQuotations {
+            let sourceIds = Set(resolvedQuotations.compactMap { $0.source?.id })
+            let authorIds = Set(resolvedQuotations.compactMap { $0.source?.author?.id })
+            return LibraryStats(
+                quotationCount: resolvedQuotations.count,
+                sourceCount: sourceIds.count,
+                authorCount: authorIds.count
+            )
+        } else {
+            let quotationCount = resolvedSources.reduce(0) {
+                $0 + $1.quotations.filter { $0.deletedAt == nil }.count
+            }
+            let authorIds = Set(resolvedSources.compactMap { $0.author?.id })
+            return LibraryStats(
+                quotationCount: quotationCount,
+                sourceCount: resolvedSources.count,
+                authorCount: authorIds.count
+            )
+        }
+    }
+}
+
+struct LibraryStats: Equatable {
+    let quotationCount: Int
+    let sourceCount: Int
+    let authorCount: Int
 }
