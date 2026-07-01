@@ -53,8 +53,9 @@ enum LibraryFilter: Hashable, Identifiable {
     }
 
     /// Primary sidebar filters (excludes implicit search context).
+    /// `.recentlyAdded` is hidden for now — it isn't actually distinct from `.allQuotes` yet.
     static var primaryFilters: [LibraryFilter] {
-        [.quotationsBySource, .allQuotes, .recentlyAdded]
+        [.quotationsBySource, .allQuotes]
     }
 
     static var formatFilters: [LibraryFilter] {
