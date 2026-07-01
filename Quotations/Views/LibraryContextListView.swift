@@ -52,6 +52,7 @@ struct LibraryContextListView: View {
             }
         }
         .navigationTitle(filter.title)
+        .scrollUnderTitleFade()
         .overlay { emptyOverlay(sources: resolved.sources, quotations: resolved.quotations) }
         .navigationSplitViewColumnWidth(min: 220, ideal: 300, max: 420)
         .toolbar {
