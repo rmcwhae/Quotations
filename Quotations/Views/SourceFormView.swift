@@ -6,6 +6,47 @@
 import SwiftUI
 import SwiftData
 
+private struct AuthorFieldAnchorKey: PreferenceKey {
+    static let defaultValue: Anchor<CGRect>? = nil
+    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
+        value = nextValue() ?? value
+    }
+}
+
+private struct AuthorSuggestionsDropdown: View {
+    let suggestions: [Author]
+    let onSelect: (Author) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(suggestions) { author in
+                Button {
+                    onSelect(author)
+                } label: {
+                    Text(author.name)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if author.id != suggestions.last?.id {
+                    Divider()
+                }
+            }
+        }
+        .padding(.vertical, 4)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.secondary.opacity(0.2))
+        )
+        .shadow(color: .black.opacity(0.2), radius: 8, y: 2)
+    }
+}
+
 struct SourceFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(filter: #Predicate<Author> { $0.deletedAt == nil }, sort: \Author.name)
@@ -66,21 +107,7 @@ struct SourceFormView: View {
                     if isAuthorFieldFocused { authorInputChangedSinceFocus = true }
                 }
             }
-
-            if showsAuthorSuggestions {
-                Section {
-                    ForEach(authorSuggestions.prefix(6)) { author in
-                        Button {
-                            authorText = author.name
-                            authorInputChangedSinceFocus = false
-                        } label: {
-                            Text(author.name)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-            }
+            .anchorPreference(key: AuthorFieldAnchorKey.self, value: .bounds) { $0 }
 
             LabeledContent("Title") {
                 MacFormTextField(placeholder: "", text: $title)
@@ -117,6 +144,23 @@ struct SourceFormView: View {
         .contentMargins(.bottom, 0, for: .scrollContent)
         .fixedSize(horizontal: false, vertical: true)
         .frame(minWidth: 360)
+        .overlayPreferenceValue(AuthorFieldAnchorKey.self) { anchor in
+            GeometryReader { proxy in
+                if showsAuthorSuggestions, let anchor {
+                    let rect = proxy[anchor]
+                    AuthorSuggestionsDropdown(
+                        suggestions: Array(authorSuggestions.prefix(6)),
+                        onSelect: { author in
+                            authorText = author.name
+                            authorInputChangedSinceFocus = false
+                        }
+                    )
+                    .frame(width: rect.width, alignment: .topLeading)
+                    .offset(x: rect.minX, y: rect.maxY + 4)
+                }
+            }
+            .allowsHitTesting(showsAuthorSuggestions)
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button("Cancel") { onCancel() }
