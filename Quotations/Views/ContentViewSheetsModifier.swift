@@ -17,6 +17,7 @@ struct ContentViewSheetsModifier: ViewModifier {
     @Binding var sourceToEdit: Source?
     @Binding var showDeleteSourceConfirmation: Bool
     @Binding var sourceToDelete: Source?
+    @Binding var showDeleteQuotationConfirmation: Bool
     @Binding var selectedSourceId: PersistentIdentifier?
     @Binding var selectedQuotationId: PersistentIdentifier?
     let modelContext: ModelContext
@@ -73,6 +74,12 @@ struct ContentViewSheetsModifier: ViewModifier {
                 modelContext: modelContext,
                 onEditError: onEditError
             ))
+            .modifier(DeleteQuotationConfirmationModifier(
+                isPresented: $showDeleteQuotationConfirmation,
+                selectedQuotationId: $selectedQuotationId,
+                modelContext: modelContext,
+                onEditError: onEditError
+            ))
     }
 }
 
@@ -93,6 +100,7 @@ struct DeleteSourceConfirmationModifier: ViewModifier {
             Button("Delete", role: .destructive) {
                 deleteSelectedSource()
             }
+            .keyboardShortcut(.defaultAction)
             Button("Cancel", role: .cancel) {
                 sourceToDelete = nil
             }
@@ -117,5 +125,40 @@ struct DeleteSourceConfirmationModifier: ViewModifier {
             }
         }
         sourceToDelete = nil
+    }
+}
+
+struct DeleteQuotationConfirmationModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    @Binding var selectedQuotationId: PersistentIdentifier?
+    let modelContext: ModelContext
+    let onEditError: (String) -> Void
+
+    func body(content: Content) -> some View {
+        content.confirmationDialog(
+            "Remove quotation?",
+            isPresented: $isPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Remove", role: .destructive) {
+                deleteSelectedQuotation()
+            }
+            .keyboardShortcut(.defaultAction)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This quotation will be removed from your library.")
+        }
+    }
+
+    private func deleteSelectedQuotation() {
+        guard let id = selectedQuotationId,
+              let quotation = modelContext.model(for: id) as? Quotation,
+              quotation.deletedAt == nil else { return }
+        do {
+            try SoftDelete.quotation(quotation, in: modelContext)
+        } catch {
+            onEditError(error.localizedDescription)
+        }
+        selectedQuotationId = nil
     }
 }

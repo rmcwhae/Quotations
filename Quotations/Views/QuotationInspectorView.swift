@@ -11,10 +11,10 @@ private let locationDebounceInterval: Duration = .milliseconds(500)
 struct QuotationInspectorView: View {
     let quotation: Quotation?
     @Binding var selectedQuotationId: PersistentIdentifier?
+    @Binding var showDeleteConfirmation: Bool
 
     @Environment(\.modelContext) private var modelContext
     @State private var location = ""
-    @State private var showDeleteConfirmation = false
     @State private var locationSaveTask: Task<Void, Never>?
     @FocusState private var isLocationFocused: Bool
 
@@ -72,18 +72,6 @@ struct QuotationInspectorView: View {
         .onDisappear {
             locationSaveTask?.cancel()
             applyLocation(to: quotation)
-        }
-        .confirmationDialog(
-            "Remove quotation?",
-            isPresented: $showDeleteConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Remove", role: .destructive) {
-                deleteQuotation(quotation)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This quotation will be removed from your library.")
         }
     }
 
@@ -154,15 +142,6 @@ struct QuotationInspectorView: View {
         }
     }
 
-    private func deleteQuotation(_ quotation: Quotation) {
-        do {
-            try SoftDelete.quotation(quotation, in: modelContext)
-        } catch {
-            print("Failed to delete quotation: \(error)")
-        }
-        selectedQuotationId = nil
-    }
-
     private func readOnlyRow(label: String, value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             Text(label)
@@ -202,8 +181,12 @@ struct QuotationInspectorView: View {
 }
 
 #Preview {
-    QuotationInspectorView(quotation: nil, selectedQuotationId: .constant(nil))
-        .padding()
-        .frame(width: 300, height: 400)
-        .modelContainer(for: [Author.self, Source.self, Quotation.self], inMemory: true)
+    QuotationInspectorView(
+        quotation: nil,
+        selectedQuotationId: .constant(nil),
+        showDeleteConfirmation: .constant(false)
+    )
+    .padding()
+    .frame(width: 300, height: 400)
+    .modelContainer(for: [Author.self, Source.self, Quotation.self], inMemory: true)
 }

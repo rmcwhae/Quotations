@@ -34,6 +34,7 @@ struct ContentView: View {
     @State private var sourceToEdit: Source?
     @State private var sourceToDelete: Source?
     @State private var showDeleteSourceConfirmation = false
+    @State private var showDeleteQuotationConfirmation = false
     @State private var isInspectorShown = false
     @State private var newQuotationId: PersistentIdentifier?
 
@@ -209,6 +210,10 @@ struct ContentView: View {
             navigation.clearQuotationSelection()
             return .handled
         }
+        .onDeleteCommand {
+            guard navigation.selectedQuotationId != nil else { return }
+            showDeleteQuotationConfirmation = true
+        }
         .searchable(
             text: Binding(
                 get: { searchState.query },
@@ -265,6 +270,7 @@ struct ContentView: View {
             sourceToEdit: $sourceToEdit,
             showDeleteSourceConfirmation: $showDeleteSourceConfirmation,
             sourceToDelete: $sourceToDelete,
+            showDeleteQuotationConfirmation: $showDeleteQuotationConfirmation,
             selectedSourceId: $navigation.selectedSourceId,
             selectedQuotationId: $navigation.selectedQuotationId,
             modelContext: modelContext,
@@ -310,14 +316,6 @@ private extension ContentView {
                 .disabled(selectedSource == nil)
             }
             ToolbarItem(placement: .primaryAction) {
-                Button(action: beginCSVImport) {
-                    Image(systemName: "square.and.arrow.down")
-                }
-                .accessibilityLabel("Import quotations from CSV")
-                .help("Import quotations from CSV")
-                .disabled(selectedSource == nil)
-            }
-            ToolbarItem(placement: .primaryAction) {
                 Button(
                     action: { isInspectorShown.toggle() },
                     label: {
@@ -331,7 +329,8 @@ private extension ContentView {
         .inspector(isPresented: $isInspectorShown) {
             QuotationInspectorView(
                 quotation: selectedQuotation,
-                selectedQuotationId: $navigation.selectedQuotationId
+                selectedQuotationId: $navigation.selectedQuotationId,
+                showDeleteConfirmation: $showDeleteQuotationConfirmation
             )
             .padding()
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
