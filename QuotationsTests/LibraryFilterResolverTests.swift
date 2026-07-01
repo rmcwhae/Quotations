@@ -59,15 +59,49 @@ final class LibraryFilterResolverTests: XCTestCase {
 
     func testRecentReadsSortsByDateReadDescending() {
         let sources = [printSource!, koboSource!]
-        let result = LibraryFilterResolver.sources(for: .quotationsBySource, from: sources)
+        let result = LibraryFilterResolver.sources(for: .quotationsBySource, from: sources, sortOption: .dateRead)
         XCTAssertEqual(result.map(\.title), ["Letters", "Essays"])
     }
 
     func testFormatFilterReturnsMatchingSources() {
         let sources = [printSource!, koboSource!]
-        let result = LibraryFilterResolver.sources(for: .format(.kobo), from: sources)
+        let result = LibraryFilterResolver.sources(for: .format(.kobo), from: sources, sortOption: .dateRead)
         XCTAssertEqual(result.count, 1)
         XCTAssertEqual(result.first?.title, "Letters")
+    }
+
+    func testSourcesSortsByDateAddedWhenRequested() {
+        printSource.createdAt = Date(timeIntervalSince1970: 1_000)
+        koboSource.createdAt = Date(timeIntervalSince1970: 2_000)
+        let sources = [printSource!, koboSource!]
+
+        let result = LibraryFilterResolver.sources(for: .quotationsBySource, from: sources, sortOption: .dateAdded)
+        XCTAssertEqual(result.map(\.title), ["Letters", "Essays"])
+    }
+
+    func testSourcesSortsByAuthorNameWhenRequested() {
+        let zSource = Source(title: "Their Eyes Were Watching God", author: Author(name: "Zora Neale Hurston"))
+        let aSource = Source(title: "The Stranger", author: Author(name: "Albert Camus"))
+
+        let result = LibraryFilterResolver.sources(
+            for: .quotationsBySource,
+            from: [zSource, aSource],
+            sortOption: .authorName
+        )
+        XCTAssertEqual(result.map(\.title), ["The Stranger", "Their Eyes Were Watching God"])
+    }
+
+    func testSourcesSortsByTitleWhenRequested() {
+        let sources = [printSource!, koboSource!]
+        let result = LibraryFilterResolver.sources(for: .quotationsBySource, from: sources, sortOption: .title)
+        XCTAssertEqual(result.map(\.title), ["Essays", "Letters"])
+    }
+
+    func testFormatFilterRespectsSortOption() {
+        let secondKobo = Source(title: "Aeneid", author: author, format: SourceFormat.kobo.rawValue)
+        let sources = [printSource!, koboSource!, secondKobo]
+        let result = LibraryFilterResolver.sources(for: .format(.kobo), from: sources, sortOption: .title)
+        XCTAssertEqual(result.map(\.title), ["Aeneid", "Letters"])
     }
 
     func testAllQuotesReturnsNewestFirst() {

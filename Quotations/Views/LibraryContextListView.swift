@@ -20,6 +20,8 @@ struct LibraryContextListView: View {
     var onSourceEdit: (Source) -> Void
     var onSourceDelete: (Source) -> Void
 
+    @AppStorage("sourceListSortOption") private var sourceSortOption: SourceSortOption = .dateRead
+
     private var trimmedSearchQuery: String {
         searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
     }
@@ -30,7 +32,7 @@ struct LibraryContextListView: View {
         if filter == .searchResults {
             sources = LibraryFilterResolver.searchResultSources(from: self.sources, matchSets: matchSets)
         } else {
-            sources = LibraryFilterResolver.sources(for: filter, from: self.sources)
+            sources = LibraryFilterResolver.sources(for: filter, from: self.sources, sortOption: sourceSortOption)
         }
         let quotations = LibraryFilterResolver.quotations(
             for: filter,
@@ -64,6 +66,20 @@ struct LibraryContextListView: View {
                 .help("Manage authors")
             }
             if !filter.showsQuotations {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Picker("Sort by", selection: $sourceSortOption) {
+                            ForEach(SourceSortOption.allCases) { option in
+                                Text(option.title).tag(option)
+                            }
+                        }
+                        .pickerStyle(.inline)
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                    }
+                    .accessibilityLabel("Sort sources")
+                    .help("Sort by \(sourceSortOption.title)")
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: onAddSource) {
                         Image(systemName: "book.badge.plus")

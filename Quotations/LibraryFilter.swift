@@ -67,3 +67,23 @@ enum LibraryListSelection: Hashable {
     case source(PersistentIdentifier)
     case quotation(PersistentIdentifier, sourceId: PersistentIdentifier?)
 }
+
+/// User-selectable sort order for source-listing screens (column 2 when `!filter.showsQuotations`).
+/// Each option has one fixed, conventional direction — no separate ascending/descending toggle.
+enum SourceSortOption: String, CaseIterable, Identifiable {
+    case dateRead
+    case dateAdded
+    case authorName
+    case title
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .dateRead: "Date Read"
+        case .dateAdded: "Date Added"
+        case .authorName: "Author Name"
+        case .title: "Source Name"
+        }
+    }
+}

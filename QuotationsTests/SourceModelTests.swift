@@ -44,4 +44,67 @@ final class SourceModelTests: XCTestCase {
         XCTAssertTrue(Source.compareByDateReadDescending(older, undated))
         XCTAssertFalse(Source.compareByDateReadDescending(undated, recent))
     }
+
+    func testCompareByDateAddedDescending() {
+        let older = Source(title: "Older")
+        older.createdAt = Date(timeIntervalSince1970: 1_000)
+        let newer = Source(title: "Newer")
+        newer.createdAt = Date(timeIntervalSince1970: 2_000)
+
+        XCTAssertTrue(Source.compareByDateAddedDescending(newer, older))
+        XCTAssertFalse(Source.compareByDateAddedDescending(older, newer))
+    }
+
+    func testCompareByDateAddedDescendingTieBreaksByTitle() {
+        let same = Date(timeIntervalSince1970: 1_000)
+        let apple = Source(title: "Apple")
+        apple.createdAt = same
+        let banana = Source(title: "Banana")
+        banana.createdAt = same
+
+        XCTAssertTrue(Source.compareByDateAddedDescending(apple, banana))
+        XCTAssertFalse(Source.compareByDateAddedDescending(banana, apple))
+    }
+
+    func testCompareByAuthorNameAscendingOrdersAlphabetically() {
+        let seneca = Source(title: "Letters", author: Author(name: "Seneca"))
+        let aurelius = Source(title: "Meditations", author: Author(name: "Marcus Aurelius"))
+
+        XCTAssertTrue(Source.compareByAuthorNameAscending(aurelius, seneca))
+        XCTAssertFalse(Source.compareByAuthorNameAscending(seneca, aurelius))
+    }
+
+    func testCompareByAuthorNameAscendingTreatsNilAuthorAsEmpty() {
+        let noAuthor = Source(title: "Anonymous Work")
+        let withAuthor = Source(title: "Named Work", author: Author(name: "Zora"))
+
+        XCTAssertTrue(Source.compareByAuthorNameAscending(noAuthor, withAuthor))
+        XCTAssertFalse(Source.compareByAuthorNameAscending(withAuthor, noAuthor))
+    }
+
+    func testCompareByTitleAscendingIsLocaleAware() {
+        let cabin = Source(title: "Cabin")
+        let cafe = Source(title: "Café")
+
+        XCTAssertTrue(Source.compareByTitleAscending(cabin, cafe))
+        XCTAssertFalse(Source.compareByTitleAscending(cafe, cabin))
+    }
+
+    func testCompareByTitleAscendingTieBreaksByDateAddedDescending() {
+        let first = Source(title: "Same Title")
+        first.createdAt = Date(timeIntervalSince1970: 1_000)
+        let second = Source(title: "Same Title")
+        second.createdAt = Date(timeIntervalSince1970: 2_000)
+
+        XCTAssertTrue(Source.compareByTitleAscending(second, first))
+        XCTAssertFalse(Source.compareByTitleAscending(first, second))
+    }
+
+    func testComparatorDispatchesToMatchingSortOption() {
+        let sourceA = Source(title: "A", author: Author(name: "Zeta"))
+        let sourceB = Source(title: "B", author: Author(name: "Alpha"))
+
+        XCTAssertTrue(Source.comparator(for: .title)(sourceA, sourceB))
+        XCTAssertTrue(Source.comparator(for: .authorName)(sourceB, sourceA))
+    }
 }

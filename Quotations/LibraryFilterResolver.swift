@@ -10,16 +10,18 @@ import SwiftData
 enum LibraryFilterResolver {
     static func sources(
         for filter: LibraryFilter,
-        from sources: [Source]
+        from sources: [Source],
+        sortOption: SourceSortOption
     ) -> [Source] {
         let active = sources.filter { $0.deletedAt == nil }
+        let comparator = Source.comparator(for: sortOption)
         switch filter {
         case .quotationsBySource:
-            return active.sorted(by: Source.compareByDateReadDescending)
+            return active.sorted(by: comparator)
         case .format(let format):
             return active
                 .filter { $0.sourceFormat == format }
-                .sorted(by: Source.compareByDateReadDescending)
+                .sorted(by: comparator)
         case .allQuotes, .recentlyAdded, .searchResults:
             return []
         }

@@ -96,4 +96,41 @@ final class Source {
         }
         return (lhs.createdAt ?? .distantPast) > (rhs.createdAt ?? .distantPast)
     }
+
+    static func compareByDateAddedDescending(_ lhs: Source, _ rhs: Source) -> Bool {
+        let lhsDate = lhs.createdAt ?? .distantPast
+        let rhsDate = rhs.createdAt ?? .distantPast
+        if lhsDate != rhsDate {
+            return lhsDate > rhsDate
+        }
+        return lhs.title.localizedStandardCompare(rhs.title) == .orderedAscending
+    }
+
+    /// Sources with no author sort before any named author (nil treated as an empty name).
+    static func compareByAuthorNameAscending(_ lhs: Source, _ rhs: Source) -> Bool {
+        let lhsName = lhs.author?.name ?? ""
+        let rhsName = rhs.author?.name ?? ""
+        let comparison = lhsName.localizedStandardCompare(rhsName)
+        if comparison != .orderedSame {
+            return comparison == .orderedAscending
+        }
+        return (lhs.createdAt ?? .distantPast) > (rhs.createdAt ?? .distantPast)
+    }
+
+    static func compareByTitleAscending(_ lhs: Source, _ rhs: Source) -> Bool {
+        let comparison = lhs.title.localizedStandardCompare(rhs.title)
+        if comparison != .orderedSame {
+            return comparison == .orderedAscending
+        }
+        return (lhs.createdAt ?? .distantPast) > (rhs.createdAt ?? .distantPast)
+    }
+
+    static func comparator(for sortOption: SourceSortOption) -> (Source, Source) -> Bool {
+        switch sortOption {
+        case .dateRead: compareByDateReadDescending
+        case .dateAdded: compareByDateAddedDescending
+        case .authorName: compareByAuthorNameAscending
+        case .title: compareByTitleAscending
+        }
+    }
 }
