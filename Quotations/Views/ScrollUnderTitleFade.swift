@@ -15,7 +15,7 @@ struct ScrollUnderTitleFadeOverlay: View {
             stops: [
                 .init(color: background, location: 0),
                 .init(color: background.opacity(0.92), location: 0.45),
-                .init(color: background.opacity(0), location: 1),
+                .init(color: background.opacity(0), location: 1)
             ],
             startPoint: .top,
             endPoint: .bottom

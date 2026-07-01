@@ -49,74 +49,19 @@ enum QuotationCSVParser {
     }
 
     private static func parseRecords(_ bytes: [UInt8]) throws -> [[String]] {
-        var records: [[String]] = []
-        var currentRecord: [String] = []
-        var currentFieldBytes: [UInt8] = []
-        var insideQuotes = false
+        var builder = RecordBuilder()
         var index = 0
-
-        func decodeField() -> String {
-            String(decoding: currentFieldBytes, as: UTF8.self)
-        }
-
-        func finishField() {
-            currentRecord.append(decodeField())
-            currentFieldBytes.removeAll(keepingCapacity: true)
-        }
-
-        func finishRecord() {
-            finishField()
-            records.append(currentRecord)
-            currentRecord = []
-        }
 
         while index < bytes.count {
             let byte = bytes[index]
-
-            if insideQuotes {
-                if byte == 0x22 {
-                    let next = index + 1
-                    if next < bytes.count, bytes[next] == 0x22 {
-                        currentFieldBytes.append(0x22)
-                        index = next + 1
-                        continue
-                    }
-                    insideQuotes = false
-                } else {
-                    currentFieldBytes.append(byte)
-                }
+            if builder.insideQuotes {
+                index = builder.consumeQuoted(byte, bytes: bytes, at: index)
             } else {
-                switch byte {
-                case 0x22:
-                    insideQuotes = true
-                case 0x2C:
-                    finishField()
-                case 0x0A:
-                    finishRecord()
-                case 0x0D:
-                    if index + 1 < bytes.count, bytes[index + 1] == 0x0A {
-                        index += 1
-                    }
-                    finishRecord()
-                default:
-                    currentFieldBytes.append(byte)
-                }
+                index = builder.consumeUnquoted(byte, bytes: bytes, at: index)
             }
-
-            index += 1
         }
 
-        if insideQuotes {
-            throw QuotationCSVImportError.invalidFormat("CSV contains an unclosed quoted field.")
-        }
-
-        if !currentFieldBytes.isEmpty || !currentRecord.isEmpty {
-            finishRecord()
-        }
-
-        return records.filter { record in
-            !record.allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        }
+        return try builder.finish()
     }
 
     #if DEBUG
@@ -129,4 +74,74 @@ enum QuotationCSVParser {
         return try parseRecords(bytes).count
     }
     #endif
+}
+
+private extension QuotationCSVParser {
+    struct RecordBuilder {
+        var records: [[String]] = []
+        var currentRecord: [String] = []
+        var currentFieldBytes: [UInt8] = []
+        var insideQuotes = false
+
+        mutating func consumeQuoted(_ byte: UInt8, bytes: [UInt8], at index: Int) -> Int {
+            if byte == 0x22 {
+                let next = index + 1
+                if next < bytes.count, bytes[next] == 0x22 {
+                    currentFieldBytes.append(0x22)
+                    return next + 1
+                }
+                insideQuotes = false
+            } else {
+                currentFieldBytes.append(byte)
+            }
+            return index + 1
+        }
+
+        mutating func consumeUnquoted(_ byte: UInt8, bytes: [UInt8], at index: Int) -> Int {
+            switch byte {
+            case 0x22:
+                insideQuotes = true
+            case 0x2C:
+                finishField()
+            case 0x0A:
+                finishRecord()
+            case 0x0D:
+                let nextIndex: Int
+                if index + 1 < bytes.count, bytes[index + 1] == 0x0A {
+                    nextIndex = index + 2
+                } else {
+                    nextIndex = index + 1
+                }
+                finishRecord()
+                return nextIndex
+            default:
+                currentFieldBytes.append(byte)
+            }
+            return index + 1
+        }
+
+        mutating func finish() throws -> [[String]] {
+            if insideQuotes {
+                throw QuotationCSVImportError.invalidFormat("CSV contains an unclosed quoted field.")
+            }
+            if !currentFieldBytes.isEmpty || !currentRecord.isEmpty {
+                finishRecord()
+            }
+            return records.filter { record in
+                !record.allSatisfy { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            }
+        }
+
+        private mutating func finishField() {
+            let field = String(bytes: currentFieldBytes, encoding: .utf8) ?? ""
+            currentRecord.append(field)
+            currentFieldBytes.removeAll(keepingCapacity: true)
+        }
+
+        private mutating func finishRecord() {
+            finishField()
+            records.append(currentRecord)
+            currentRecord = []
+        }
+    }
 }

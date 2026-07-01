@@ -56,128 +56,6 @@ struct ContentView: View {
         return modelContext.model(for: id) as? Quotation
     }
 
-    private func emptyDetail(_ message: String) -> some View {
-        VStack(spacing: 12) {
-            Text("Quotations")
-                .font(.system(size: 56, weight: .regular, design: .serif).italic())
-                .foregroundStyle(.tertiary)
-            Text(message)
-                .font(.title2)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func addQuotation() {
-        guard let source = selectedSource else { return }
-        cleanupNewQuotationIfEmpty()
-        let quotation = Quotation(content: "", source: source)
-        modelContext.insert(quotation)
-        try? modelContext.save()
-        newQuotationId = quotation.id
-        navigation.selectedQuotationId = quotation.id
-    }
-
-    private func cleanupNewQuotationIfEmpty() {
-        defer { newQuotationId = nil }
-        guard let id = newQuotationId,
-              let quotation = modelContext.model(for: id) as? Quotation else { return }
-        if quotation.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            try? SoftDelete.quotation(quotation, in: modelContext)
-            if navigation.selectedQuotationId == id {
-                navigation.selectedQuotationId = nil
-            }
-        }
-    }
-
-    private func selectFilter(_ filter: LibraryFilter) {
-        guard filter != navigation.selectedFilter || isSearchActive else { return }
-        if filter != .searchResults {
-            searchState.query = ""
-        }
-        var transaction = Transaction()
-        transaction.disablesAnimations = true
-        withTransaction(transaction) {
-            navigation.selectFilter(filter)
-        }
-    }
-
-    private func handleSourceCreated(_ sourceId: PersistentIdentifier) {
-        navigation.selectedSourceId = sourceId
-        navigation.selectedQuotationId = nil
-        if navigation.selectedFilter.showsQuotations {
-            navigation.selectedFilter = .quotationsBySource
-        }
-    }
-
-    private func beginCSVImport() {
-        guard let source = selectedSource else {
-            errorMessage = "Select a source before importing quotations from CSV."
-            showError = true
-            return
-        }
-        csvImportSourceId = source.persistentModelID
-        showCSVImporter = true
-    }
-
-    private func importCSV(from url: URL) {
-        guard !isImporting else { return }
-        guard let sourceId = csvImportSourceId,
-              let source = modelContext.model(for: sourceId) as? Source else {
-            errorMessage = "Select a source before importing quotations from CSV."
-            showError = true
-            return
-        }
-        isImporting = true
-        defer {
-            isImporting = false
-            csvImportSourceId = nil
-        }
-
-        let accessGranted = url.startAccessingSecurityScopedResource()
-        defer {
-            if accessGranted {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-
-        do {
-            let result = try QuotationCSVImportService.importCSV(
-                url: url,
-                into: source,
-                modelContext: modelContext,
-                backupManager: backupManager
-            )
-            importSuccessMessage = result.summaryMessage
-            showImportSuccess = true
-            searchState.runSearchIfNeeded(modelContext: modelContext)
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-        }
-    }
-
-    private func importFromAppleBooks() {
-        guard !isImporting else { return }
-        isImporting = true
-        defer { isImporting = false }
-
-        do {
-            let result = try AppleBooksImportService.importFromAppleBooks(
-                modelContext: modelContext,
-                backupManager: backupManager
-            )
-            importSuccessMessage = result.summaryMessage
-            showImportSuccess = true
-            searchState.runSearchIfNeeded(modelContext: modelContext)
-        } catch let error as AppleBooksImportError where error == .userCancelled {
-            // User dismissed the file picker; no alert needed.
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
-        }
-    }
-
     var body: some View {
         NavigationSplitView {
             LibraryFilterSidebarView(
@@ -287,6 +165,128 @@ struct ContentView: View {
 }
 
 private extension ContentView {
+    func emptyDetail(_ message: String) -> some View {
+        VStack(spacing: 12) {
+            Text("Quotations")
+                .font(.system(size: 56, weight: .regular, design: .serif).italic())
+                .foregroundStyle(.tertiary)
+            Text(message)
+                .font(.title2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    func addQuotation() {
+        guard let source = selectedSource else { return }
+        cleanupNewQuotationIfEmpty()
+        let quotation = Quotation(content: "", source: source)
+        modelContext.insert(quotation)
+        try? modelContext.save()
+        newQuotationId = quotation.id
+        navigation.selectedQuotationId = quotation.id
+    }
+
+    func cleanupNewQuotationIfEmpty() {
+        defer { newQuotationId = nil }
+        guard let id = newQuotationId,
+              let quotation = modelContext.model(for: id) as? Quotation else { return }
+        if quotation.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            try? SoftDelete.quotation(quotation, in: modelContext)
+            if navigation.selectedQuotationId == id {
+                navigation.selectedQuotationId = nil
+            }
+        }
+    }
+
+    func selectFilter(_ filter: LibraryFilter) {
+        guard filter != navigation.selectedFilter || isSearchActive else { return }
+        if filter != .searchResults {
+            searchState.query = ""
+        }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            navigation.selectFilter(filter)
+        }
+    }
+
+    func handleSourceCreated(_ sourceId: PersistentIdentifier) {
+        navigation.selectedSourceId = sourceId
+        navigation.selectedQuotationId = nil
+        if navigation.selectedFilter.showsQuotations {
+            navigation.selectedFilter = .quotationsBySource
+        }
+    }
+
+    func beginCSVImport() {
+        guard let source = selectedSource else {
+            errorMessage = "Select a source before importing quotations from CSV."
+            showError = true
+            return
+        }
+        csvImportSourceId = source.persistentModelID
+        showCSVImporter = true
+    }
+
+    func importCSV(from url: URL) {
+        guard !isImporting else { return }
+        guard let sourceId = csvImportSourceId,
+              let source = modelContext.model(for: sourceId) as? Source else {
+            errorMessage = "Select a source before importing quotations from CSV."
+            showError = true
+            return
+        }
+        isImporting = true
+        defer {
+            isImporting = false
+            csvImportSourceId = nil
+        }
+
+        let accessGranted = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessGranted {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            let result = try QuotationCSVImportService.importCSV(
+                url: url,
+                into: source,
+                modelContext: modelContext,
+                backupManager: backupManager
+            )
+            importSuccessMessage = result.summaryMessage
+            showImportSuccess = true
+            searchState.runSearchIfNeeded(modelContext: modelContext)
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    func importFromAppleBooks() {
+        guard !isImporting else { return }
+        isImporting = true
+        defer { isImporting = false }
+
+        do {
+            let result = try AppleBooksImportService.importFromAppleBooks(
+                modelContext: modelContext,
+                backupManager: backupManager
+            )
+            importSuccessMessage = result.summaryMessage
+            showImportSuccess = true
+            searchState.runSearchIfNeeded(modelContext: modelContext)
+        } catch let error as AppleBooksImportError where error == .userCancelled {
+            // User dismissed the file picker; no alert needed.
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
     var detailPane: some View {
         Group {
             if let source = selectedSource {

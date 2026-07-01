@@ -26,20 +26,12 @@ struct ContentViewSheetsModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                if let errorMessage {
-                    Text(errorMessage)
-                }
-            }
-            .alert("Import Complete", isPresented: $showImportSuccess) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                if let importSuccessMessage {
-                    Text(importSuccessMessage)
-                }
-            }
+            .modifier(ContentViewAlertsModifier(
+                showError: $showError,
+                errorMessage: errorMessage,
+                showImportSuccess: $showImportSuccess,
+                importSuccessMessage: importSuccessMessage
+            ))
             .sheet(isPresented: $showAuthorList) {
                 AuthorListView(onDismiss: { showAuthorList = false })
             }
@@ -80,6 +72,31 @@ struct ContentViewSheetsModifier: ViewModifier {
                 modelContext: modelContext,
                 onEditError: onEditError
             ))
+    }
+}
+
+private struct ContentViewAlertsModifier: ViewModifier {
+    @Binding var showError: Bool
+    let errorMessage: String?
+    @Binding var showImportSuccess: Bool
+    let importSuccessMessage: String?
+
+    func body(content: Content) -> some View {
+        content
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let errorMessage {
+                    Text(errorMessage)
+                }
+            }
+            .alert("Import Complete", isPresented: $showImportSuccess) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                if let importSuccessMessage {
+                    Text(importSuccessMessage)
+                }
+            }
     }
 }
 
