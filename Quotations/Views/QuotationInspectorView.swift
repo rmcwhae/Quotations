@@ -84,6 +84,15 @@ struct QuotationInspectorView: View {
                     .tint(AppColors.highlightColor)
                     .formInputStyle(maxWidth: 160, isFocused: $isLocationFocused)
                     .accessibilityHint("Page number or percentage")
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // The inspector panel's first click can activate it without
+                        // focusing the field underneath; claim focus explicitly.
+                        isLocationFocused = true
+                    }
+                    .onSubmit {
+                        isLocationFocused = false
+                    }
                     .onChange(of: location) { _, _ in
                         scheduleLocationSave(for: quotation)
                     }
