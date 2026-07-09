@@ -12,6 +12,7 @@ struct RefreshQuotationWidgetIntent: AppIntent {
 
     func perform() async throws -> some IntentResult {
         WidgetRefreshStore.bumpRefreshSeed()
+        WidgetCenter.shared.reloadAllTimelines()
         return .result()
     }
 }

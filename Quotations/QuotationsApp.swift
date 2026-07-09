@@ -100,7 +100,6 @@ private struct RootView: View {
                 DeepLinkLaunchQueue.flush(into: deepLinkRouter)
             }
             .onOpenURL { url in
-                DeepLinkDebug.report("RootView onOpenURL", url: url)
                 deepLinkRouter.enqueue(url)
             }
             .onReceive(NotificationCenter.default.publisher(for: .quotationDeepLinkReceived)) { _ in

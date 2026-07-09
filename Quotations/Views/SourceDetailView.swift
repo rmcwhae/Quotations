@@ -35,15 +35,26 @@ struct SourceDetailView: View {
                     .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
                 }
             }
-            .onChange(of: selectedQuotationId) { _, newID in
-                guard let newID else { return }
-                withAnimation {
-                    proxy.scrollTo(newID, anchor: .center)
-                }
+            .onAppear {
+                scrollToSelectedQuotation(using: proxy)
+            }
+            .onChange(of: selectedQuotationId) { _, _ in
+                scrollToSelectedQuotation(using: proxy)
             }
         }
         .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .deselectQuotationOnBackgroundTap($selectedQuotationId)
+    }
+
+    private func scrollToSelectedQuotation(using proxy: ScrollViewProxy) {
+        guard let id = selectedQuotationId else { return }
+        Task { @MainActor in
+            await Task.yield()
+            try? await Task.sleep(for: .milliseconds(100))
+            withAnimation {
+                proxy.scrollTo(id, anchor: .center)
+            }
+        }
     }
 }

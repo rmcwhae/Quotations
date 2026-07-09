@@ -3,6 +3,7 @@
 //  QuotationsWidget
 //
 
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -27,9 +28,12 @@ struct QuotationWidgetView: View {
     }
 
     var body: some View {
-        widgetContent
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .containerBackground(backgroundColor, for: .widget)
+        ZStack(alignment: .bottomTrailing) {
+            widgetContent
+            refreshButton
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .containerBackground(backgroundColor, for: .widget)
     }
 
     @ViewBuilder
@@ -52,6 +56,17 @@ struct QuotationWidgetView: View {
         }
     }
 
+    private var refreshButton: some View {
+        Button(intent: RefreshQuotationWidgetIntent()) {
+            Image(systemName: "arrow.clockwise")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.tertiary)
+                .padding(6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Refresh quotation")
+    }
+
     private func quotationContent(_ content: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(displayText(from: content))
@@ -68,6 +83,8 @@ struct QuotationWidgetView: View {
             }
         }
         .padding(12)
+        .padding(.trailing, 20)
+        .padding(.bottom, 20)
     }
 
     private var attribution: some View {
@@ -99,6 +116,8 @@ struct QuotationWidgetView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(12)
+        .padding(.trailing, 20)
+        .padding(.bottom, 20)
     }
 
     private var bodyFontSize: CGFloat {
