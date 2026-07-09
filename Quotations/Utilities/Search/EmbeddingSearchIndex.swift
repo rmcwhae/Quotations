@@ -99,6 +99,11 @@ actor EmbeddingSearchIndex {
         persistSnapshot()
     }
 
+    func allEntries() async -> [EmbeddingIndexEntry] {
+        await ensureLoaded()
+        return Array(snapshot.entries.values)
+    }
+
     private func ensureLoaded() async {
         guard !isLoaded else { return }
         defer { isLoaded = true }

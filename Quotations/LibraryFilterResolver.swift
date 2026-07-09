@@ -22,7 +22,7 @@ enum LibraryFilterResolver {
             return active
                 .filter { $0.sourceFormat == format }
                 .sorted(by: comparator)
-        case .allQuotes, .recentlyAdded, .searchResults:
+        case .allQuotes, .recentlyAdded, .searchResults, .explore:
             return []
         }
     }
@@ -52,7 +52,7 @@ enum LibraryFilterResolver {
                     .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
             }
             return []
-        case .quotationsBySource, .format:
+        case .quotationsBySource, .format, .explore:
             return []
         }
     }

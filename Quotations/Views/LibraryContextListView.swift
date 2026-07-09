@@ -14,6 +14,8 @@ struct LibraryContextListView: View {
     let quotations: [Quotation]
     let searchState: SearchState
     let findQuery: String
+    @Bindable var exploreState: ExploreState
+    var onExploreWordSelected: (String) -> Void
     @Binding var selectedSourceId: PersistentIdentifier?
     @Binding var selectedQuotationId: PersistentIdentifier?
     var onManageAuthors: () -> Void
@@ -23,6 +25,10 @@ struct LibraryContextListView: View {
 
     @AppStorage("sourceListSortOption") private var sourceSortOption: SourceSortOption = .dateRead
     @FocusState private var isSearchFieldFocused: Bool
+
+    private var isExplorePage: Bool {
+        filter == .explore
+    }
 
     private var isSearchPage: Bool {
         filter == .searchResults
@@ -60,7 +66,19 @@ struct LibraryContextListView: View {
             matchSets: matchSets,
             searchResultIds: LibraryFilterResolver.searchResultQuotationIds(from: searchState)
         )
-        let stats = LibraryFilterResolver.stats(for: filter, resolvedSources: sources, resolvedQuotations: quotations)
+        let stats: LibraryStats
+        if filter == .explore {
+            let active = self.quotations.filter { $0.deletedAt == nil }
+            let sourceIds = Set(active.compactMap { $0.source?.id })
+            let authorIds = Set(active.compactMap { $0.source?.author?.id })
+            stats = LibraryStats(
+                quotationCount: active.count,
+                sourceCount: sourceIds.count,
+                authorCount: authorIds.count
+            )
+        } else {
+            stats = LibraryFilterResolver.stats(for: filter, resolvedSources: sources, resolvedQuotations: quotations)
+        }
         return ResolvedListContent(sources: sources, quotations: quotations, stats: stats)
     }
 
@@ -68,7 +86,18 @@ struct LibraryContextListView: View {
         let resolved = listContent
 
         Group {
-            if isSearchPage {
+            if isExplorePage {
+                VStack(spacing: 0) {
+                    LibraryExploreView(
+                        quotations: quotations,
+                        exploreState: exploreState,
+                        selectedQuotationId: $selectedQuotationId,
+                        selectedSourceIdBinding: $selectedSourceId,
+                        onWordSelected: onExploreWordSelected
+                    )
+                    LibraryStatsFooterView(stats: resolved.stats)
+                }
+            } else if isSearchPage {
                 VStack(spacing: 0) {
                     SearchPageHeaderView(
                         query: Binding(
@@ -90,10 +119,16 @@ struct LibraryContextListView: View {
             if isSearchPage {
                 isSearchFieldFocused = true
             }
+            if isExplorePage {
+                exploreState.refresh(quotations: quotations)
+            }
         }
         .onChange(of: filter) { _, newFilter in
             if newFilter == .searchResults {
                 isSearchFieldFocused = true
+            }
+            if newFilter == .explore {
+                exploreState.refresh(quotations: quotations)
             }
         }
     }
@@ -113,7 +148,7 @@ struct LibraryContextListView: View {
         }
         .navigationSplitViewColumnWidth(min: 220, ideal: 300)
         .toolbar {
-            if !isSearchPage {
+            if !isSearchPage && !isExplorePage {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: onManageAuthors) {
                         Image(systemName: "person.2")

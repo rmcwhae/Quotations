@@ -13,6 +13,7 @@ enum LibraryFilter: Hashable, Identifiable {
     case recentlyAdded
     case format(SourceFormat)
     case searchResults
+    case explore
 
     var id: String {
         switch self {
@@ -21,6 +22,7 @@ enum LibraryFilter: Hashable, Identifiable {
         case .recentlyAdded: "recentlyAdded"
         case .format(let format): "format-\(format.rawValue)"
         case .searchResults: "searchResults"
+        case .explore: "explore"
         }
     }
 
@@ -31,6 +33,7 @@ enum LibraryFilter: Hashable, Identifiable {
         case .recentlyAdded: "Recently Added"
         case .format(let format): format.rawValue
         case .searchResults: "Advanced Search"
+        case .explore: "Explore"
         }
     }
 
@@ -41,6 +44,7 @@ enum LibraryFilter: Hashable, Identifiable {
         case .recentlyAdded: "clock"
         case .format: "books.vertical"
         case .searchResults: "magnifyingglass"
+        case .explore: "chart.dots.scatter"
         }
     }
 
@@ -48,14 +52,14 @@ enum LibraryFilter: Hashable, Identifiable {
     var showsQuotations: Bool {
         switch self {
         case .allQuotes, .recentlyAdded, .searchResults: true
-        case .quotationsBySource, .format: false
+        case .quotationsBySource, .format, .explore: false
         }
     }
 
     /// Primary sidebar filters (excludes implicit search context).
     /// `.recentlyAdded` is hidden for now — it isn't actually distinct from `.allQuotes` yet.
     static var primaryFilters: [LibraryFilter] {
-        [.searchResults, .quotationsBySource, .allQuotes]
+        [.searchResults, .explore, .quotationsBySource, .allQuotes]
     }
 
     static var formatFilters: [LibraryFilter] {

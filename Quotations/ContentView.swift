@@ -25,6 +25,7 @@ struct ContentView: View {
     @State private var navigation = LibraryNavigationState()
     @State private var searchState = SearchState()
     @State private var findInPage = FindInPageState()
+    @State private var exploreState = ExploreState()
     @State private var newSourceSession: NewSourceSheetSession?
     @State private var showAuthorList = false
     @State private var showBackups = false
@@ -64,10 +65,12 @@ struct ContentView: View {
     var body: some View {
         @Bindable var navigation = navigation
         @Bindable var findInPage = findInPage
+        @Bindable var exploreState = exploreState
 
         splitView(
             navigation: navigation,
             findInPage: findInPage,
+            exploreState: exploreState,
             selectedSourceId: $navigation.selectedSourceId,
             selectedQuotationId: $navigation.selectedQuotationId,
             findQuery: $findInPage.query
@@ -127,6 +130,7 @@ struct ContentView: View {
     private func splitView(
         navigation: LibraryNavigationState,
         findInPage: FindInPageState,
+        exploreState: ExploreState,
         selectedSourceId: Binding<PersistentIdentifier?>,
         selectedQuotationId: Binding<PersistentIdentifier?>,
         findQuery: Binding<String>
@@ -144,6 +148,8 @@ struct ContentView: View {
                 quotations: quotations,
                 searchState: searchState,
                 findQuery: findInPage.query,
+                exploreState: exploreState,
+                onExploreWordSelected: { openAdvancedSearch(for: $0) },
                 selectedSourceId: selectedSourceId,
                 selectedQuotationId: selectedQuotationId,
                 onManageAuthors: { showAuthorList = true },
@@ -208,6 +214,12 @@ private extension ContentView {
                 navigation.selectedQuotationId = nil
             }
         }
+    }
+
+    func openAdvancedSearch(for word: String) {
+        searchState.query = word
+        selectFilter(.searchResults)
+        searchState.runSearchIfNeeded(modelContext: modelContext)
     }
 
     func selectFilter(_ filter: LibraryFilter) {
@@ -438,6 +450,9 @@ private extension ContentView {
     }
 
     var detailPlaceholderMessage: String {
+        if navigation.selectedFilter == .explore {
+            return "Select a quotation from Explore"
+        }
         if navigation.selectedFilter.showsQuotations {
             return "Select a quotation"
         }
