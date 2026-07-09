@@ -21,6 +21,11 @@ struct LibraryContextListView: View {
     var onSourceDelete: (Source) -> Void
 
     @AppStorage("sourceListSortOption") private var sourceSortOption: SourceSortOption = .dateRead
+    @FocusState private var isSearchFieldFocused: Bool
+
+    private var isSearchPage: Bool {
+        filter == .searchResults
+    }
 
     private var trimmedSearchQuery: String {
         searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -53,6 +58,39 @@ struct LibraryContextListView: View {
     var body: some View {
         let resolved = listContent
 
+        Group {
+            if isSearchPage {
+                VStack(spacing: 0) {
+                    SearchPageHeaderView(
+                        query: Binding(
+                            get: { searchState.query },
+                            set: { searchState.query = $0 }
+                        ),
+                        isFocused: $isSearchFieldFocused
+                    )
+
+                    listBody(resolved: resolved)
+                }
+            } else {
+                listBody(resolved: resolved)
+            }
+        }
+        .navigationTitle(filter.title)
+        .scrollUnderTitleFade()
+        .onAppear {
+            if isSearchPage {
+                isSearchFieldFocused = true
+            }
+        }
+        .onChange(of: filter) { _, newFilter in
+            if newFilter == .searchResults {
+                isSearchFieldFocused = true
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func listBody(resolved: ResolvedListContent) -> some View {
         List {
             if filter.showsQuotations {
                 quotationRows(resolved.quotations)
@@ -60,20 +98,20 @@ struct LibraryContextListView: View {
                 sourceRows(resolved.sources)
             }
         }
-        .navigationTitle(filter.title)
-        .scrollUnderTitleFade()
         .overlay { emptyOverlay(sources: resolved.sources, quotations: resolved.quotations) }
         .safeAreaInset(edge: .bottom) {
             LibraryStatsFooterView(stats: resolved.stats)
         }
         .navigationSplitViewColumnWidth(min: 220, ideal: 300)
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: onManageAuthors) {
-                    Image(systemName: "person.2")
+            if !isSearchPage {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: onManageAuthors) {
+                        Image(systemName: "person.2")
+                    }
+                    .accessibilityLabel("Manage authors")
+                    .help("Manage authors")
                 }
-                .accessibilityLabel("Manage authors")
-                .help("Manage authors")
             }
             if !filter.showsQuotations {
                 ToolbarItem(placement: .primaryAction) {

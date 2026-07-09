@@ -9,12 +9,7 @@ import SwiftUI
 
 struct LibraryFilterSidebarView: View, Equatable {
     let selectedFilter: LibraryFilter
-    let isSearchActive: Bool
     var onSelectFilter: (LibraryFilter) -> Void
-
-    private var displayedSelection: LibraryFilter {
-        isSearchActive ? .searchResults : selectedFilter
-    }
 
     var body: some View {
         List {
@@ -29,22 +24,15 @@ struct LibraryFilterSidebarView: View, Equatable {
                     filterRow(filter)
                 }
             }
-
-            if isSearchActive {
-                Section {
-                    filterRow(.searchResults, isImplicit: true)
-                }
-            }
         }
         .navigationSplitViewColumnWidth(min: 160, ideal: 200, max: 300)
     }
 
     @ViewBuilder
-    private func filterRow(_ filter: LibraryFilter, isImplicit: Bool = false) -> some View {
-        let isSelected = displayedSelection == filter
+    private func filterRow(_ filter: LibraryFilter) -> some View {
+        let isSelected = selectedFilter == filter
 
         Label(filter.title, systemImage: filter.systemImage)
-            .foregroundStyle(isImplicit && !isSelected ? .secondary : .primary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.vertical, 4)
             .listRowBackground(
@@ -54,12 +42,12 @@ struct LibraryFilterSidebarView: View, Equatable {
             )
             .contentShape(Rectangle())
             .onTapGesture {
-                guard filter != .searchResults, filter != selectedFilter else { return }
+                guard filter != selectedFilter else { return }
                 onSelectFilter(filter)
             }
     }
 
     static func == (lhs: LibraryFilterSidebarView, rhs: LibraryFilterSidebarView) -> Bool {
-        lhs.selectedFilter == rhs.selectedFilter && lhs.isSearchActive == rhs.isSearchActive
+        lhs.selectedFilter == rhs.selectedFilter
     }
 }

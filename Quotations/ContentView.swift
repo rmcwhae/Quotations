@@ -42,12 +42,8 @@ struct ContentView: View {
     @State private var newQuotationId: PersistentIdentifier?
     @State private var unresolvedDeepLinkURL: URL?
 
-    private var isSearchActive: Bool {
-        !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    private var effectiveFilter: LibraryFilter {
-        navigation.effectiveFilter(isSearchActive: isSearchActive)
+    private var isOnSearchPage: Bool {
+        navigation.selectedFilter == .searchResults
     }
 
     private var selectedSource: Source? {
@@ -70,13 +66,12 @@ struct ContentView: View {
         NavigationSplitView {
             LibraryFilterSidebarView(
                 selectedFilter: navigation.selectedFilter,
-                isSearchActive: isSearchActive,
                 onSelectFilter: selectFilter
             )
             .equatable()
         } content: {
             LibraryContextListView(
-                filter: effectiveFilter,
+                filter: navigation.selectedFilter,
                 sources: sources,
                 quotations: quotations,
                 searchState: searchState,
@@ -103,13 +98,6 @@ struct ContentView: View {
             guard navigation.selectedQuotationId != nil else { return }
             showDeleteQuotationConfirmation = true
         }
-        .searchable(
-            text: Binding(
-                get: { searchState.query },
-                set: { searchState.query = $0 }
-            ),
-            placement: .toolbar
-        )
         .onChange(of: searchState.query) { _, _ in
             searchState.runSearchIfNeeded(modelContext: modelContext)
         }
@@ -230,7 +218,7 @@ private extension ContentView {
     }
 
     func selectFilter(_ filter: LibraryFilter) {
-        guard filter != navigation.selectedFilter || isSearchActive else { return }
+        guard filter != navigation.selectedFilter else { return }
         if filter != .searchResults {
             searchState.query = ""
         }
@@ -406,10 +394,9 @@ private extension ContentView {
                 SourceDetailView(
                     source: source,
                     searchQuery: searchState.query,
-                    quotationIdsFilter: isSearchActive
+                    quotationIdsFilter: isOnSearchPage
                         ? searchState.matchSetsForQuery()?.quotationIds
                         : nil,
-                    semanticQuotationIds: isSearchActive ? searchState.semanticQuotationIds : [],
                     selectedQuotationId: $navigation.selectedQuotationId,
                     newQuotationId: newQuotationId
                 )
@@ -457,7 +444,7 @@ private extension ContentView {
     }
 
     var detailPlaceholderMessage: String {
-        if effectiveFilter.showsQuotations {
+        if navigation.selectedFilter.showsQuotations {
             return "Select a quotation"
         }
         return "Select a source"

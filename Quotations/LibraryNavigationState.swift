@@ -13,13 +13,7 @@ final class LibraryNavigationState {
     var selectedSourceId: PersistentIdentifier?
     var selectedQuotationId: PersistentIdentifier?
 
-    /// When search is active, column 2 uses the search-results context.
-    func effectiveFilter(isSearchActive: Bool) -> LibraryFilter {
-        isSearchActive ? .searchResults : selectedFilter
-    }
-
     func selectFilter(_ filter: LibraryFilter) {
-        guard filter != .searchResults else { return }
         selectedFilter = filter
         clearListSelection()
     }

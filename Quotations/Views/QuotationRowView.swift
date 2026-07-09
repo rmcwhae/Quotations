@@ -16,7 +16,6 @@ struct QuotationRowView: View {
     let quotation: Quotation
     let searchQuery: String
     var isSelected: Bool = false
-    var isSemanticMatch: Bool = false
     /// When true, the row enters edit mode on appear (used for a freshly added quotation).
     var beginEditing: Bool = false
     var newQuotationId: PersistentIdentifier? = nil
@@ -41,7 +40,6 @@ struct QuotationRowView: View {
         quotation: Quotation,
         searchQuery: String,
         isSelected: Bool = false,
-        isSemanticMatch: Bool = false,
         beginEditing: Bool = false,
         newQuotationId: PersistentIdentifier? = nil,
         onSelect: (() -> Void)? = nil,
@@ -52,7 +50,6 @@ struct QuotationRowView: View {
         self.quotation = quotation
         self.searchQuery = searchQuery
         self.isSelected = isSelected
-        self.isSemanticMatch = isSemanticMatch
         self.beginEditing = beginEditing
         self.newQuotationId = newQuotationId
         self.onSelect = onSelect
@@ -96,11 +93,10 @@ struct QuotationRowView: View {
     }
 
     private var accessibilitySummary: String {
-        let prefix = isSemanticMatch ? "Concept match. " : ""
-        if quotation.content.isEmpty { return "\(prefix)New quotation" }
+        if quotation.content.isEmpty { return "New quotation" }
         let trimmed = quotation.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count <= 120 { return prefix + trimmed }
-        return prefix + String(trimmed.prefix(120)) + "…"
+        if trimmed.count <= 120 { return trimmed }
+        return String(trimmed.prefix(120)) + "…"
     }
 
     var body: some View {
@@ -114,12 +110,6 @@ struct QuotationRowView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { onDeselect?() }
             VStack(alignment: .leading, spacing: 4) {
-                if isSemanticMatch {
-                    HStack {
-                        Spacer(minLength: 0)
-                        SemanticMatchBadge()
-                    }
-                }
                 textEditor
             }
             .frame(maxWidth: quotationTextMaxWidth, alignment: .leading)

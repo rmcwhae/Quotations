@@ -34,11 +34,20 @@ final class LibraryNavigationStateTests: XCTestCase {
         context = nil
     }
 
-    func testEffectiveFilterUsesSearchResultsWhenSearchActive() {
+    func testSelectFilterSearchResultsWorks() {
         let navigation = LibraryNavigationState()
         navigation.selectedFilter = .quotationsBySource
-        XCTAssertEqual(navigation.effectiveFilter(isSearchActive: true), .searchResults)
-        XCTAssertEqual(navigation.effectiveFilter(isSearchActive: false), .quotationsBySource)
+
+        navigation.selectFilter(.searchResults)
+
+        XCTAssertEqual(navigation.selectedFilter, .searchResults)
+        XCTAssertNil(navigation.selectedSourceId)
+        XCTAssertNil(navigation.selectedQuotationId)
+    }
+
+    func testPrimaryFiltersIncludesSearch() {
+        XCTAssertTrue(LibraryFilter.primaryFilters.contains(.searchResults))
+        XCTAssertEqual(LibraryFilter.primaryFilters.first, .searchResults)
     }
 
     func testSelectFilterClearsListSelection() {

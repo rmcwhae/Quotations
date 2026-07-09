@@ -30,7 +30,7 @@ enum LibraryFilter: Hashable, Identifiable {
         case .quotationsBySource: "Quotations by Source"
         case .recentlyAdded: "Recently Added"
         case .format(let format): format.rawValue
-        case .searchResults: "Search Results"
+        case .searchResults: "Search"
         }
     }
 
@@ -55,7 +55,7 @@ enum LibraryFilter: Hashable, Identifiable {
     /// Primary sidebar filters (excludes implicit search context).
     /// `.recentlyAdded` is hidden for now — it isn't actually distinct from `.allQuotes` yet.
     static var primaryFilters: [LibraryFilter] {
-        [.quotationsBySource, .allQuotes]
+        [.searchResults, .quotationsBySource, .allQuotes]
     }
 
     static var formatFilters: [LibraryFilter] {
