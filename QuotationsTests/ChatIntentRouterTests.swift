@@ -26,6 +26,10 @@ final class ChatIntentRouterTests: XCTestCase {
             ChatIntentRouter.intent(for: "Quotes about mortality and grief"),
             .questionSpecific
         )
+        XCTAssertEqual(
+            ChatIntentRouter.intent(for: "outdoor living versus city living"),
+            .questionSpecific
+        )
     }
 
     func testSuggestedAuthorPromptRoutesToLibraryProfile() {

@@ -31,8 +31,7 @@ enum LibraryChatService {
 
     static func generateResponse(
         userMessage: String,
-        quotations: [Quotation],
-        sessionBox: LibraryChatSessionBox
+        quotations: [Quotation]
     ) async throws -> ChatMessage {
         guard AppleIntelligenceAvailability.isChatAvailable else {
             throw LibraryChatError.unavailable
@@ -64,9 +63,10 @@ enum LibraryChatService {
             throw LibraryChatError.noRetrievedContext
         }
 
-        let responseText = try await sessionBox.respond(
+        let responseText = try await generateAnswer(
             userMessage: trimmed,
-            retrievedContext: buildResult.context
+            retrievedContext: buildResult.context,
+            intent: intent
         )
 
         return ChatMessage(
@@ -106,12 +106,12 @@ enum LibraryChatService {
             return QuotationContextBuilder.build(quotations: resolved)
         }
     }
-}
 
-final class LibraryChatSessionBox {
-    private var backing: Any?
-
-    func respond(userMessage: String, retrievedContext: String) async throws -> String {
+    private static func generateAnswer(
+        userMessage: String,
+        retrievedContext: String,
+        intent: ChatQueryIntent
+    ) async throws -> String {
         guard #available(macOS 26.0, *) else {
             throw LibraryChatError.unavailable
         }
@@ -120,21 +120,16 @@ final class LibraryChatSessionBox {
             throw LibraryChatError.unavailable
         }
 
-        let session: LanguageModelSession
-        if let existing = backing as? LanguageModelSession {
-            session = existing
-        } else {
-            let created = LanguageModelSession(instructions: Self.systemInstructions)
-            backing = created
-            session = created
-        }
-
+        let session = LanguageModelSession(instructions: instructions(for: intent))
         let prompt = """
+        Answer only the user's current question using only the retrieved quotations below. \
+        Do not continue, repeat, or assume context from any earlier conversation.
+
         Retrieved quotations from the user's library:
 
         \(retrievedContext)
 
-        User question:
+        Current question:
         \(userMessage)
         """
 
@@ -155,15 +150,24 @@ final class LibraryChatSessionBox {
         #endif
     }
 
-    func reset() {
-        backing = nil
+    private static func instructions(for intent: ChatQueryIntent) -> String {
+        switch intent {
+        case .libraryProfile:
+            return """
+            You analyze a personal quotation library using only the overview data and retrieved \
+            quotations provided in each message. Describe tone, recurring themes, syntax, and subject \
+            matter when asked for stylistic profiles. Cite author and source names when referencing \
+            specific quotations. If the retrieved material is insufficient, say so clearly instead of \
+            inventing quotations or authors. Treat each message as a standalone request.
+            """
+        case .questionSpecific:
+            return """
+            You answer specific questions about a personal quotation library using only the retrieved \
+            quotations provided in each message. Focus on the current question and the evidence in front \
+            of you. Cite author and source names when referencing quotations. If the retrieved material \
+            does not address the question, say so clearly instead of inventing quotations, repeating an \
+            earlier analysis, or summarizing unrelated themes. Treat each message as a standalone request.
+            """
+        }
     }
-
-    private static let systemInstructions = """
-    You answer questions about a personal quotation library using only the retrieved quotations \
-    and overview data provided in each message. Describe tone, recurring themes, syntax, and \
-    subject matter when asked for stylistic profiles. Cite author and source names when \
-    referencing specific quotations. If the retrieved material is insufficient, say so clearly \
-    instead of inventing quotations or authors.
-    """
 }

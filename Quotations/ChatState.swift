@@ -14,7 +14,6 @@ final class ChatState {
     var errorMessage: String?
 
     private var generationTask: Task<Void, Never>?
-    private var sessionBox: LibraryChatSessionBox?
 
     deinit {
         generationTask?.cancel()
@@ -47,8 +46,6 @@ final class ChatState {
         messages = []
         errorMessage = nil
         isGenerating = false
-        sessionBox?.reset()
-        sessionBox = nil
     }
 
     private func generateResponse(for userMessage: String, quotations: [Quotation]) {
@@ -64,16 +61,11 @@ final class ChatState {
             guard !Task.isCancelled else { return }
 
             do {
-                let box = sessionBox ?? LibraryChatSessionBox()
                 let response = try await LibraryChatService.generateResponse(
                     userMessage: userMessage,
-                    quotations: quotations,
-                    sessionBox: box
+                    quotations: quotations
                 )
                 guard !Task.isCancelled else { return }
-                if sessionBox == nil {
-                    sessionBox = box
-                }
                 messages.append(response)
                 errorMessage = nil
             } catch let error as LibraryChatError {
