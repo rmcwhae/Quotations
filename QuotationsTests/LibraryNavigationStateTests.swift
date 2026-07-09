@@ -48,8 +48,10 @@ final class LibraryNavigationStateTests: XCTestCase {
     func testPrimaryFiltersIncludesSearch() {
         XCTAssertTrue(LibraryFilter.primaryFilters.contains(.searchResults))
         XCTAssertTrue(LibraryFilter.primaryFilters.contains(.explore))
+        XCTAssertTrue(LibraryFilter.primaryFilters.contains(.ask))
         XCTAssertEqual(LibraryFilter.primaryFilters.first, .searchResults)
         XCTAssertEqual(LibraryFilter.primaryFilters[1], .explore)
+        XCTAssertEqual(LibraryFilter.primaryFilters[2], .ask)
     }
 
     func testSelectFilterClearsListSelection() {

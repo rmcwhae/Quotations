@@ -26,6 +26,7 @@ struct ContentView: View {
     @State private var searchState = SearchState()
     @State private var findInPage = FindInPageState()
     @State private var exploreState = ExploreState()
+    @State private var chatState = ChatState()
     @State private var newSourceSession: NewSourceSheetSession?
     @State private var showAuthorList = false
     @State private var showBackups = false
@@ -66,11 +67,13 @@ struct ContentView: View {
         @Bindable var navigation = navigation
         @Bindable var findInPage = findInPage
         @Bindable var exploreState = exploreState
+        @Bindable var chatState = chatState
 
         splitView(
             navigation: navigation,
             findInPage: findInPage,
             exploreState: exploreState,
+            chatState: chatState,
             selectedSourceId: $navigation.selectedSourceId,
             selectedQuotationId: $navigation.selectedQuotationId,
             findQuery: $findInPage.query
@@ -131,6 +134,7 @@ struct ContentView: View {
         navigation: LibraryNavigationState,
         findInPage: FindInPageState,
         exploreState: ExploreState,
+        chatState: ChatState,
         selectedSourceId: Binding<PersistentIdentifier?>,
         selectedQuotationId: Binding<PersistentIdentifier?>,
         findQuery: Binding<String>
@@ -149,7 +153,11 @@ struct ContentView: View {
                 searchState: searchState,
                 findQuery: findInPage.query,
                 exploreState: exploreState,
+                chatState: chatState,
                 onExploreWordSelected: { openAdvancedSearch(for: $0) },
+                onChatCitationSelected: { quotationId, sourceId in
+                    navigation.selectQuotation(quotationId, sourceId: sourceId)
+                },
                 selectedSourceId: selectedSourceId,
                 selectedQuotationId: selectedQuotationId,
                 onManageAuthors: { showAuthorList = true },
@@ -452,6 +460,9 @@ private extension ContentView {
     var detailPlaceholderMessage: String {
         if navigation.selectedFilter == .explore {
             return "Select a quotation from Explore"
+        }
+        if navigation.selectedFilter == .ask {
+            return "Select a citation from Ask"
         }
         if navigation.selectedFilter.showsQuotations {
             return "Select a quotation"

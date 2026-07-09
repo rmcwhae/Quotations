@@ -15,7 +15,9 @@ struct LibraryContextListView: View {
     let searchState: SearchState
     let findQuery: String
     @Bindable var exploreState: ExploreState
+    @Bindable var chatState: ChatState
     var onExploreWordSelected: (String) -> Void
+    var onChatCitationSelected: (PersistentIdentifier, PersistentIdentifier?) -> Void
     @Binding var selectedSourceId: PersistentIdentifier?
     @Binding var selectedQuotationId: PersistentIdentifier?
     var onManageAuthors: () -> Void
@@ -28,6 +30,10 @@ struct LibraryContextListView: View {
 
     private var isExplorePage: Bool {
         filter == .explore
+    }
+
+    private var isAskPage: Bool {
+        filter == .ask
     }
 
     private var isSearchPage: Bool {
@@ -67,7 +73,7 @@ struct LibraryContextListView: View {
             searchResultIds: LibraryFilterResolver.searchResultQuotationIds(from: searchState)
         )
         let stats: LibraryStats
-        if filter == .explore {
+        if filter == .explore || filter == .ask {
             let active = self.quotations.filter { $0.deletedAt == nil }
             let sourceIds = Set(active.compactMap { $0.source?.id })
             let authorIds = Set(active.compactMap { $0.source?.author?.id })
@@ -94,6 +100,15 @@ struct LibraryContextListView: View {
                         selectedQuotationId: $selectedQuotationId,
                         selectedSourceIdBinding: $selectedSourceId,
                         onWordSelected: onExploreWordSelected
+                    )
+                    LibraryStatsFooterView(stats: resolved.stats)
+                }
+            } else if isAskPage {
+                VStack(spacing: 0) {
+                    LibraryChatView(
+                        quotations: quotations,
+                        chatState: chatState,
+                        onSelectCitation: onChatCitationSelected
                     )
                     LibraryStatsFooterView(stats: resolved.stats)
                 }
@@ -148,7 +163,7 @@ struct LibraryContextListView: View {
         }
         .navigationSplitViewColumnWidth(min: 220, ideal: 300)
         .toolbar {
-            if !isSearchPage && !isExplorePage {
+            if !isSearchPage && !isExplorePage && !isAskPage {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: onManageAuthors) {
                         Image(systemName: "person.2")
