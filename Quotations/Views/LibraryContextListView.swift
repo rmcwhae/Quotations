@@ -112,6 +112,18 @@ struct LibraryContextListView: View {
                     )
                     LibraryStatsFooterView(stats: resolved.stats)
                 }
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            chatState.clear()
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .accessibilityLabel("Clear conversation")
+                        .help("Clear conversation")
+                        .disabled(chatState.isGenerating || !chatState.hasContent)
+                    }
+                }
             } else if isSearchPage {
                 VStack(spacing: 0) {
                     SearchPageHeaderView(

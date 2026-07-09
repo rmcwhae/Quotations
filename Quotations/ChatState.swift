@@ -24,6 +24,10 @@ final class ChatState {
         AppleIntelligenceAvailability.isChatAvailable
     }
 
+    var hasContent: Bool {
+        !messages.isEmpty || errorMessage != nil
+    }
+
     func send(_ text: String, quotations: [Quotation]) {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !isGenerating else { return }
