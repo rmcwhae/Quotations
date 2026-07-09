@@ -55,6 +55,7 @@ struct LibraryChatView: View {
                         Text(errorMessage)
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                            .textSelection(.enabled)
                             .padding(.horizontal, 4)
                     }
                 }
@@ -158,8 +159,9 @@ private struct ChatMessageBubbleView: View {
     var body: some View {
         VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 8) {
             Text(message.text)
-                .font(message.role == .assistant ? .body : .body)
-                .foregroundStyle(message.role == .user ? Color.primary : Color.primary)
+                .font(.body)
+                .foregroundStyle(.primary)
+                .textSelection(.enabled)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .background(bubbleBackground)
