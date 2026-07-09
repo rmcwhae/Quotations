@@ -115,6 +115,7 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .quotationsDataDidChange)) { _ in
             searchState.runSearchIfNeeded(modelContext: modelContext)
+            QuotationSearchIndexManager.scheduleSync(modelContext: modelContext)
         }
         .onReceive(NotificationCenter.default.publisher(for: .showBackupsPanel)) { _ in
             showBackups = true
@@ -408,6 +409,7 @@ private extension ContentView {
                     quotationIdsFilter: isSearchActive
                         ? searchState.matchSetsForQuery()?.quotationIds
                         : nil,
+                    semanticQuotationIds: isSearchActive ? searchState.semanticQuotationIds : [],
                     selectedQuotationId: $navigation.selectedQuotationId,
                     newQuotationId: newQuotationId
                 )

@@ -130,7 +130,8 @@ struct LibraryContextListView: View {
             QuotationListRowView(
                 quotation: quotation,
                 searchQuery: searchState.query,
-                isSelected: quotation.id == selectedQuotationId
+                isSelected: quotation.id == selectedQuotationId,
+                isSemanticMatch: searchState.isSemanticMatch(quotation.id)
             )
             .tag(quotation.id)
             .listRowBackground(selectionBackground(isSelected: quotation.id == selectedQuotationId))
@@ -150,6 +151,12 @@ struct LibraryContextListView: View {
             if searchState.isSearching {
                 Text("Searching…")
                     .foregroundStyle(.secondary)
+            } else if let summary = searchState.semanticSummary, !summary.isEmpty {
+                Text(summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
             } else if !trimmedSearchQuery.isEmpty,
                       quotations.isEmpty,
                       sources.isEmpty {

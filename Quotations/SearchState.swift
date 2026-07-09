@@ -26,6 +26,10 @@ final class SearchState {
     var matchSets: MatchSets?
     /// Quotation IDs grouped by source, for search results rendering without per-section `@Query`.
     var quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]] = [:]
+    /// Quotation IDs found by semantic search but not by keyword matching.
+    var semanticQuotationIds: Set<PersistentIdentifier> = []
+    /// Optional Apple Intelligence summary for the latest semantic search.
+    var semanticSummary: String?
 
     private let debounceInterval: Duration = .milliseconds(200)
     private var searchTask: Task<Void, Never>?
@@ -52,6 +56,8 @@ final class SearchState {
         searchResults = []
         matchSets = nil
         quotationsBySourceId = [:]
+        semanticQuotationIds = []
+        semanticSummary = nil
 
         searchTask = Task { @MainActor in
             try? await Task.sleep(for: debounceInterval)
@@ -66,10 +72,26 @@ final class SearchState {
                 let allQuotations = try modelContext.fetch(descriptor)
                 guard !Task.isCancelled else { return }
 
-                let match = SearchMatcher.match(quotations: allQuotations, query: trimmed)
-                searchResults = match.results
-                matchSets = match.matchSets
-                quotationsBySourceId = match.quotationsBySourceId
+                let keywordMatch = SearchMatcher.match(quotations: allQuotations, query: trimmed)
+                applyMatch(keywordMatch)
+
+                if SemanticSearchMerger.shouldRunSemanticSearch(query: trimmed, keywordResult: keywordMatch) {
+                    let semanticResponse = await SemanticSearchService.search(
+                        query: trimmed,
+                        keywordResult: keywordMatch,
+                        quotations: allQuotations
+                    )
+                    guard !Task.isCancelled else { return }
+
+                    let mergedMatch = SemanticSearchMerger.merge(
+                        keywordResult: keywordMatch,
+                        encodedQuotationIDs: semanticResponse.encodedQuotationIDs,
+                        quotations: allQuotations
+                    )
+                    applyMatch(mergedMatch)
+                    semanticSummary = semanticResponse.summary
+                }
+
                 isSearching = false
             } catch {
                 guard !Task.isCancelled else { return }
@@ -83,10 +105,23 @@ final class SearchState {
         return matchSets
     }
 
+    func isSemanticMatch(_ quotationId: PersistentIdentifier) -> Bool {
+        semanticQuotationIds.contains(quotationId)
+    }
+
+    private func applyMatch(_ match: SearchMatcher.MatchResult) {
+        searchResults = match.results
+        matchSets = match.matchSets
+        quotationsBySourceId = match.quotationsBySourceId
+        semanticQuotationIds = match.semanticQuotationIds
+    }
+
     private func clearResults() {
         searchResults = []
         isSearching = false
         matchSets = nil
         quotationsBySourceId = [:]
+        semanticQuotationIds = []
+        semanticSummary = nil
     }
 }

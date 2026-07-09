@@ -12,6 +12,7 @@ struct SourceDetailView: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
+    var semanticQuotationIds: Set<PersistentIdentifier> = []
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
 
@@ -28,6 +29,7 @@ struct SourceDetailView: View {
                         source: source,
                         searchQuery: searchQuery,
                         quotationIdsFilter: quotationIdsFilter,
+                        semanticQuotationIds: semanticQuotationIds,
                         selectedQuotationId: $selectedQuotationId,
                         newQuotationId: newQuotationId
                     )

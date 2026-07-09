@@ -11,12 +11,18 @@ enum SearchMatcher {
         let results: [SearchResultItem]
         let matchSets: MatchSets
         let quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]]
+        let semanticQuotationIds: Set<PersistentIdentifier>
     }
 
     static func match(quotations: [Quotation], query: String) -> MatchResult {
         let lower = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !lower.isEmpty else {
-            return MatchResult(results: [], matchSets: emptyMatchSets, quotationsBySourceId: [:])
+            return MatchResult(
+                results: [],
+                matchSets: emptyMatchSets,
+                quotationsBySourceId: [:],
+                semanticQuotationIds: []
+            )
         }
 
         var results: [SearchResultItem] = []
@@ -48,7 +54,8 @@ enum SearchMatcher {
         return MatchResult(
             results: results,
             matchSets: MatchSets(authorIds: authorIds, sourceIds: sourceIds, quotationIds: quotationIds),
-            quotationsBySourceId: quotationsBySourceId
+            quotationsBySourceId: quotationsBySourceId,
+            semanticQuotationIds: []
         )
     }
 

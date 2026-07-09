@@ -12,6 +12,7 @@ struct QuotationListRowView: View {
     let quotation: Quotation
     let searchQuery: String
     var isSelected: Bool = false
+    var isSemanticMatch: Bool = false
 
     private var excerpt: String {
         let trimmed = quotation.content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -22,10 +23,11 @@ struct QuotationListRowView: View {
     private var accessibilitySummary: String {
         let sourceTitle = quotation.source?.title ?? "Unknown source"
         let author = quotation.source?.author?.name
+        let matchKind = isSemanticMatch ? "Concept match. " : ""
         if let author {
-            return "\(excerpt), from \(sourceTitle) by \(author)"
+            return "\(matchKind)\(excerpt), from \(sourceTitle) by \(author)"
         }
-        return "\(excerpt), from \(sourceTitle)"
+        return "\(matchKind)\(excerpt), from \(sourceTitle)"
     }
 
     var body: some View {
@@ -35,19 +37,27 @@ struct QuotationListRowView: View {
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
 
-            if let source = quotation.source {
-                HStack(spacing: 4) {
-                    HighlightMatch(text: source.title, query: searchQuery)
-                        .font(.system(size: 11, weight: .medium))
-                        .lineLimit(1)
-                    if let author = source.author {
-                        Text("·")
-                            .foregroundStyle(.tertiary)
-                        HighlightMatch(text: author.name, query: searchQuery)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                if let source = quotation.source {
+                    HStack(spacing: 4) {
+                        HighlightMatch(text: source.title, query: searchQuery)
+                            .font(.system(size: 11, weight: .medium))
                             .lineLimit(1)
+                        if let author = source.author {
+                            Text("·")
+                                .foregroundStyle(.tertiary)
+                            HighlightMatch(text: author.name, query: searchQuery)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
                     }
+                }
+
+                Spacer(minLength: 0)
+
+                if isSemanticMatch {
+                    SemanticMatchBadge()
                 }
             }
         }

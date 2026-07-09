@@ -91,6 +91,7 @@ struct QuotationsApp: App {
 private struct RootView: View {
     let loadWarning: String?
     @Environment(DeepLinkRouter.self) private var deepLinkRouter
+    @Environment(\.modelContext) private var modelContext
     @State private var showLoadWarning = false
 
     var body: some View {
@@ -98,6 +99,9 @@ private struct RootView: View {
             .onAppear {
                 showLoadWarning = loadWarning != nil
                 DeepLinkLaunchQueue.flush(into: deepLinkRouter)
+                Task {
+                    await QuotationSearchIndexManager.reindexIfNeeded(modelContext: modelContext)
+                }
             }
             .onOpenURL { url in
                 deepLinkRouter.enqueue(url)

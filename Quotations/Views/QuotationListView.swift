@@ -10,6 +10,7 @@ import SwiftData
 struct QuotationRowsContent: View {
     let quotations: [Quotation]
     let searchQuery: String
+    var semanticQuotationIds: Set<PersistentIdentifier> = []
     var newQuotationId: PersistentIdentifier?
     @Binding var selectedQuotationIdBinding: PersistentIdentifier?
     var onEdit: (Quotation) -> Void
@@ -22,6 +23,7 @@ struct QuotationRowsContent: View {
                     quotation: quotation,
                     searchQuery: searchQuery,
                     isSelected: quotation.id == selectedQuotationIdBinding,
+                    isSemanticMatch: semanticQuotationIds.contains(quotation.id),
                     beginEditing: quotation.id == newQuotationId,
                     newQuotationId: newQuotationId,
                     onSelect: { selectedQuotationIdBinding = quotation.id },
@@ -42,6 +44,7 @@ struct QuotationListView: View {
     let source: Source
     let searchQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
+    var semanticQuotationIds: Set<PersistentIdentifier> = []
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
 
@@ -52,12 +55,14 @@ struct QuotationListView: View {
         source: Source,
         searchQuery: String,
         quotationIdsFilter: Set<PersistentIdentifier>? = nil,
+        semanticQuotationIds: Set<PersistentIdentifier> = [],
         selectedQuotationId: Binding<PersistentIdentifier?>,
         newQuotationId: PersistentIdentifier? = nil
     ) {
         self.source = source
         self.searchQuery = searchQuery
         self.quotationIdsFilter = quotationIdsFilter
+        self.semanticQuotationIds = semanticQuotationIds
         _selectedQuotationId = selectedQuotationId
         self.newQuotationId = newQuotationId
         let sourceId = source.persistentModelID
@@ -92,6 +97,7 @@ struct QuotationListView: View {
             QuotationRowsContent(
                 quotations: displayedQuotations,
                 searchQuery: searchQuery,
+                semanticQuotationIds: semanticQuotationIds,
                 newQuotationId: newQuotationId,
                 selectedQuotationIdBinding: $selectedQuotationId,
                 onEdit: saveQuotation,

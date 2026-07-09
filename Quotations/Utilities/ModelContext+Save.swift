@@ -13,5 +13,6 @@ extension ModelContext {
         try save()
         NotificationCenter.default.post(name: .quotationsDataDidChange, object: nil)
         WidgetCenter.shared.reloadAllTimelines()
+        QuotationSearchIndexManager.scheduleSync(modelContext: self)
     }
 }
