@@ -13,6 +13,7 @@ struct LibraryContextListView: View {
     let sources: [Source]
     let quotations: [Quotation]
     let searchState: SearchState
+    let findQuery: String
     @Binding var selectedSourceId: PersistentIdentifier?
     @Binding var selectedQuotationId: PersistentIdentifier?
     var onManageAuthors: () -> Void
@@ -29,6 +30,14 @@ struct LibraryContextListView: View {
 
     private var trimmedSearchQuery: String {
         searchState.query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var listHighlightQuery: String {
+        if filter == .searchResults {
+            let find = findQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+            return find.isEmpty ? searchState.query : findQuery
+        }
+        return findQuery
     }
 
     private struct ResolvedListContent {
@@ -144,7 +153,7 @@ struct LibraryContextListView: View {
         ForEach(resolvedSources) { source in
             SourceListRowView(
                 source: source,
-                searchQuery: searchState.query,
+                searchQuery: listHighlightQuery,
                 isSelected: source.id == selectedSourceId,
                 showsQuotationCount: filter == .quotationsBySource
             )
@@ -167,7 +176,7 @@ struct LibraryContextListView: View {
         ForEach(resolvedQuotations) { quotation in
             QuotationListRowView(
                 quotation: quotation,
-                searchQuery: searchState.query,
+                searchQuery: listHighlightQuery,
                 isSelected: quotation.id == selectedQuotationId,
                 isSemanticMatch: searchState.isSemanticMatch(quotation.id)
             )

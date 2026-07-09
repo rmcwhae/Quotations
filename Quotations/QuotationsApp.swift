@@ -66,6 +66,18 @@ struct QuotationsApp: App {
         }
         .handlesExternalEvents(matching: ["*"])
         .commands {
+            CommandMenu("Find") {
+                Button("Find…") {
+                    NotificationCenter.default.post(name: .focusFindInPage, object: nil)
+                }
+                .keyboardShortcut("f", modifiers: .command)
+            }
+            CommandMenu("Advanced Search") {
+                Button("Show Advanced Search") {
+                    NotificationCenter.default.post(name: .openAdvancedSearch, object: nil)
+                }
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+            }
             CommandGroup(after: .newItem) {
                 Button("New Quotation") {
                     NotificationCenter.default.post(name: .addQuotation, object: nil)

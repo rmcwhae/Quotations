@@ -11,7 +11,7 @@ import SwiftUI
 /// One source block: header (title, author, link), divider, and content below.
 struct SourceSectionView<BelowContent: View>: View {
     let source: Source
-    let searchQuery: String
+    let findQuery: String
     /// When set, tapping the source header clears the selected quotation.
     var selectedQuotationId: Binding<PersistentIdentifier?>? = nil
     /// When false, section background is transparent (parent provides parchment).
@@ -50,7 +50,7 @@ struct SourceSectionView<BelowContent: View>: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
-                        HighlightMatch(text: source.title, query: searchQuery)
+                        HighlightMatch(text: source.title, query: findQuery)
                             .font(.system(size: 24, weight: .regular, design: .serif))
                             .multilineTextAlignment(.leading)
                         if metadataText != nil || sourceURL != nil {
@@ -58,7 +58,7 @@ struct SourceSectionView<BelowContent: View>: View {
                                 if let metadataText {
                                     HighlightMatch(
                                         text: metadataText,
-                                        query: searchQuery
+                                        query: findQuery
                                     )
                                     .font(.system(size: 14, design: .serif).italic())
                                     .foregroundStyle(.secondary)

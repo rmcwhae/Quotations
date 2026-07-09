@@ -24,6 +24,7 @@ struct ContentView: View {
 
     @State private var navigation = LibraryNavigationState()
     @State private var searchState = SearchState()
+    @State private var findInPage = FindInPageState()
     @State private var newSourceSession: NewSourceSheetSession?
     @State private var showAuthorList = false
     @State private var showBackups = false
@@ -62,7 +63,74 @@ struct ContentView: View {
 
     var body: some View {
         @Bindable var navigation = navigation
+        @Bindable var findInPage = findInPage
 
+        splitView(
+            navigation: navigation,
+            findInPage: findInPage,
+            selectedSourceId: $navigation.selectedSourceId,
+            selectedQuotationId: $navigation.selectedQuotationId,
+            findQuery: $findInPage.query
+        )
+        .onDeleteCommand {
+            guard navigation.selectedQuotationId != nil else { return }
+            showDeleteQuotationConfirmation = true
+        }
+        .modifier(ContentViewLifecycleModifier(
+            modelContext: modelContext,
+            showCSVImporter: $showCSVImporter,
+            showBackups: $showBackups,
+            showError: $showError,
+            errorMessage: $errorMessage,
+            selectedSourceId: $navigation.selectedSourceId,
+            selectedQuotationId: $navigation.selectedQuotationId,
+            newQuotationId: newQuotationId,
+            deepLinkRouter: deepLinkRouter,
+            sourcesCount: sources.count,
+            quotationsCount: quotations.count,
+            searchState: searchState,
+            onImportCSV: importCSV,
+            onBeginCSVImport: beginCSVImport,
+            onImportFromAppleBooks: importFromAppleBooks,
+            onAddQuotation: addQuotation,
+            onOpenAdvancedSearch: { selectFilter(.searchResults) },
+            onAppear: consumePendingDeepLinkIfNeeded,
+            onPendingURLChange: consumePendingDeepLinkIfNeeded,
+            onRetryDeepLink: retryUnresolvedDeepLinkIfNeeded,
+            onDeepLinkReceived: consumePendingDeepLinkIfNeeded,
+            onCleanupNewQuotation: cleanupNewQuotationIfEmpty
+        ))
+        .modifier(ContentViewSheetsModifier(
+                showError: $showError,
+                errorMessage: errorMessage,
+                showImportSuccess: $showImportSuccess,
+                importSuccessMessage: importSuccessMessage,
+                showAuthorList: $showAuthorList,
+                showBackups: $showBackups,
+                newSourceSession: $newSourceSession,
+                sourceToEdit: $sourceToEdit,
+                showDeleteSourceConfirmation: $showDeleteSourceConfirmation,
+                sourceToDelete: $sourceToDelete,
+                showDeleteQuotationConfirmation: $showDeleteQuotationConfirmation,
+                selectedSourceId: $navigation.selectedSourceId,
+                selectedQuotationId: $navigation.selectedQuotationId,
+                modelContext: modelContext,
+                onEditError: { message in
+                    errorMessage = message
+                    showError = true
+                },
+                onSourceCreated: handleSourceCreated
+            ))
+    }
+
+    @ViewBuilder
+    private func splitView(
+        navigation: LibraryNavigationState,
+        findInPage: FindInPageState,
+        selectedSourceId: Binding<PersistentIdentifier?>,
+        selectedQuotationId: Binding<PersistentIdentifier?>,
+        findQuery: Binding<String>
+    ) -> some View {
         NavigationSplitView {
             LibraryFilterSidebarView(
                 selectedFilter: navigation.selectedFilter,
@@ -75,8 +143,9 @@ struct ContentView: View {
                 sources: sources,
                 quotations: quotations,
                 searchState: searchState,
-                selectedSourceId: $navigation.selectedSourceId,
-                selectedQuotationId: $navigation.selectedQuotationId,
+                findQuery: findInPage.query,
+                selectedSourceId: selectedSourceId,
+                selectedQuotationId: selectedQuotationId,
                 onManageAuthors: { showAuthorList = true },
                 onAddSource: { newSourceSession = NewSourceSheetSession() },
                 onSourceEdit: { sourceToEdit = $0 },
@@ -89,96 +158,20 @@ struct ContentView: View {
             detailPane
         }
         .navigationSplitViewStyle(.balanced)
+        .searchable(
+            text: findQuery,
+            placement: .toolbar,
+            prompt: "Find"
+        )
         .onKeyPress(.escape) {
+            if !findInPage.trimmedQuery.isEmpty {
+                findInPage.query = ""
+                return .handled
+            }
             guard navigation.selectedQuotationId != nil else { return .ignored }
             navigation.clearQuotationSelection()
             return .handled
         }
-        .onDeleteCommand {
-            guard navigation.selectedQuotationId != nil else { return }
-            showDeleteQuotationConfirmation = true
-        }
-        .onChange(of: searchState.query) { _, _ in
-            searchState.runSearchIfNeeded(modelContext: modelContext)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .quotationsDataDidChange)) { _ in
-            searchState.runSearchIfNeeded(modelContext: modelContext)
-            QuotationSearchIndexManager.scheduleSync(modelContext: modelContext)
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .showBackupsPanel)) { _ in
-            showBackups = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .importFromAppleBooks)) { _ in
-            importFromAppleBooks()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .importQuotationsFromCSV)) { _ in
-            beginCSVImport()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .addQuotation)) { _ in
-            addQuotation()
-        }
-        .onAppear {
-            consumePendingDeepLinkIfNeeded()
-        }
-        .onOpenURL { url in
-            deepLinkRouter.enqueue(url)
-        }
-        .onChange(of: deepLinkRouter.pendingURL) { _, _ in
-            consumePendingDeepLinkIfNeeded()
-        }
-        .onChange(of: sources.count) { _, _ in
-            retryUnresolvedDeepLinkIfNeeded()
-        }
-        .onChange(of: quotations.count) { _, _ in
-            retryUnresolvedDeepLinkIfNeeded()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .quotationDeepLinkReceived)) { _ in
-            consumePendingDeepLinkIfNeeded()
-        }
-        .fileImporter(
-            isPresented: $showCSVImporter,
-            allowedContentTypes: [.commaSeparatedText, .plainText, .text],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                guard let url = urls.first else { return }
-                importCSV(from: url)
-            case .failure(let error):
-                errorMessage = error.localizedDescription
-                showError = true
-            }
-        }
-        .onChange(of: navigation.selectedSourceId) { _, _ in
-            cleanupNewQuotationIfEmpty()
-        }
-        .onChange(of: navigation.selectedQuotationId) { _, newValue in
-            if let newId = newQuotationId, newValue != newId {
-                cleanupNewQuotationIfEmpty()
-            }
-        }
-        .navigationTitle("")
-        .modifier(ContentViewSheetsModifier(
-            showError: $showError,
-            errorMessage: errorMessage,
-            showImportSuccess: $showImportSuccess,
-            importSuccessMessage: importSuccessMessage,
-            showAuthorList: $showAuthorList,
-            showBackups: $showBackups,
-            newSourceSession: $newSourceSession,
-            sourceToEdit: $sourceToEdit,
-            showDeleteSourceConfirmation: $showDeleteSourceConfirmation,
-            sourceToDelete: $sourceToDelete,
-            showDeleteQuotationConfirmation: $showDeleteQuotationConfirmation,
-            selectedSourceId: $navigation.selectedSourceId,
-            selectedQuotationId: $navigation.selectedQuotationId,
-            modelContext: modelContext,
-            onEditError: { message in
-                errorMessage = message
-                showError = true
-            },
-            onSourceCreated: handleSourceCreated
-        ))
     }
 }
 
@@ -277,6 +270,7 @@ private extension ContentView {
 
         NSApp.activate(ignoringOtherApps: true)
         searchState.query = ""
+        findInPage.query = ""
         var transaction = Transaction()
         transaction.disablesAnimations = true
         withTransaction(transaction) {
@@ -393,7 +387,7 @@ private extension ContentView {
             if let source = selectedSource {
                 SourceDetailView(
                     source: source,
-                    searchQuery: searchState.query,
+                    findQuery: findInPage.query,
                     quotationIdsFilter: isOnSearchPage
                         ? searchState.matchSetsForQuery()?.quotationIds
                         : nil,

@@ -10,7 +10,7 @@ import SwiftData
 
 struct SourceDetailView: View {
     let source: Source
-    let searchQuery: String
+    let findQuery: String
     var quotationIdsFilter: Set<PersistentIdentifier>?
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
@@ -20,13 +20,13 @@ struct SourceDetailView: View {
             ScrollView {
                 SourceSectionView(
                     source: source,
-                    searchQuery: searchQuery,
+                    findQuery: findQuery,
                     selectedQuotationId: $selectedQuotationId,
                     showsBackground: false
                 ) {
                     QuotationListView(
                         source: source,
-                        searchQuery: searchQuery,
+                        findQuery: findQuery,
                         quotationIdsFilter: quotationIdsFilter,
                         selectedQuotationId: $selectedQuotationId,
                         newQuotationId: newQuotationId

@@ -14,7 +14,7 @@ private let textContainerPadding = CGSize(width: 8, height: 6)
 
 struct QuotationRowView: View {
     let quotation: Quotation
-    let searchQuery: String
+    let findQuery: String
     var isSelected: Bool = false
     /// When true, the row enters edit mode on appear (used for a freshly added quotation).
     var beginEditing: Bool = false
@@ -38,7 +38,7 @@ struct QuotationRowView: View {
 
     init(
         quotation: Quotation,
-        searchQuery: String,
+        findQuery: String,
         isSelected: Bool = false,
         beginEditing: Bool = false,
         newQuotationId: PersistentIdentifier? = nil,
@@ -48,7 +48,7 @@ struct QuotationRowView: View {
         onDelete: @escaping (PersistentIdentifier) -> Void
     ) {
         self.quotation = quotation
-        self.searchQuery = searchQuery
+        self.findQuery = findQuery
         self.isSelected = isSelected
         self.beginEditing = beginEditing
         self.newQuotationId = newQuotationId
@@ -66,12 +66,12 @@ struct QuotationRowView: View {
         min(textContainerWidth, quotationTextMaxWidth)
     }
 
-    private var isSearchActive: Bool {
-        !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    private var isFindActive: Bool {
+        !findQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     private var showsHighlightedText: Bool {
-        isSearchActive && !isTextFocused
+        isFindActive && !isTextFocused
     }
 
     private var borderColor: Color {
@@ -233,7 +233,7 @@ struct QuotationRowView: View {
         } else {
             Group {
                 if showsHighlightedText {
-                    HighlightMatch(text: editedContent, query: searchQuery, useMarkdown: true)
+                    HighlightMatch(text: editedContent, query: findQuery, useMarkdown: true)
                 } else {
                     FormattedQuotationText(text: editedContent)
                 }

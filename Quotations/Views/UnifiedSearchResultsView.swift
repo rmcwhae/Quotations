@@ -10,7 +10,7 @@ import SwiftUI
 
 struct UnifiedSearchResultsView: View {
     let sources: [Source]
-    let searchQuery: String
+    let findQuery: String
     var quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]]
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
@@ -33,7 +33,7 @@ struct UnifiedSearchResultsView: View {
                         ForEach(sources) { source in
                             SingleSourceSearchSection(
                                 source: source,
-                                searchQuery: searchQuery,
+                                findQuery: findQuery,
                                 quotationIds: quotationsBySourceId[source.persistentModelID] ?? [],
                                 selectedQuotationId: $selectedQuotationId,
                                 newQuotationId: newQuotationId
@@ -54,7 +54,7 @@ struct UnifiedSearchResultsView: View {
 
 private struct SingleSourceSearchSection: View {
     let source: Source
-    let searchQuery: String
+    let findQuery: String
     let quotationIds: [PersistentIdentifier]
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
@@ -69,7 +69,7 @@ private struct SingleSourceSearchSection: View {
     var body: some View {
         SourceSectionView(
             source: source,
-            searchQuery: searchQuery,
+            findQuery: findQuery,
             selectedQuotationId: $selectedQuotationId,
             showsBackground: false
         ) {
@@ -81,7 +81,7 @@ private struct SingleSourceSearchSection: View {
             } else {
                 QuotationRowsContent(
                     quotations: resolvedQuotations,
-                    searchQuery: searchQuery,
+                    findQuery: findQuery,
                     newQuotationId: newQuotationId,
                     selectedQuotationIdBinding: $selectedQuotationId,
                     onEdit: saveQuotation,

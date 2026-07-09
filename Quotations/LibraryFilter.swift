@@ -30,7 +30,7 @@ enum LibraryFilter: Hashable, Identifiable {
         case .quotationsBySource: "Quotations by Source"
         case .recentlyAdded: "Recently Added"
         case .format(let format): format.rawValue
-        case .searchResults: "Search"
+        case .searchResults: "Advanced Search"
         }
     }
 
