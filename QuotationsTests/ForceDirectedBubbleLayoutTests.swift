@@ -28,8 +28,8 @@ final class ForceDirectedBubbleLayoutTests: XCTestCase {
                     return XCTFail("Missing layout position")
                 }
                 let distance = hypot(first.x - second.x, first.y - second.y)
-                let minimum = radii[i].radius + radii[j].radius + 8
-                XCTAssertGreaterThanOrEqual(distance, minimum - 0.5, "Bubbles \(firstID) and \(secondID) overlap")
+                let minimum = radii[i].radius + radii[j].radius
+                XCTAssertGreaterThanOrEqual(distance, minimum - 0.01, "Bubbles \(firstID) and \(secondID) overlap")
             }
         }
     }
@@ -47,8 +47,8 @@ final class ForceDirectedBubbleLayoutTests: XCTestCase {
                     return XCTFail("Missing position")
                 }
                 let distance = hypot(first.x - second.x, first.y - second.y)
-                let minimum = radii[i].radius + radii[j].radius + 8
-                XCTAssertGreaterThanOrEqual(distance, minimum - 0.5)
+                let minimum = radii[i].radius + radii[j].radius
+                XCTAssertGreaterThanOrEqual(distance, minimum - 0.01)
             }
         }
     }

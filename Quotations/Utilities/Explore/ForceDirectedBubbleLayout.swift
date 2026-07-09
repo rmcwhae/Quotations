@@ -14,7 +14,8 @@ struct ForceBubbleNode: Identifiable {
 }
 
 enum ForceDirectedBubbleLayout {
-    private static let padding: CGFloat = 8
+    /// Circles may touch (gap = 0) but must not overlap.
+    private static let minimumGap: CGFloat = 0
     private static let centerStrength: CGFloat = 0.04
     private static let collisionStrength: CGFloat = 1.2
     private static let velocityDecay: CGFloat = 0.55
@@ -103,7 +104,7 @@ enum ForceDirectedBubbleLayout {
                 var dy = nodes[second].position.y - nodes[first].position.y
                 var distance = hypot(dx, dy)
 
-                let minimumDistance = nodes[first].radius + nodes[second].radius + padding
+                let minimumDistance = nodes[first].radius + nodes[second].radius + minimumGap
                 if distance == 0 {
                     dx = CGFloat.random(in: -1...1)
                     dy = CGFloat.random(in: -1...1)
@@ -137,7 +138,7 @@ enum ForceDirectedBubbleLayout {
                     var dx = nodes[second].position.x - nodes[first].position.x
                     var dy = nodes[second].position.y - nodes[first].position.y
                     var distance = hypot(dx, dy)
-                    let minimumDistance = nodes[first].radius + nodes[second].radius + padding
+                    let minimumDistance = nodes[first].radius + nodes[second].radius + minimumGap
 
                     if distance < minimumDistance {
                         if distance < 0.001 {
