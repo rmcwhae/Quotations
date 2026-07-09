@@ -112,6 +112,25 @@ final class QuotationDeepLinkTests: XCTestCase {
         )
     }
 
+    func testMatchesEntityReferenceRegardlessOfStoreIdentifier() throws {
+        let author = Author(name: "Plato")
+        let source = Source(title: "Republic", author: author)
+        let quotation = Quotation(content: "Justice is virtue and order", source: source)
+        context.insert(author)
+        context.insert(source)
+        context.insert(quotation)
+        try context.save()
+
+        let fullURI = try XCTUnwrap(QuotationDeepLink.uriRepresentation(for: quotation.persistentModelID))
+        let primaryKey = try XCTUnwrap(fullURI.split(separator: "/").last.map(String.init))
+        let widgetStyleToken = base64URLToken(for: "x-coredata://Quotation/\(primaryKey)")
+
+        let resolved = try XCTUnwrap(
+            QuotationDeepLinkResolver.quotation(encodedID: widgetStyleToken, in: context)
+        )
+        XCTAssertEqual(resolved.persistentModelID, quotation.persistentModelID)
+    }
+
     func testParseIncomingURLAcceptsQueryOnlyURLs() throws {
         let quotation = Quotation(content: "one two three four five")
         context.insert(quotation)
@@ -128,5 +147,13 @@ final class QuotationDeepLinkTests: XCTestCase {
             QuotationDeepLink.uriRepresentation(for: quotationID),
             QuotationDeepLink.uriRepresentation(for: quotation.persistentModelID)
         )
+    }
+
+    private func base64URLToken(for uri: String) -> String {
+        Data(uri.utf8)
+            .base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
     }
 }

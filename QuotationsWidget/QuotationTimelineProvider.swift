@@ -44,9 +44,7 @@ struct QuotationTimelineProvider: TimelineProvider {
                     content: quote.content,
                     authorName: quote.authorName,
                     sourceTitle: quote.sourceTitle,
-                    deepLinkURL: QuotationDeepLink.url(
-                        for: .quotation(quote.quotationID, sourceID: quote.sourceID)
-                    )
+                    deepLinkURL: Self.deepLinkURL(for: quote)
                 )
             )
         }
@@ -65,9 +63,16 @@ struct QuotationTimelineProvider: TimelineProvider {
             content: quote.content,
             authorName: quote.authorName,
             sourceTitle: quote.sourceTitle,
-            deepLinkURL: QuotationDeepLink.url(
-                for: .quotation(quote.quotationID, sourceID: quote.sourceID)
-            )
+            deepLinkURL: Self.deepLinkURL(for: quote)
         )
+    }
+
+    private static func deepLinkURL(for quote: WidgetQuotationSnapshot) -> URL? {
+        guard let url = QuotationDeepLink.url(
+            for: .quotation(quote.quotationID, sourceID: quote.sourceID)
+        ), QuotationDeepLink.isQuotationDeepLink(url) else {
+            return nil
+        }
+        return url
     }
 }

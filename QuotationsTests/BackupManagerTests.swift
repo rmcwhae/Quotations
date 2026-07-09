@@ -126,6 +126,50 @@ final class BackupManagerTests: XCTestCase {
         XCTAssertEqual(quotations.count, 1)
     }
 
+    func testApplyPendingRestoreUsesStoreFileRegardlessOfName() throws {
+        let backup = try manager.createBackup()
+        let renamedStoreURL = backup.directoryURL.appendingPathComponent("Quotations.store")
+        let originalStoreURL = backup.directoryURL.appendingPathComponent("default.store")
+        try FileManager.default.moveItem(at: originalStoreURL, to: renamedStoreURL)
+
+        let replacementAuthor = Author(name: "Epictetus")
+        context.insert(replacementAuthor)
+        try context.save()
+
+        UserDefaults.standard.set(backup.id, forKey: BackupManager.pendingRestoreBackupIDKey)
+        BackupManager.applyPendingRestoreIfNeeded(
+            storeURL: storeURL,
+            backupsDirectory: backupsDirectory
+        )
+
+        XCTAssertNil(UserDefaults.standard.string(forKey: BackupManager.pendingRestoreBackupIDKey))
+        XCTAssertEqual(try BackupManager.liveQuotationCount(forStoreAt: storeURL), 1)
+    }
+
+    func testListBackupsFindsRenamedStoreFile() throws {
+        let backup = try manager.createBackup()
+        let renamedStoreURL = backup.directoryURL.appendingPathComponent("Quotations.store")
+        let originalStoreURL = backup.directoryURL.appendingPathComponent("default.store")
+        try FileManager.default.moveItem(at: originalStoreURL, to: renamedStoreURL)
+
+        let listed = BackupManager.listBackups(in: backupsDirectory)
+        XCTAssertEqual(listed.first?.quotationCount, 1)
+    }
+
+    func testApplyPendingRestoreKeepsPendingKeyWhenBackupStoreMissing() {
+        UserDefaults.standard.set("missing-backup", forKey: BackupManager.pendingRestoreBackupIDKey)
+        BackupManager.applyPendingRestoreIfNeeded(
+            storeURL: storeURL,
+            backupsDirectory: backupsDirectory
+        )
+
+        XCTAssertEqual(
+            UserDefaults.standard.string(forKey: BackupManager.pendingRestoreBackupIDKey),
+            "missing-backup"
+        )
+        UserDefaults.standard.removeObject(forKey: BackupManager.pendingRestoreBackupIDKey)
+    }
+
     func testSafetyBackupFlagIsStoredInMetadata() throws {
         let backup = try manager.createBackup(isSafetyBackup: true)
         let reloaded = BackupManager.listBackups(in: backupsDirectory).first { $0.id == backup.id }

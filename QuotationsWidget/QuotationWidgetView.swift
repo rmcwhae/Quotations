@@ -27,16 +27,29 @@ struct QuotationWidgetView: View {
     }
 
     var body: some View {
-        Group {
-            if let content = entry.content {
-                quotationContent(content)
+        widgetContent
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .containerBackground(backgroundColor, for: .widget)
+    }
+
+    @ViewBuilder
+    private var widgetContent: some View {
+        let content = Group {
+            if let body = entry.content {
+                quotationContent(body)
             } else {
                 emptyState
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .widgetURL(entry.deepLinkURL)
-        .containerBackground(backgroundColor, for: .widget)
+
+        if let url = entry.deepLinkURL, QuotationDeepLink.isQuotationDeepLink(url) {
+            Link(destination: url) {
+                content
+            }
+            .widgetURL(url)
+        } else {
+            content
+        }
     }
 
     private func quotationContent(_ content: String) -> some View {

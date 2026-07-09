@@ -8,13 +8,23 @@ import SwiftData
 
 enum AppGroupStore {
     static let identifier = "group.com.russellmcwhae.Quotations"
+    static let configurationName = "Quotations"
 
     static var containerURL: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: identifier)
     }
 
     static func modelConfiguration(schema: Schema) -> ModelConfiguration {
-        ModelConfiguration(schema: schema, groupContainer: .identifier(identifier))
+        ModelConfiguration(configurationName, schema: schema, groupContainer: .identifier(identifier))
+    }
+
+    static var sharedStoreURL: URL {
+        let schema = Schema([Author.self, Source.self, Quotation.self])
+        return modelConfiguration(schema: schema).url
+    }
+
+    static var sharedStoreExists: Bool {
+        FileManager.default.fileExists(atPath: sharedStoreURL.path)
     }
 
     /// Default Application Support store URL (pre–App Group migration).
@@ -22,32 +32,49 @@ enum AppGroupStore {
         ModelConfiguration(schema: schema, isStoredInMemoryOnly: false).url
     }
 
-    /// Copies the legacy store into the App Group container when the shared store is missing.
+    /// Copies the legacy store into the App Group container when the shared store is missing or empty.
     static func migrateLegacyStoreIfNeeded(schema: Schema) throws {
         let fileManager = FileManager.default
         let legacyURL = legacyStoreURL(schema: schema)
         let sharedURL = modelConfiguration(schema: schema).url
 
-        guard fileManager.fileExists(atPath: legacyURL.path) else { return }
-        guard !fileManager.fileExists(atPath: sharedURL.path) else { return }
+        if fileManager.fileExists(atPath: legacyURL.path) {
+            if !fileManager.fileExists(atPath: sharedURL.path) {
+                let destinationDirectory = sharedURL.deletingLastPathComponent()
+                try fileManager.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+                try copyStoreFiles(from: legacyURL, toDirectory: destinationDirectory)
+            } else if shouldPreferStore(at: legacyURL, over: sharedURL) {
+                try StoreSnapshot.replaceStore(at: sharedURL, withSnapshotFrom: legacyURL)
+            }
+        }
 
-        let destinationDirectory = sharedURL.deletingLastPathComponent()
-        try fileManager.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
-        try copyStoreFiles(from: legacyURL, toDirectory: destinationDirectory)
+        try consolidateSiblingStoresIfNeeded(around: sharedURL)
+    }
+
+    /// When both `default.store` and the named store exist in the App Group, keep the one with data.
+    static func consolidateSiblingStoresIfNeeded(around canonicalURL: URL) throws {
+        let directory = canonicalURL.deletingLastPathComponent()
+        guard let storeFiles = StoreSnapshot.primaryStoreFiles(in: directory), storeFiles.count > 1 else {
+            return
+        }
+
+        guard let preferred = StoreSnapshot.preferredStoreFile(in: directory),
+              preferred != canonicalURL else {
+            return
+        }
+
+        if shouldPreferStore(at: preferred, over: canonicalURL) {
+            try StoreSnapshot.replaceStore(at: canonicalURL, withSnapshotFrom: preferred)
+        }
+    }
+
+    private static func shouldPreferStore(at candidateURL: URL, over incumbentURL: URL) -> Bool {
+        let candidateCount = (try? StoreSnapshot.liveQuotationCount(forStoreAt: candidateURL)) ?? 0
+        let incumbentCount = (try? StoreSnapshot.liveQuotationCount(forStoreAt: incumbentURL)) ?? 0
+        return candidateCount > incumbentCount
     }
 
     static func copyStoreFiles(from sourceStoreURL: URL, toDirectory destinationDirectory: URL) throws {
-        let fileManager = FileManager.default
-        let storeFileName = sourceStoreURL.lastPathComponent
-
-        for suffix in ["", "-wal", "-shm"] {
-            let source = URL(fileURLWithPath: sourceStoreURL.path + suffix)
-            guard fileManager.fileExists(atPath: source.path) else { continue }
-            let destination = destinationDirectory.appendingPathComponent(storeFileName + suffix)
-            if fileManager.fileExists(atPath: destination.path) {
-                try fileManager.removeItem(at: destination)
-            }
-            try fileManager.copyItem(at: source, to: destination)
-        }
+        try StoreSnapshot.copyStoreFiles(from: sourceStoreURL, toDirectory: destinationDirectory)
     }
 }

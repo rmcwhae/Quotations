@@ -4,6 +4,7 @@
 //
 
 import AppKit
+import os
 import SwiftUI
 import SwiftData
 import Combine
@@ -40,6 +41,8 @@ struct ContentView: View {
     @State private var isInspectorShown = false
     @State private var newQuotationId: PersistentIdentifier?
     @State private var unresolvedDeepLinkURL: URL?
+    @State private var deepLinkDebugMessage = ""
+    @State private var showDeepLinkDebug = false
 
     private var isSearchActive: Bool {
         !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -131,6 +134,7 @@ struct ContentView: View {
             consumePendingDeepLinkIfNeeded()
         }
         .onOpenURL { url in
+            DeepLinkDebug.report("ContentView onOpenURL", url: url)
             deepLinkRouter.enqueue(url)
         }
         .onChange(of: deepLinkRouter.pendingURL) { _, _ in
@@ -139,9 +143,16 @@ struct ContentView: View {
         .onChange(of: sources.count) { _, _ in
             retryUnresolvedDeepLinkIfNeeded()
         }
+        .onChange(of: quotations.count) { _, _ in
+            retryUnresolvedDeepLinkIfNeeded()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .quotationDeepLinkReceived)) { _ in
             consumePendingDeepLinkIfNeeded()
         }
+        .modifier(DeepLinkDebugModifier(
+            message: $deepLinkDebugMessage,
+            isPresented: $showDeepLinkDebug
+        ))
         .fileImporter(
             isPresented: $showCSVImporter,
             allowedContentTypes: [.commaSeparatedText, .plainText, .text],
@@ -244,14 +255,51 @@ private extension ContentView {
         }
     }
 
+    static let deepLinkLog = Logger(subsystem: "com.russellmcwhae.Quotations", category: "DeepLink")
+
     func handleDeepLink(_ url: URL, retryCount: Int = 0) {
-        guard let parameters = QuotationDeepLink.parseURLParameters(url) else { return }
+        guard let parameters = QuotationDeepLink.parseURLParameters(url) else {
+            Self.deepLinkLog.debug("Ignoring deep link without quotation id: \(url.absoluteString, privacy: .public)")
+            DeepLinkDebug.report(
+                "No quotation id in URL",
+                url: url,
+                details: deepLinkDiagnostics(url: url, retryCount: retryCount)
+            )
+            return
+        }
 
         guard let quotation = QuotationDeepLinkResolver.quotation(
             encodedID: parameters.encodedQuotationID,
             in: modelContext
         ) else {
-            guard retryCount < 10 else { return }
+            guard retryCount < 10 else {
+                Self.deepLinkLog.error(
+                    "Failed to resolve quotation deep link after retries. url=\(url.absoluteString, privacy: .public) sharedStoreExists=\(AppGroupStore.sharedStoreExists, privacy: .public)"
+                )
+                DeepLinkDebug.report(
+                    "Quotation not found after retries",
+                    url: url,
+                    details: deepLinkDiagnostics(
+                        url: url,
+                        retryCount: retryCount,
+                        encodedQuotationID: parameters.encodedQuotationID,
+                        encodedSourceID: parameters.encodedSourceID
+                    )
+                )
+                return
+            }
+            if retryCount == 0 {
+                DeepLinkDebug.report(
+                    "Resolving quotation (will retry)",
+                    url: url,
+                    details: deepLinkDiagnostics(
+                        url: url,
+                        retryCount: retryCount,
+                        encodedQuotationID: parameters.encodedQuotationID,
+                        encodedSourceID: parameters.encodedSourceID
+                    )
+                )
+            }
             unresolvedDeepLinkURL = url
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(150))
@@ -266,6 +314,20 @@ private extension ContentView {
             in: modelContext
         ) else {
             unresolvedDeepLinkURL = url
+            Self.deepLinkLog.error(
+                "Resolved quotation but not source for deep link. url=\(url.absoluteString, privacy: .public)"
+            )
+            DeepLinkDebug.report(
+                "Quotation found, source not found",
+                url: url,
+                details: deepLinkDiagnostics(
+                    url: url,
+                    retryCount: retryCount,
+                    encodedQuotationID: parameters.encodedQuotationID,
+                    encodedSourceID: parameters.encodedSourceID,
+                    quotation: quotation
+                )
+            )
             return
         }
 
@@ -280,17 +342,94 @@ private extension ContentView {
             )
         }
         isInspectorShown = true
+        unresolvedDeepLinkURL = url
 
-        if selectedSource != nil, selectedQuotation != nil {
-            unresolvedDeepLinkURL = nil
-        } else {
-            unresolvedDeepLinkURL = url
+        DeepLinkDebug.report(
+            "Navigation applied",
+            url: url,
+            details: deepLinkDiagnostics(
+                url: url,
+                retryCount: retryCount,
+                encodedQuotationID: parameters.encodedQuotationID,
+                encodedSourceID: parameters.encodedSourceID,
+                quotation: quotation,
+                resolvedSourceID: resolvedSourceID
+            )
+        )
+
+        Task { @MainActor in
+            await Task.yield()
+            verifyDeepLinkNavigation(for: url)
         }
+    }
+
+    func deepLinkDiagnostics(
+        url: URL,
+        retryCount: Int,
+        encodedQuotationID: String? = nil,
+        encodedSourceID: String? = nil,
+        quotation: Quotation? = nil,
+        resolvedSourceID: PersistentIdentifier? = nil
+    ) -> [String: String] {
+        var details: [String: String] = [
+            "retry": "\(retryCount)",
+            "sharedStoreExists": "\(AppGroupStore.sharedStoreExists)",
+            "quotationCount": "\(quotations.count)",
+            "sourceCount": "\(sources.count)",
+            "hasQuotationIdParam": "\(QuotationDeepLink.isQuotationDeepLink(url))",
+        ]
+        if let encodedQuotationID {
+            details["encodedQuotationID"] = encodedQuotationID
+        }
+        if let encodedSourceID {
+            details["encodedSourceID"] = encodedSourceID
+        }
+        if let quotation {
+            let preview = quotation.content
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .prefix(60)
+            details["quotationPreview"] = "\"\(preview)\""
+            details["quotationURI"] = QuotationDeepLink.uriRepresentation(for: quotation.persistentModelID) ?? "nil"
+        }
+        if let resolvedSourceID {
+            details["resolvedSourceURI"] = QuotationDeepLink.uriRepresentation(for: resolvedSourceID) ?? "nil"
+        }
+        details["selectedFilter"] = String(describing: navigation.selectedFilter)
+        details["selectedSourceId"] = navigation.selectedSourceId.flatMap {
+            QuotationDeepLink.uriRepresentation(for: $0)
+        } ?? "nil"
+        details["selectedQuotationId"] = navigation.selectedQuotationId.flatMap {
+            QuotationDeepLink.uriRepresentation(for: $0)
+        } ?? "nil"
+        return details
+    }
+
+    func verifyDeepLinkNavigation(for url: URL) {
+        guard unresolvedDeepLinkURL == url else { return }
+        if let quotationId = navigation.selectedQuotationId,
+           let sourceId = navigation.selectedSourceId,
+           modelContext.model(for: quotationId) as? Quotation != nil,
+           modelContext.model(for: sourceId) as? Source != nil {
+            DeepLinkDebug.report(
+                "Navigation verified",
+                url: url,
+                details: deepLinkDiagnostics(url: url, retryCount: 0)
+            )
+            unresolvedDeepLinkURL = nil
+            return
+        }
+        DeepLinkDebug.report(
+            "Navigation verification failed",
+            url: url,
+            details: deepLinkDiagnostics(url: url, retryCount: 0)
+        )
+        retryUnresolvedDeepLinkIfNeeded()
     }
 
     func consumePendingDeepLinkIfNeeded() {
         DeepLinkLaunchQueue.flush(into: deepLinkRouter)
         guard let url = deepLinkRouter.consumePendingURL() else { return }
+        DeepLinkDebug.report("Consuming pending URL", url: url)
         Task { @MainActor in
             await Task.yield()
             handleDeepLink(url)

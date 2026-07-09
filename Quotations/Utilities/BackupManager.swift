@@ -116,29 +116,23 @@ final class BackupManager {
         guard fileManager.fileExists(atPath: backup.directoryURL.path) else {
             throw BackupError.backupDirectoryMissing
         }
+        guard Self.primaryStoreFile(in: backup.directoryURL) != nil else {
+            throw BackupError.storeFileMissing
+        }
 
         _ = try createBackup(isSafetyBackup: true)
         UserDefaults.standard.set(backup.id, forKey: Self.pendingRestoreBackupIDKey)
-
-        let configuration = NSWorkspace.OpenConfiguration()
-        configuration.createsNewApplicationInstance = true
-
-        let semaphore = DispatchSemaphore(value: 0)
-        var relaunchError: Error?
-
-        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
-            relaunchError = error
-            semaphore.signal()
-        }
-
-        _ = semaphore.wait(timeout: .now() + 5)
-
-        if relaunchError != nil {
-            UserDefaults.standard.removeObject(forKey: Self.pendingRestoreBackupIDKey)
-            throw BackupError.relaunchFailed
-        }
-
+        Self.scheduleRelaunch()
         NSApp.terminate(nil)
+    }
+
+    static func scheduleRelaunch() {
+        let bundlePath = Bundle.main.bundleURL.path
+        let escapedPath = bundlePath.replacingOccurrences(of: "'", with: "'\\''")
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/bin/sh")
+        process.arguments = ["-c", "(sleep 0.5; /usr/bin/open '\(escapedPath)') >/dev/null 2>&1 &"]
+        try? process.run()
     }
 
     static func applyPendingRestoreIfNeeded(storeURL: URL, backupsDirectory: URL? = nil) {
@@ -146,21 +140,16 @@ final class BackupManager {
             return
         }
 
-        defer {
-            UserDefaults.standard.removeObject(forKey: pendingRestoreBackupIDKey)
-        }
-
         let directory = backupsDirectory ?? defaultBackupsDirectory()
         let backupDirectory = directory.appendingPathComponent(backupID, isDirectory: true)
-        guard FileManager.default.fileExists(atPath: backupDirectory.path) else {
+        guard FileManager.default.fileExists(atPath: backupDirectory.path),
+              let snapshotStoreURL = primaryStoreFile(in: backupDirectory) else {
             return
         }
 
         do {
-            try replaceStore(
-                at: storeURL,
-                withSnapshotFrom: backupDirectory.appendingPathComponent(storeURL.lastPathComponent)
-            )
+            try replaceStore(at: storeURL, withSnapshotFrom: snapshotStoreURL)
+            UserDefaults.standard.removeObject(forKey: pendingRestoreBackupIDKey)
         } catch {
             print("BackupManager restore failed: \(error)")
         }
@@ -186,6 +175,22 @@ final class BackupManager {
 
     // MARK: - File operations
 
+    static func primaryStoreFiles(in directory: URL) -> [URL]? {
+        StoreSnapshot.primaryStoreFiles(in: directory)
+    }
+
+    static func primaryStoreFile(in directory: URL) -> URL? {
+        StoreSnapshot.primaryStoreFile(in: directory)
+    }
+
+    static func preferredStoreFile(in directory: URL) -> URL? {
+        StoreSnapshot.preferredStoreFile(in: directory)
+    }
+
+    static func liveQuotationCount(forStoreAt storeURL: URL) throws -> Int {
+        try StoreSnapshot.liveQuotationCount(forStoreAt: storeURL)
+    }
+
     static func defaultBackupsDirectory() -> URL {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
@@ -202,47 +207,15 @@ final class BackupManager {
     }
 
     static func storeSidecarURLs(for storeURL: URL) -> [URL] {
-        var urls = [storeURL]
-        let wal = URL(fileURLWithPath: storeURL.path + "-wal")
-        let shm = URL(fileURLWithPath: storeURL.path + "-shm")
-        let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: wal.path) {
-            urls.append(wal)
-        }
-        if fileManager.fileExists(atPath: shm.path) {
-            urls.append(shm)
-        }
-        return urls
+        StoreSnapshot.storeSidecarURLs(for: storeURL)
     }
 
     static func copyStoreFiles(from sourceStoreURL: URL, toDirectory destinationDirectory: URL) throws {
-        let fileManager = FileManager.default
-        let storeFileName = sourceStoreURL.lastPathComponent
-
-        for suffix in ["", "-wal", "-shm"] {
-            let source = URL(fileURLWithPath: sourceStoreURL.path + suffix)
-            guard fileManager.fileExists(atPath: source.path) else { continue }
-            let destination = destinationDirectory.appendingPathComponent(storeFileName + suffix)
-            if fileManager.fileExists(atPath: destination.path) {
-                try fileManager.removeItem(at: destination)
-            }
-            try fileManager.copyItem(at: source, to: destination)
-        }
+        try StoreSnapshot.copyStoreFiles(from: sourceStoreURL, toDirectory: destinationDirectory)
     }
 
     static func replaceStore(at destinationStoreURL: URL, withSnapshotFrom sourceStoreURL: URL) throws {
-        let fileManager = FileManager.default
-        let destinationDirectory = destinationStoreURL.deletingLastPathComponent()
-        try fileManager.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
-
-        for url in storeSidecarURLs(for: destinationStoreURL) where fileManager.fileExists(atPath: url.path) {
-            try fileManager.removeItem(at: url)
-        }
-
-        try copyStoreFiles(
-            from: sourceStoreURL,
-            toDirectory: destinationDirectory
-        )
+        try StoreSnapshot.replaceStore(at: destinationStoreURL, withSnapshotFrom: sourceStoreURL)
     }
 
     // MARK: - Metadata
@@ -285,9 +258,7 @@ final class BackupManager {
     }
 
     private static func loadBackup(from directoryURL: URL) -> Backup? {
-        let storeFileName = "default.store"
-        let storeURL = directoryURL.appendingPathComponent(storeFileName)
-        guard FileManager.default.fileExists(atPath: storeURL.path) else {
+        guard let storeURL = primaryStoreFile(in: directoryURL) else {
             return nil
         }
 

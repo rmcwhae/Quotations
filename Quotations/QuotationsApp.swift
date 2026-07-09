@@ -62,9 +62,9 @@ struct QuotationsApp: App {
                 .modelContainer(sharedModelContainer)
                 .environment(backupManager)
                 .environment(deepLinkRouter)
-                .handlesExternalEvents(preferring: ["quotation"], allowing: ["*"])
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         }
-        .handlesExternalEvents(matching: ["quotation"])
+        .handlesExternalEvents(matching: ["*"])
         .commands {
             CommandGroup(after: .newItem) {
                 Button("New Quotation") {
@@ -100,6 +100,7 @@ private struct RootView: View {
                 DeepLinkLaunchQueue.flush(into: deepLinkRouter)
             }
             .onOpenURL { url in
+                DeepLinkDebug.report("RootView onOpenURL", url: url)
                 deepLinkRouter.enqueue(url)
             }
             .onReceive(NotificationCenter.default.publisher(for: .quotationDeepLinkReceived)) { _ in

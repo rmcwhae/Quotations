@@ -68,6 +68,11 @@ enum QuotationDeepLink {
         return parse(url) ?? .home
     }
 
+    static func isQuotationDeepLink(_ url: URL?) -> Bool {
+        guard let url, let parameters = parseURLParameters(url) else { return false }
+        return !parameters.encodedQuotationID.isEmpty
+    }
+
     static func parseURLParameters(_ url: URL) -> URLParameters? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let idValue = components.queryItems?.first(where: { $0.name == "id" })?.value,
@@ -99,11 +104,39 @@ enum QuotationDeepLink {
         encodedToken: String,
         modelID: PersistentIdentifier
     ) -> Bool {
-        guard let targetURI = entityURI(fromEncodedToken: encodedToken),
-              let modelURI = uriRepresentation(for: modelID) else {
+        guard let targetReference = entityReference(fromEncodedToken: encodedToken),
+              let modelURI = uriRepresentation(for: modelID),
+              let modelReference = entityReference(fromURI: modelURI) else {
             return false
         }
-        return targetURI == modelURI
+        return targetReference == modelReference
+    }
+
+    static func entityReference(fromEncodedToken token: String) -> EntityReference? {
+        guard let uri = entityURI(fromEncodedToken: token) else { return nil }
+        return entityReference(fromURI: uri)
+    }
+
+    static func entityReference(fromURI uri: String) -> EntityReference? {
+        guard uri.hasPrefix("x-coredata://") else { return nil }
+
+        let remainder = uri.dropFirst("x-coredata://".count)
+        let components = remainder
+            .split(separator: "/")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+
+        guard components.count >= 2 else { return nil }
+
+        return EntityReference(
+            entityName: components[components.count - 2],
+            primaryKey: components[components.count - 1]
+        )
+    }
+
+    struct EntityReference: Equatable {
+        let entityName: String
+        let primaryKey: String
     }
 
     static func resolvePersistentIdentifier(fromEncodedToken token: String) -> PersistentIdentifier? {
