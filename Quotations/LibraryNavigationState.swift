@@ -44,4 +44,13 @@ final class LibraryNavigationState {
     func clearQuotationSelection() {
         selectedQuotationId = nil
     }
+
+    func openQuotationFromDeepLink(
+        _ quotationId: PersistentIdentifier,
+        sourceId: PersistentIdentifier
+    ) {
+        selectedFilter = .quotationsBySource
+        selectedSourceId = sourceId
+        selectedQuotationId = quotationId
+    }
 }

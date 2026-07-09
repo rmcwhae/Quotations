@@ -66,7 +66,7 @@ struct LibraryContextListView: View {
         .safeAreaInset(edge: .bottom) {
             LibraryStatsFooterView(stats: resolved.stats)
         }
-        .navigationSplitViewColumnWidth(min: 220, ideal: 300, max: 420)
+        .navigationSplitViewColumnWidth(min: 220, ideal: 300)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button(action: onManageAuthors) {

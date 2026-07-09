@@ -16,22 +16,30 @@ struct SourceDetailView: View {
     var newQuotationId: PersistentIdentifier?
 
     var body: some View {
-        ScrollView {
-            SourceSectionView(
-                source: source,
-                searchQuery: searchQuery,
-                selectedQuotationId: $selectedQuotationId,
-                showsBackground: false
-            ) {
-                QuotationListView(
+        ScrollViewReader { proxy in
+            ScrollView {
+                SourceSectionView(
                     source: source,
                     searchQuery: searchQuery,
-                    quotationIdsFilter: quotationIdsFilter,
                     selectedQuotationId: $selectedQuotationId,
-                    newQuotationId: newQuotationId
-                )
-                .padding(.top, LayoutMetrics.quotationListTopPadding)
-                .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
+                    showsBackground: false
+                ) {
+                    QuotationListView(
+                        source: source,
+                        searchQuery: searchQuery,
+                        quotationIdsFilter: quotationIdsFilter,
+                        selectedQuotationId: $selectedQuotationId,
+                        newQuotationId: newQuotationId
+                    )
+                    .padding(.top, LayoutMetrics.quotationListTopPadding)
+                    .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
+                }
+            }
+            .onChange(of: selectedQuotationId) { _, newID in
+                guard let newID else { return }
+                withAnimation {
+                    proxy.scrollTo(newID, anchor: .center)
+                }
             }
         }
         .scrollContentBackground(.hidden)

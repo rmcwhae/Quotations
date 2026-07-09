@@ -8,6 +8,9 @@ import SwiftData
 
 @main
 struct QuotationsApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var deepLinkRouter = DeepLinkRouter()
+
     private let sharedModelContainer: ModelContainer
     private let containerLoadWarning: String?
     private let backupManager: BackupManager
@@ -18,7 +21,8 @@ struct QuotationsApp: App {
             Source.self,
             Quotation.self
         ])
-        let persistentConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        try? AppGroupStore.migrateLegacyStoreIfNeeded(schema: schema)
+        let persistentConfiguration = AppGroupStore.modelConfiguration(schema: schema)
 
         BackupManager.applyPendingRestoreIfNeeded(storeURL: persistentConfiguration.url)
 
@@ -57,7 +61,10 @@ struct QuotationsApp: App {
             RootView(loadWarning: containerLoadWarning)
                 .modelContainer(sharedModelContainer)
                 .environment(backupManager)
+                .environment(deepLinkRouter)
+                .handlesExternalEvents(preferring: ["quotation"], allowing: ["*"])
         }
+        .handlesExternalEvents(matching: ["quotation"])
         .commands {
             CommandGroup(after: .newItem) {
                 Button("New Quotation") {
@@ -83,12 +90,20 @@ struct QuotationsApp: App {
 
 private struct RootView: View {
     let loadWarning: String?
+    @Environment(DeepLinkRouter.self) private var deepLinkRouter
     @State private var showLoadWarning = false
 
     var body: some View {
         ContentView()
             .onAppear {
                 showLoadWarning = loadWarning != nil
+                DeepLinkLaunchQueue.flush(into: deepLinkRouter)
+            }
+            .onOpenURL { url in
+                deepLinkRouter.enqueue(url)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .quotationDeepLinkReceived)) { _ in
+                DeepLinkLaunchQueue.flush(into: deepLinkRouter)
             }
             .alert("Library Warning", isPresented: $showLoadWarning) {
                 Button("OK", role: .cancel) {}

@@ -61,4 +61,15 @@ final class LibraryNavigationStateTests: XCTestCase {
         XCTAssertEqual(navigation.selectedQuotationId, quotation.id)
         XCTAssertEqual(navigation.selectedSourceId, source.id)
     }
+
+    func testOpenQuotationFromDeepLinkSelectsSourceView() {
+        let navigation = LibraryNavigationState()
+        navigation.selectedFilter = .allQuotes
+
+        navigation.openQuotationFromDeepLink(quotation.id, sourceId: source.id)
+
+        XCTAssertEqual(navigation.selectedFilter, .quotationsBySource)
+        XCTAssertEqual(navigation.selectedQuotationId, quotation.id)
+        XCTAssertEqual(navigation.selectedSourceId, source.id)
+    }
 }

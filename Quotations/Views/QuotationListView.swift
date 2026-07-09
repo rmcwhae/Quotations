@@ -29,6 +29,7 @@ struct QuotationRowsContent: View {
                     onEdit: onEdit,
                     onDelete: onDelete
                 )
+                .id(quotation.id)
                 .padding(.vertical, 2)
             }
         }

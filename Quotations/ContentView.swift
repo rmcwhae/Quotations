@@ -3,6 +3,7 @@
 //  Quotations
 //
 
+import AppKit
 import SwiftUI
 import SwiftData
 import Combine
@@ -12,6 +13,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @Environment(BackupManager.self) private var backupManager
+    @Environment(DeepLinkRouter.self) private var deepLinkRouter
 
     @Query(filter: #Predicate<Source> { $0.deletedAt == nil })
     private var sources: [Source]
@@ -37,6 +39,7 @@ struct ContentView: View {
     @State private var showDeleteQuotationConfirmation = false
     @State private var isInspectorShown = false
     @State private var newQuotationId: PersistentIdentifier?
+    @State private var unresolvedDeepLinkURL: URL?
 
     private var isSearchActive: Bool {
         !searchState.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -48,6 +51,10 @@ struct ContentView: View {
 
     private var selectedSource: Source? {
         guard let id = navigation.selectedSourceId else { return nil }
+        if let source = modelContext.model(for: id) as? Source,
+           source.deletedAt == nil {
+            return source
+        }
         return sources.first { $0.id == id }
     }
 
@@ -57,6 +64,8 @@ struct ContentView: View {
     }
 
     var body: some View {
+        @Bindable var navigation = navigation
+
         NavigationSplitView {
             LibraryFilterSidebarView(
                 selectedFilter: navigation.selectedFilter,
@@ -83,6 +92,7 @@ struct ContentView: View {
         } detail: {
             detailPane
         }
+        .navigationSplitViewStyle(.balanced)
         .onKeyPress(.escape) {
             guard navigation.selectedQuotationId != nil else { return .ignored }
             navigation.clearQuotationSelection()
@@ -116,6 +126,21 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .addQuotation)) { _ in
             addQuotation()
+        }
+        .onAppear {
+            consumePendingDeepLinkIfNeeded()
+        }
+        .onOpenURL { url in
+            deepLinkRouter.enqueue(url)
+        }
+        .onChange(of: deepLinkRouter.pendingURL) { _, _ in
+            consumePendingDeepLinkIfNeeded()
+        }
+        .onChange(of: sources.count) { _, _ in
+            retryUnresolvedDeepLinkIfNeeded()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .quotationDeepLinkReceived)) { _ in
+            consumePendingDeepLinkIfNeeded()
         }
         .fileImporter(
             isPresented: $showCSVImporter,
@@ -217,6 +242,64 @@ private extension ContentView {
         if navigation.selectedFilter.showsQuotations {
             navigation.selectedFilter = .quotationsBySource
         }
+    }
+
+    func handleDeepLink(_ url: URL, retryCount: Int = 0) {
+        guard let parameters = QuotationDeepLink.parseURLParameters(url) else { return }
+
+        guard let quotation = QuotationDeepLinkResolver.quotation(
+            encodedID: parameters.encodedQuotationID,
+            in: modelContext
+        ) else {
+            guard retryCount < 10 else { return }
+            unresolvedDeepLinkURL = url
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(150))
+                handleDeepLink(url, retryCount: retryCount + 1)
+            }
+            return
+        }
+
+        guard let resolvedSourceID = QuotationDeepLinkResolver.sourceID(
+            encodedID: parameters.encodedSourceID,
+            for: quotation,
+            in: modelContext
+        ) else {
+            unresolvedDeepLinkURL = url
+            return
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
+        searchState.query = ""
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            navigation.openQuotationFromDeepLink(
+                quotation.persistentModelID,
+                sourceId: resolvedSourceID
+            )
+        }
+        isInspectorShown = true
+
+        if selectedSource != nil, selectedQuotation != nil {
+            unresolvedDeepLinkURL = nil
+        } else {
+            unresolvedDeepLinkURL = url
+        }
+    }
+
+    func consumePendingDeepLinkIfNeeded() {
+        DeepLinkLaunchQueue.flush(into: deepLinkRouter)
+        guard let url = deepLinkRouter.consumePendingURL() else { return }
+        Task { @MainActor in
+            await Task.yield()
+            handleDeepLink(url)
+        }
+    }
+
+    func retryUnresolvedDeepLinkIfNeeded() {
+        guard let url = unresolvedDeepLinkURL else { return }
+        handleDeepLink(url)
     }
 
     func beginCSVImport() {
@@ -354,4 +437,5 @@ private extension ContentView {
     ContentView()
         .modelContainer(for: [Author.self, Source.self, Quotation.self], inMemory: true)
         .environment(BackupManager(storeURL: URL(fileURLWithPath: "/tmp/default.store")))
+        .environment(DeepLinkRouter())
 }

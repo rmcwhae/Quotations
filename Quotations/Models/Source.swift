@@ -15,6 +15,25 @@ enum SourceFormat: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+/// User-selectable sort order for source-listing screens.
+enum SourceSortOption: String, CaseIterable, Identifiable {
+    case dateRead
+    case dateAdded
+    case authorName
+    case title
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .dateRead: "Date Read"
+        case .dateAdded: "Date Added"
+        case .authorName: "Author Name"
+        case .title: "Source Name"
+        }
+    }
+}
+
 @Model
 final class Source {
     var title: String

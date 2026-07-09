@@ -36,7 +36,7 @@ struct LibraryFilterSidebarView: View, Equatable {
                 }
             }
         }
-        .navigationSplitViewColumnWidth(min: 160, ideal: 200, max: 260)
+        .navigationSplitViewColumnWidth(min: 160, ideal: 200, max: 300)
     }
 
     @ViewBuilder
