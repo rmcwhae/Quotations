@@ -22,7 +22,6 @@ struct QuotationWidgetView: View {
     private var lineLimit: Int? {
         switch family {
         case .systemSmall: 4
-        case .systemMedium: 4
         default: nil
         }
     }
@@ -116,13 +115,14 @@ struct QuotationWidgetView: View {
                 geometry.size.height - topInset - bottomInset - footerHeight
             )
             let fontSize = mediumFontSize(forAvailableHeight: textHeight)
+            let maxLines = mediumMaxLines(forAvailableHeight: textHeight, fontSize: fontSize)
 
             VStack(alignment: .leading, spacing: 0) {
                 Text(displayText(from: content))
                     .font(.system(size: fontSize, design: .serif))
                     .foregroundStyle(.primary)
                     .lineSpacing(0)
-                    .lineLimit(4, reservesSpace: false)
+                    .lineLimit(maxLines, reservesSpace: false)
                     .multilineTextAlignment(.leading)
                     .frame(width: contentWidth, height: textHeight, alignment: .topLeading)
                     .clipped()
@@ -140,8 +140,15 @@ struct QuotationWidgetView: View {
 
     private func mediumFontSize(forAvailableHeight height: CGFloat) -> CGFloat {
         let lineHeightRatio: CGFloat = 1.16
-        let computed = height / 4 / lineHeightRatio
-        return min(max(computed, 14), 30)
+        let targetLines: CGFloat = 6
+        let computed = height / targetLines / lineHeightRatio
+        return min(max(computed, 10), 16)
+    }
+
+    private func mediumMaxLines(forAvailableHeight height: CGFloat, fontSize: CGFloat) -> Int {
+        let lineHeight = fontSize * 1.16
+        guard lineHeight > 0 else { return 1 }
+        return max(1, Int(floor(height / lineHeight)))
     }
 
     private var mediumFooterRow: some View {
@@ -259,11 +266,11 @@ struct QuotationWidgetView: View {
         family == .systemSmall ? 13 : 15
     }
 
-    private var mediumHorizontalPadding: CGFloat { 8 }
+    private var mediumHorizontalPadding: CGFloat { 20 }
 
-    private var mediumTopPadding: CGFloat { 4 }
+    private var mediumTopPadding: CGFloat { 18 }
 
-    private var mediumBottomPadding: CGFloat { 2 }
+    private var mediumBottomPadding: CGFloat { 14 }
 
     private var mediumFooterHeight: CGFloat { 12 }
 
