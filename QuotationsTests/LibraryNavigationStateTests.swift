@@ -45,13 +45,13 @@ final class LibraryNavigationStateTests: XCTestCase {
         XCTAssertNil(navigation.selectedQuotationId)
     }
 
-    func testPrimaryFiltersIncludesSearch() {
-        XCTAssertTrue(LibraryFilter.primaryFilters.contains(.searchResults))
-        XCTAssertTrue(LibraryFilter.primaryFilters.contains(.explore))
-        XCTAssertTrue(LibraryFilter.primaryFilters.contains(.ask))
-        XCTAssertEqual(LibraryFilter.primaryFilters.first, .searchResults)
-        XCTAssertEqual(LibraryFilter.primaryFilters[1], .explore)
-        XCTAssertEqual(LibraryFilter.primaryFilters[2], .ask)
+    func testPrimaryFiltersOrder() {
+        XCTAssertEqual(LibraryFilter.primaryFilters, [
+            .quotationsBySource,
+            .explore,
+            .ask,
+            .searchResults
+        ])
     }
 
     func testSelectFilterClearsListSelection() {
@@ -59,9 +59,9 @@ final class LibraryNavigationStateTests: XCTestCase {
         navigation.selectedSourceId = source.id
         navigation.selectedQuotationId = quotation.id
 
-        navigation.selectFilter(.allQuotes)
+        navigation.selectFilter(.explore)
 
-        XCTAssertEqual(navigation.selectedFilter, .allQuotes)
+        XCTAssertEqual(navigation.selectedFilter, .explore)
         XCTAssertNil(navigation.selectedSourceId)
         XCTAssertNil(navigation.selectedQuotationId)
     }
@@ -77,7 +77,7 @@ final class LibraryNavigationStateTests: XCTestCase {
 
     func testOpenQuotationFromDeepLinkSelectsSourceView() {
         let navigation = LibraryNavigationState()
-        navigation.selectedFilter = .allQuotes
+        navigation.selectedFilter = .explore
 
         navigation.openQuotationFromDeepLink(quotation.id, sourceId: source.id)
 

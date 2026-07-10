@@ -22,7 +22,7 @@ enum LibraryFilterResolver {
             return active
                 .filter { $0.sourceFormat == format }
                 .sorted(by: comparator)
-        case .allQuotes, .recentlyAdded, .searchResults, .explore, .ask:
+        case .recentlyAdded, .searchResults, .explore, .ask:
             return []
         }
     }
@@ -35,8 +35,6 @@ enum LibraryFilterResolver {
     ) -> [Quotation] {
         let active = quotations.filter { $0.deletedAt == nil }
         switch filter {
-        case .allQuotes:
-            return active.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         case .recentlyAdded:
             return active.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         case .searchResults:

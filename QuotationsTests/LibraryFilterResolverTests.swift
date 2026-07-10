@@ -104,12 +104,6 @@ final class LibraryFilterResolverTests: XCTestCase {
         XCTAssertEqual(result.map(\.title), ["Aeneid", "Letters"])
     }
 
-    func testAllQuotesReturnsNewestFirst() {
-        let quotations = [oldQuotation!, newQuotation!]
-        let result = LibraryFilterResolver.quotations(for: .allQuotes, from: quotations)
-        XCTAssertEqual(result.map(\.content), ["Newer quote", "Older quote"])
-    }
-
     func testSearchResultsFilterUsesMatchSets() {
         let quotations = [oldQuotation!, newQuotation!]
         let matchSets = MatchSets(
