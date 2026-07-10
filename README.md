@@ -11,7 +11,7 @@ I also made a terminal alias to automate app builds outside of Xcode (update `pa
 ```bash
 alias qab="cd path/to/repo && \
   xcodebuild -scheme Quotations -configuration Release -destination 'platform=macOS' \
-    -derivedDataPath build clean build && \
+    -derivedDataPath build -allowProvisioningUpdates clean build && \
   rm -rf /Applications/Quotations.app && \
   cp -R build/Build/Products/Release/Quotations.app /Applications/ && \
   open /Applications/Quotations.app"
