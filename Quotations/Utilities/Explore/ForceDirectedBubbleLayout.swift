@@ -88,10 +88,10 @@ enum ForceDirectedBubbleLayout {
         alpha: CGFloat
     ) {
         for index in nodes.indices {
-            let dx = center.x - nodes[index].position.x
-            let dy = center.y - nodes[index].position.y
-            nodes[index].velocity.dx += dx * centerStrength * alpha
-            nodes[index].velocity.dy += dy * centerStrength * alpha
+            let deltaX = center.x - nodes[index].position.x
+            let deltaY = center.y - nodes[index].position.y
+            nodes[index].velocity.dx += deltaX * centerStrength * alpha
+            nodes[index].velocity.dy += deltaY * centerStrength * alpha
         }
     }
 
@@ -100,22 +100,22 @@ enum ForceDirectedBubbleLayout {
 
         for first in nodes.indices {
             for second in (first + 1)..<nodes.count {
-                var dx = nodes[second].position.x - nodes[first].position.x
-                var dy = nodes[second].position.y - nodes[first].position.y
-                var distance = hypot(dx, dy)
+                var deltaX = nodes[second].position.x - nodes[first].position.x
+                var deltaY = nodes[second].position.y - nodes[first].position.y
+                var distance = hypot(deltaX, deltaY)
 
                 let minimumDistance = nodes[first].radius + nodes[second].radius + minimumGap
                 if distance == 0 {
-                    dx = CGFloat.random(in: -1...1)
-                    dy = CGFloat.random(in: -1...1)
+                    deltaX = CGFloat.random(in: -1...1)
+                    deltaY = CGFloat.random(in: -1...1)
                     distance = 0.01
                 }
 
                 if distance < minimumDistance {
                     let overlap = (minimumDistance - distance) / distance
                     let force = overlap * collisionStrength * alpha
-                    let offsetX = dx * force * 0.5
-                    let offsetY = dy * force * 0.5
+                    let offsetX = deltaX * force * 0.5
+                    let offsetY = deltaY * force * 0.5
 
                     nodes[first].velocity.dx -= offsetX
                     nodes[first].velocity.dy -= offsetY
@@ -135,21 +135,21 @@ enum ForceDirectedBubbleLayout {
 
             for first in nodes.indices {
                 for second in (first + 1)..<nodes.count {
-                    var dx = nodes[second].position.x - nodes[first].position.x
-                    var dy = nodes[second].position.y - nodes[first].position.y
-                    var distance = hypot(dx, dy)
+                    var deltaX = nodes[second].position.x - nodes[first].position.x
+                    var deltaY = nodes[second].position.y - nodes[first].position.y
+                    var distance = hypot(deltaX, deltaY)
                     let minimumDistance = nodes[first].radius + nodes[second].radius + minimumGap
 
                     if distance < minimumDistance {
                         if distance < 0.001 {
-                            dx = 1
-                            dy = 0
+                            deltaX = 1
+                            deltaY = 0
                             distance = 0.001
                         }
 
                         let separation = (minimumDistance - distance) / 2
-                        let normalX = dx / distance
-                        let normalY = dy / distance
+                        let normalX = deltaX / distance
+                        let normalY = deltaY / distance
 
                         nodes[first].position.x -= normalX * separation
                         nodes[first].position.y -= normalY * separation

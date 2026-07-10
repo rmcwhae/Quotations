@@ -24,8 +24,9 @@ struct SemanticClusterMapView: View {
                         Button {
                             onSelectQuotation(point.quotationId, point.sourceId)
                         } label: {
+                            let isSelected = point.quotationId == selectedQuotationId
                             Circle()
-                                .fill(color(for: point.clusterIndex).opacity(point.quotationId == selectedQuotationId ? 0.95 : 0.65))
+                                .fill(color(for: point.clusterIndex).opacity(isSelected ? 0.95 : 0.65))
                                 .overlay {
                                     Circle()
                                         .strokeBorder(
@@ -47,21 +48,23 @@ struct SemanticClusterMapView: View {
     private func normalizedPoints(in size: CGSize) -> [PersistentIdentifier: CGPoint] {
         guard !result.points.isEmpty else { return [:] }
 
-        let xs = result.points.map(\.position.x)
-        let ys = result.points.map(\.position.y)
-        let minX = xs.min() ?? 0
-        let maxX = xs.max() ?? 1
-        let minY = ys.min() ?? 0
-        let maxY = ys.max() ?? 1
+        let xValues = result.points.map(\.position.x)
+        let yValues = result.points.map(\.position.y)
+        let minX = xValues.min() ?? 0
+        let maxX = xValues.max() ?? 1
+        let minY = yValues.min() ?? 0
+        let maxY = yValues.max() ?? 1
         let spanX = max(maxX - minX, 0.001)
         let spanY = max(maxY - minY, 0.001)
         let padding: CGFloat = 24
 
         var map: [PersistentIdentifier: CGPoint] = [:]
         for point in result.points {
-            let nx = padding + (CGFloat(point.position.x - minX) / CGFloat(spanX)) * (size.width - padding * 2)
-            let ny = padding + (CGFloat(point.position.y - minY) / CGFloat(spanY)) * (size.height - padding * 2)
-            map[point.quotationId] = CGPoint(x: nx, y: ny)
+            let widthScale = (size.width - padding * 2) / CGFloat(spanX)
+            let heightScale = (size.height - padding * 2) / CGFloat(spanY)
+            let normalizedX = padding + CGFloat(point.position.x - minX) * widthScale
+            let normalizedY = padding + CGFloat(point.position.y - minY) * heightScale
+            map[point.quotationId] = CGPoint(x: normalizedX, y: normalizedY)
         }
         return map
     }

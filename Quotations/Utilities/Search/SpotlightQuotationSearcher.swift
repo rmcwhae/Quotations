@@ -19,8 +19,9 @@ enum SpotlightQuotationSearcher {
 
     private static func searchWithQueryString(_ query: String, limit: Int) async -> [String] {
         let escaped = query.replacingOccurrences(of: "\"", with: "\\\"")
-        let queryString =
-            "(\(textContentAttribute) == \"*\(escaped)*\"c || \(descriptionAttribute) == \"*\(escaped)*\"c) && \(domainAttribute) == '\(QuotationSpotlightIndexer.domainIdentifier)'"
+        let textMatch = "(\(textContentAttribute) == \"*\(escaped)*\"c || \(descriptionAttribute) == \"*\(escaped)*\"c)"
+        let domainMatch = "\(domainAttribute) == '\(QuotationSpotlightIndexer.domainIdentifier)'"
+        let queryString = "\(textMatch) && \(domainMatch)"
 
         let context = CSSearchQueryContext()
         let searchQuery = CSSearchQuery(queryString: queryString, queryContext: context)

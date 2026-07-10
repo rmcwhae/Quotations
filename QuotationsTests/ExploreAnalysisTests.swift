@@ -25,7 +25,7 @@ final class ExploreAnalysisTests: XCTestCase {
             CGPoint(x: 10, y: 10),
             CGPoint(x: 10.2, y: 9.8)
         ]
-        let assignments = KMeansClustering.cluster(points: points, k: 2)
+        let assignments = KMeansClustering.cluster(points: points, clusterCount: 2)
         XCTAssertEqual(assignments.count, 4)
         XCTAssertNotEqual(assignments[0], assignments[2])
     }

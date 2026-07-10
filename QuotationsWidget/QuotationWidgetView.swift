@@ -294,4 +294,3 @@ struct QuotationWidgetView: View {
     QuotationWidgetEntry.placeholder
     QuotationWidgetEntry.empty
 }
-

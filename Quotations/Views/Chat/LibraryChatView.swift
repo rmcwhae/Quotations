@@ -80,7 +80,10 @@ struct LibraryChatView: View {
                 .font(.title3.weight(.semibold))
 
             Text(
-                "Ask natural-language questions grounded in your quotations. Try a stylistic profile, recurring themes, or a topic you care about."
+                """
+                Ask natural-language questions grounded in your quotations. \
+                Try a stylistic profile, recurring themes, or a topic you care about.
+                """
             )
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -226,24 +229,24 @@ private struct FlowLayout: Layout {
     private func arrange(proposal: ProposedViewSize, subviews: Subviews) -> Arrangement {
         let maxWidth = proposal.width ?? .infinity
         var placements: [Placement] = []
-        var x: CGFloat = 0
-        var y: CGFloat = 0
+        var cursorX: CGFloat = 0
+        var cursorY: CGFloat = 0
         var rowHeight: CGFloat = 0
         var size = CGSize.zero
 
         for index in subviews.indices {
             let sizeThatFits = subviews[index].sizeThatFits(.unspecified)
-            if x > 0, x + sizeThatFits.width > maxWidth {
-                x = 0
-                y += rowHeight + spacing
+            if cursorX > 0, cursorX + sizeThatFits.width > maxWidth {
+                cursorX = 0
+                cursorY += rowHeight + spacing
                 rowHeight = 0
             }
 
-            placements.append(Placement(index: index, origin: CGPoint(x: x, y: y)))
+            placements.append(Placement(index: index, origin: CGPoint(x: cursorX, y: cursorY)))
             rowHeight = max(rowHeight, sizeThatFits.height)
-            x += sizeThatFits.width + spacing
-            size.width = max(size.width, x - spacing)
-            size.height = max(size.height, y + rowHeight)
+            cursorX += sizeThatFits.width + spacing
+            size.width = max(size.width, cursorX - spacing)
+            size.height = max(size.height, cursorY + rowHeight)
         }
 
         return Arrangement(size: size, placements: placements)

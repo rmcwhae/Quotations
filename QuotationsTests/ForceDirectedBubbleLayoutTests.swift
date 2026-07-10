@@ -20,15 +20,15 @@ final class ForceDirectedBubbleLayoutTests: XCTestCase {
 
         XCTAssertEqual(positions.count, radii.count)
 
-        for i in 0..<radii.count {
-            for j in (i + 1)..<radii.count {
-                let firstID = radii[i].id
-                let secondID = radii[j].id
+        for firstIndex in 0..<radii.count {
+            for secondIndex in (firstIndex + 1)..<radii.count {
+                let firstID = radii[firstIndex].id
+                let secondID = radii[secondIndex].id
                 guard let first = positions[firstID], let second = positions[secondID] else {
                     return XCTFail("Missing layout position")
                 }
                 let distance = hypot(first.x - second.x, first.y - second.y)
-                let minimum = radii[i].radius + radii[j].radius
+                let minimum = radii[firstIndex].radius + radii[secondIndex].radius
                 XCTAssertGreaterThanOrEqual(distance, minimum - 0.01, "Bubbles \(firstID) and \(secondID) overlap")
             }
         }
@@ -41,13 +41,13 @@ final class ForceDirectedBubbleLayoutTests: XCTestCase {
         let positions = ForceDirectedBubbleLayout.layout(radii: radii, in: CGSize(width: 500, height: 500))
         XCTAssertEqual(positions.count, radii.count)
 
-        for i in 0..<radii.count {
-            for j in (i + 1)..<radii.count {
-                guard let first = positions[radii[i].id], let second = positions[radii[j].id] else {
+        for firstIndex in 0..<radii.count {
+            for secondIndex in (firstIndex + 1)..<radii.count {
+                guard let first = positions[radii[firstIndex].id], let second = positions[radii[secondIndex].id] else {
                     return XCTFail("Missing position")
                 }
                 let distance = hypot(first.x - second.x, first.y - second.y)
-                let minimum = radii[i].radius + radii[j].radius
+                let minimum = radii[firstIndex].radius + radii[secondIndex].radius
                 XCTAssertGreaterThanOrEqual(distance, minimum - 0.01)
             }
         }

@@ -47,7 +47,7 @@ enum SemanticClusterAnalyzer {
         let vectors = items.map(\.vector)
         let positions = PrincipalComponentAnalysis.project2D(vectors: vectors)
         let clusterCount = KMeansClustering.recommendedClusterCount(for: positions.count)
-        let assignments = KMeansClustering.cluster(points: positions, k: clusterCount)
+        let assignments = KMeansClustering.cluster(points: positions, clusterCount: clusterCount)
 
         var quotationsByCluster: [Int: [Quotation]] = [:]
         for (index, assignment) in assignments.enumerated() {

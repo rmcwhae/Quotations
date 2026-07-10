@@ -7,14 +7,14 @@ import CoreGraphics
 import Foundation
 
 enum KMeansClustering {
-    static func cluster(points: [CGPoint], k: Int, maxIterations: Int = 50) -> [Int] {
+    static func cluster(points: [CGPoint], clusterCount requestedCount: Int, maxIterations: Int = 50) -> [Int] {
         guard !points.isEmpty else { return [] }
-        let clusterCount = min(max(1, k), points.count)
+        let clusterCount = min(max(1, requestedCount), points.count)
         if clusterCount == 1 {
             return Array(repeating: 0, count: points.count)
         }
 
-        var centroids = seededCentroids(from: points, k: clusterCount)
+        var centroids = seededCentroids(from: points, clusterCount: clusterCount)
         var assignments = Array(repeating: 0, count: points.count)
 
         for _ in 0..<maxIterations {
@@ -26,7 +26,7 @@ enum KMeansClustering {
                     changed = true
                 }
             }
-            centroids = recomputeCentroids(points: points, assignments: assignments, k: clusterCount)
+            centroids = recomputeCentroids(points: points, assignments: assignments, clusterCount: clusterCount)
             if !changed { break }
         }
 
@@ -38,10 +38,10 @@ enum KMeansClustering {
         return min(8, max(2, Int(Double(pointCount).squareRoot().rounded())))
     }
 
-    private static func seededCentroids(from points: [CGPoint], k: Int) -> [CGPoint] {
+    private static func seededCentroids(from points: [CGPoint], clusterCount: Int) -> [CGPoint] {
         guard let first = points.first else { return [] }
         var centroids = [first]
-        while centroids.count < k {
+        while centroids.count < clusterCount {
             let distances = points.map { point in
                 centroids.map { distance(point, $0) }.min() ?? 0
             }
@@ -53,9 +53,9 @@ enum KMeansClustering {
         return centroids
     }
 
-    private static func recomputeCentroids(points: [CGPoint], assignments: [Int], k: Int) -> [CGPoint] {
-        var sums = Array(repeating: CGPoint.zero, count: k)
-        var counts = Array(repeating: 0, count: k)
+    private static func recomputeCentroids(points: [CGPoint], assignments: [Int], clusterCount: Int) -> [CGPoint] {
+        var sums = Array(repeating: CGPoint.zero, count: clusterCount)
+        var counts = Array(repeating: 0, count: clusterCount)
 
         for (point, cluster) in zip(points, assignments) {
             sums[cluster].x += point.x
@@ -63,7 +63,7 @@ enum KMeansClustering {
             counts[cluster] += 1
         }
 
-        return (0..<k).map { index in
+        return (0..<clusterCount).map { index in
             guard counts[index] > 0 else { return .zero }
             return CGPoint(
                 x: sums[index].x / CGFloat(counts[index]),
@@ -86,8 +86,8 @@ enum KMeansClustering {
     }
 
     private static func distance(_ lhs: CGPoint, _ rhs: CGPoint) -> CGFloat {
-        let dx = lhs.x - rhs.x
-        let dy = lhs.y - rhs.y
-        return dx * dx + dy * dy
+        let deltaX = lhs.x - rhs.x
+        let deltaY = lhs.y - rhs.y
+        return deltaX * deltaX + deltaY * deltaY
     }
 }
