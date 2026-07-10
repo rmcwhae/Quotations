@@ -15,15 +15,19 @@ struct SourceDetailView: View {
     @Binding var selectedQuotationId: PersistentIdentifier?
     var newQuotationId: PersistentIdentifier?
 
+    @State private var isScrolledPastTop = false
+
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                SourceSectionView(
+            VStack(spacing: 0) {
+                SourceHeaderView(
                     source: source,
                     findQuery: findQuery,
                     selectedQuotationId: $selectedQuotationId,
-                    showsBackground: false
-                ) {
+                    showsScrolledChrome: isScrolledPastTop
+                )
+
+                ScrollView {
                     QuotationListView(
                         source: source,
                         findQuery: findQuery,
@@ -34,15 +38,20 @@ struct SourceDetailView: View {
                     .padding(.top, LayoutMetrics.quotationListTopPadding)
                     .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
                 }
-            }
-            .onAppear {
-                scrollToSelectedQuotation(using: proxy)
-            }
-            .onChange(of: selectedQuotationId) { _, _ in
-                scrollToSelectedQuotation(using: proxy)
+                .scrollContentBackground(.hidden)
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y > geometry.contentInsets.top + 4
+                } action: { _, isScrolled in
+                    isScrolledPastTop = isScrolled
+                }
+                .onAppear {
+                    scrollToSelectedQuotation(using: proxy)
+                }
+                .onChange(of: selectedQuotationId) { _, _ in
+                    scrollToSelectedQuotation(using: proxy)
+                }
             }
         }
-        .scrollContentBackground(.hidden)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .deselectQuotationOnBackgroundTap($selectedQuotationId)
     }

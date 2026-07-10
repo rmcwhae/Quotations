@@ -29,7 +29,7 @@ struct UnifiedSearchResultsView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.top, 80)
                 } else {
-                    LazyVStack(alignment: .leading, spacing: 0) {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                         ForEach(sources) { source in
                             SingleSourceSearchSection(
                                 source: source,
@@ -67,12 +67,7 @@ private struct SingleSourceSearchSection: View {
     }
 
     var body: some View {
-        SourceSectionView(
-            source: source,
-            findQuery: findQuery,
-            selectedQuotationId: $selectedQuotationId,
-            showsBackground: false
-        ) {
+        Section {
             if resolvedQuotations.isEmpty {
                 Text("No matching quotations.")
                     .foregroundStyle(.secondary)
@@ -90,6 +85,12 @@ private struct SingleSourceSearchSection: View {
                 .padding(.top, LayoutMetrics.quotationListTopPadding)
                 .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
             }
+        } header: {
+            SourceHeaderView(
+                source: source,
+                findQuery: findQuery,
+                selectedQuotationId: $selectedQuotationId
+            )
         }
     }
 
