@@ -299,7 +299,7 @@ private extension ContentView {
                 sourceId: resolvedSourceID
             )
         }
-        isInspectorShown = true
+        isInspectorShown = false
         unresolvedDeepLinkURL = url
 
         Task { @MainActor in
