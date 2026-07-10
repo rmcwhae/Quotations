@@ -10,7 +10,7 @@ enum LayoutMetrics {
     static let detailColumnMinWidth: CGFloat = 380
     /// Extra leading inset for the content (second) column so the sidebar shadow
     /// does not obscure list and page content.
-    static let contentColumnLeadingPadding: CGFloat = 12
+    static let contentColumnLeadingPadding: CGFloat = 20
     /// Natural width of a quotation row column (centered in the detail pane).
     static let quotationColumnMaxWidth: CGFloat = 616
     static let quotationListTopPadding: CGFloat = 4

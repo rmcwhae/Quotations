@@ -10,7 +10,7 @@ extension ContentView {
     func emptyDetail(_ message: String) -> some View {
         VStack(spacing: 12) {
             Text("Quotations")
-                .font(.system(size: 56, weight: .regular, design: .serif).italic())
+                .font(.system(size: 44, weight: .regular, design: .serif).italic())
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
