@@ -158,15 +158,21 @@ private struct ChatMessageBubbleView: View {
 
     var body: some View {
         VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 8) {
-            Text(message.text)
-                .font(.body)
-                .foregroundStyle(.primary)
-                .textSelection(.enabled)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(bubbleBackground)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .frame(maxWidth: 560, alignment: message.role == .user ? .trailing : .leading)
+            Group {
+                if message.role == .assistant {
+                    Text(ChatMarkdown.attributedString(from: message.text))
+                } else {
+                    Text(message.text)
+                }
+            }
+            .font(.body)
+            .foregroundStyle(.primary)
+            .textSelection(.enabled)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(bubbleBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .frame(maxWidth: 560, alignment: message.role == .user ? .trailing : .leading)
 
             if message.role == .assistant, !message.citations.isEmpty {
                 VStack(alignment: .leading, spacing: 6) {
