@@ -121,7 +121,7 @@ struct QuotationWidgetView: View {
                 Text(displayText(from: content))
                     .font(.system(size: fontSize, design: .serif))
                     .foregroundStyle(.primary)
-                    .lineSpacing(0)
+                    .lineSpacing(mediumLineSpacing)
                     .lineLimit(maxLines, reservesSpace: false)
                     .multilineTextAlignment(.leading)
                     .frame(width: contentWidth, height: textHeight, alignment: .topLeading)
@@ -141,12 +141,12 @@ struct QuotationWidgetView: View {
     private func mediumFontSize(forAvailableHeight height: CGFloat) -> CGFloat {
         let lineHeightRatio: CGFloat = 1.16
         let targetLines: CGFloat = 6
-        let computed = height / targetLines / lineHeightRatio
+        let computed = (height / targetLines - mediumLineSpacing) / lineHeightRatio
         return min(max(computed, 10), 16)
     }
 
     private func mediumMaxLines(forAvailableHeight height: CGFloat, fontSize: CGFloat) -> Int {
-        let lineHeight = fontSize * 1.16
+        let lineHeight = fontSize * 1.16 + mediumLineSpacing
         guard lineHeight > 0 else { return 1 }
         return max(1, Int(floor(height / lineHeight)))
     }
@@ -273,6 +273,8 @@ struct QuotationWidgetView: View {
     private var mediumBottomPadding: CGFloat { 18 }
 
     private var mediumFooterHeight: CGFloat { 12 }
+
+    private var mediumLineSpacing: CGFloat { 2 }
 
     private func displayText(from markdown: String) -> AttributedString {
         let plain = QuotationWidgetFilter.plainText(from: markdown)
