@@ -195,10 +195,15 @@ private extension ContentView {
             Text("Quotations")
                 .font(.system(size: 56, weight: .regular, design: .serif).italic())
                 .foregroundStyle(.tertiary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             Text(message)
                 .font(.title2)
                 .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
+        .fixedSize(horizontal: true, vertical: false)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -419,6 +424,10 @@ private extension ContentView {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .navigationSplitViewColumnWidth(
+            min: LayoutMetrics.detailColumnMinWidth,
+            ideal: 400
+        )
         .background(
             AppColors.mainBackground(colorScheme: colorScheme)
                 .ignoresSafeArea(.container, edges: .top)

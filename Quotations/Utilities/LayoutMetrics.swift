@@ -6,6 +6,8 @@
 import CoreGraphics
 
 enum LayoutMetrics {
+    /// Minimum width of the detail (third) column in the navigation split view.
+    static let detailColumnMinWidth: CGFloat = 380
     /// Natural width of a quotation row column (centered in the detail pane).
     static let quotationColumnMaxWidth: CGFloat = 616
     static let quotationListTopPadding: CGFloat = 4
