@@ -121,6 +121,7 @@ struct LibraryChatView: View {
                 .focused($isComposerFocused)
                 .onSubmit(sendDraft)
                 .disabled(!chatState.isAvailable || chatState.isGenerating)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Button("Send", action: sendDraft)
                 .keyboardShortcut(.return, modifiers: [.command])
@@ -129,6 +130,7 @@ struct LibraryChatView: View {
                         || !chatState.isAvailable
                         || chatState.isGenerating
                 )
+                .fixedSize()
         }
         .padding(12)
         .background(.bar)

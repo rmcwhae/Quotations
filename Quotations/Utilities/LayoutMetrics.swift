@@ -8,6 +8,9 @@ import CoreGraphics
 enum LayoutMetrics {
     /// Minimum width of the detail (third) column in the navigation split view.
     static let detailColumnMinWidth: CGFloat = 380
+    /// Content (second) column width in the navigation split view.
+    static let contentColumnMinWidth: CGFloat = 280
+    static let contentColumnIdealWidth: CGFloat = 500
     /// Extra leading inset for the content (second) column so the sidebar shadow
     /// does not obscure list and page content.
     static let contentColumnLeadingPadding: CGFloat = 20

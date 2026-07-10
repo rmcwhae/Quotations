@@ -142,6 +142,10 @@ struct LibraryContextListView: View {
             }
         }
         .padding(.leading, LayoutMetrics.contentColumnLeadingPadding)
+        .navigationSplitViewColumnWidth(
+            min: LayoutMetrics.contentColumnMinWidth,
+            ideal: LayoutMetrics.contentColumnIdealWidth
+        )
         .navigationTitle(filter.title)
         .scrollUnderTitleFade()
         .onAppear {
