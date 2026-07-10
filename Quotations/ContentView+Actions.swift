@@ -140,6 +140,15 @@ extension ContentView {
         }
     }
 
+    /// Explore is a full-width visualization; hide the empty detail column until a quotation is selected.
+    var shouldShowDetailColumn: Bool {
+        if navigation.selectedFilter == .explore {
+            return selectedSource != nil
+        }
+        return true
+    }
+
+    @ViewBuilder
     var detailPane: some View {
         Group {
             if let source = selectedSource {
@@ -200,9 +209,6 @@ extension ContentView {
     }
 
     var detailPlaceholderMessage: String {
-        if navigation.selectedFilter == .explore {
-            return "Select a quotation from Explore"
-        }
         if navigation.selectedFilter == .ask {
             return "Select a citation from Ask"
         }

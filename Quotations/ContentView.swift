@@ -131,37 +131,22 @@ struct ContentView: View {
 
     @ViewBuilder
     private func splitView(shell: ContentViewShellState) -> some View {
-        NavigationSplitView {
-            LibraryFilterSidebarView(
-                selectedFilter: shell.navigation.selectedFilter,
-                onSelectFilter: selectFilter
-            )
-            .equatable()
-        } content: {
-            LibraryContextListView(
-                filter: shell.navigation.selectedFilter,
-                sources: sources,
-                quotations: quotations,
-                searchState: searchState,
-                findQuery: shell.findInPage.query,
-                exploreState: shell.exploreState,
-                chatState: shell.chatState,
-                onExploreWordSelected: { openAdvancedSearch(for: $0) },
-                onChatCitationSelected: { quotationId, sourceId in
-                    shell.navigation.selectQuotation(quotationId, sourceId: sourceId)
-                },
-                selectedSourceId: shell.selectedSourceId,
-                selectedQuotationId: shell.selectedQuotationId,
-                onManageAuthors: { showAuthorList = true },
-                onAddSource: { newSourceSession = NewSourceSheetSession() },
-                onSourceEdit: { sourceToEdit = $0 },
-                onSourceDelete: { source in
-                    sourceToDelete = source
-                    showDeleteSourceConfirmation = true
+        Group {
+            if shouldShowDetailColumn {
+                NavigationSplitView {
+                    filterSidebar
+                } content: {
+                    contextList(shell: shell)
+                } detail: {
+                    detailPane
                 }
-            )
-        } detail: {
-            detailPane
+            } else {
+                NavigationSplitView {
+                    filterSidebar
+                } detail: {
+                    contextList(shell: shell)
+                }
+            }
         }
         .navigationSplitViewStyle(.balanced)
         .searchable(
@@ -178,6 +163,44 @@ struct ContentView: View {
             shell.navigation.clearQuotationSelection()
             return .handled
         }
+        .onChange(of: shouldShowDetailColumn) { _, showDetail in
+            if !showDetail {
+                isInspectorShown = false
+            }
+        }
+    }
+
+    private var filterSidebar: some View {
+        LibraryFilterSidebarView(
+            selectedFilter: navigation.selectedFilter,
+            onSelectFilter: selectFilter
+        )
+        .equatable()
+    }
+
+    private func contextList(shell: ContentViewShellState) -> some View {
+        LibraryContextListView(
+            filter: shell.navigation.selectedFilter,
+            sources: sources,
+            quotations: quotations,
+            searchState: searchState,
+            findQuery: shell.findInPage.query,
+            exploreState: shell.exploreState,
+            chatState: shell.chatState,
+            onExploreWordSelected: { openAdvancedSearch(for: $0) },
+            onChatCitationSelected: { quotationId, sourceId in
+                shell.navigation.selectQuotation(quotationId, sourceId: sourceId)
+            },
+            selectedSourceId: shell.selectedSourceId,
+            selectedQuotationId: shell.selectedQuotationId,
+            onManageAuthors: { showAuthorList = true },
+            onAddSource: { newSourceSession = NewSourceSheetSession() },
+            onSourceEdit: { sourceToEdit = $0 },
+            onSourceDelete: { source in
+                sourceToDelete = source
+                showDeleteSourceConfirmation = true
+            }
+        )
     }
 }
 

@@ -141,6 +141,7 @@ struct LibraryContextListView: View {
                 listBody(resolved: resolved)
             }
         }
+        .padding(.leading, LayoutMetrics.contentColumnLeadingPadding)
         .navigationTitle(filter.title)
         .scrollUnderTitleFade()
         .onAppear {
