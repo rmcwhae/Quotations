@@ -266,11 +266,11 @@ struct QuotationWidgetView: View {
         family == .systemSmall ? 13 : 15
     }
 
-    private var mediumHorizontalPadding: CGFloat { 20 }
+    private var mediumHorizontalPadding: CGFloat { 24 }
 
-    private var mediumTopPadding: CGFloat { 18 }
+    private var mediumTopPadding: CGFloat { 22 }
 
-    private var mediumBottomPadding: CGFloat { 14 }
+    private var mediumBottomPadding: CGFloat { 18 }
 
     private var mediumFooterHeight: CGFloat { 12 }
 
