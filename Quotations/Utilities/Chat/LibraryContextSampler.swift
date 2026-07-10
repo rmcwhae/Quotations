@@ -13,10 +13,11 @@ enum LibraryContextSampler {
 
     static func sample(
         quotations: [Quotation],
-        entries: [EmbeddingIndexEntry]
+        entries: [EmbeddingIndexEntry],
+        stopwords: Set<String> = EnglishStopwords.defaultWords
     ) -> LibraryContextSample {
         let active = quotations.filter { $0.deletedAt == nil }
-        let overviewHeader = makeOverviewHeader(for: active, entries: entries)
+        let overviewHeader = makeOverviewHeader(for: active, entries: entries, stopwords: stopwords)
         let representativeIDs = representativeQuotationIDs(
             quotations: active,
             entries: entries,
@@ -32,7 +33,8 @@ enum LibraryContextSampler {
     static func representativeQuotationIDs(
         quotations: [Quotation],
         entries: [EmbeddingIndexEntry],
-        perCluster: Int
+        perCluster: Int,
+        stopwords: Set<String> = EnglishStopwords.defaultWords
     ) -> [PersistentIdentifier] {
         let active = quotations.filter { $0.deletedAt == nil }
         guard !active.isEmpty else { return [] }
@@ -49,7 +51,11 @@ enum LibraryContextSampler {
         }
 
         guard items.count >= 2,
-              let clusters = SemanticClusterAnalyzer.analyze(quotations: active, entries: entries) else {
+              let clusters = SemanticClusterAnalyzer.analyze(
+                quotations: active,
+                entries: entries,
+                stopwords: stopwords
+              ) else {
             return active.prefix(min(12, active.count)).map(\.persistentModelID)
         }
 
@@ -87,7 +93,8 @@ enum LibraryContextSampler {
 
     static func makeOverviewHeader(
         for quotations: [Quotation],
-        entries: [EmbeddingIndexEntry] = []
+        entries: [EmbeddingIndexEntry] = [],
+        stopwords: Set<String> = EnglishStopwords.defaultWords
     ) -> String {
         let active = quotations.filter { $0.deletedAt == nil }
         let sourceIds = Set(active.compactMap { $0.source?.id })
@@ -103,7 +110,8 @@ enum LibraryContextSampler {
         let topWords = WordFrequencyAnalyzer.analyze(
             quotations: active,
             minimumLength: 3,
-            maximumEntries: topWordCount
+            maximumEntries: topWordCount,
+            stopwords: stopwords
         )
         if !topWords.isEmpty {
             let words = topWords.map(\.word).joined(separator: ", ")
@@ -119,7 +127,11 @@ enum LibraryContextSampler {
             lines.append("- Authors by quotation count: \(authors)")
         }
 
-        if let clusters = SemanticClusterAnalyzer.analyze(quotations: active, entries: entries),
+        if let clusters = SemanticClusterAnalyzer.analyze(
+            quotations: active,
+            entries: entries,
+            stopwords: stopwords
+        ),
            !clusters.points.isEmpty {
             let labels = Dictionary(grouping: clusters.points, by: \.clusterIndex)
                 .sorted { $0.key < $1.key }

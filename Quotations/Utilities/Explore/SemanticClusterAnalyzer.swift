@@ -25,7 +25,8 @@ struct SemanticClusterResult: Equatable {
 enum SemanticClusterAnalyzer {
     static func analyze(
         quotations: [Quotation],
-        entries: [EmbeddingIndexEntry]
+        entries: [EmbeddingIndexEntry],
+        stopwords: Set<String>
     ) -> SemanticClusterResult? {
         let active = quotations.filter { $0.deletedAt == nil }
         guard active.count >= 2 else { return nil }
@@ -55,7 +56,7 @@ enum SemanticClusterAnalyzer {
 
         var labels: [Int: String] = [:]
         for (cluster, clusterQuotations) in quotationsByCluster {
-            let words = WordFrequencyAnalyzer.topWords(in: clusterQuotations, limit: 3)
+            let words = WordFrequencyAnalyzer.topWords(in: clusterQuotations, limit: 3, stopwords: stopwords)
             labels[cluster] = words.isEmpty ? "Theme \(cluster + 1)" : words.joined(separator: ", ")
         }
 

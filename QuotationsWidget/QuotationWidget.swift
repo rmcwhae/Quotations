@@ -16,5 +16,6 @@ struct QuotationWidget: Widget {
         .configurationDisplayName("Quotations")
         .description("Rotates through quotations from your library.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled()
     }
 }

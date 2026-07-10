@@ -10,6 +10,7 @@ import SwiftData
 struct QuotationsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var deepLinkRouter = DeepLinkRouter()
+    @State private var stopWordsStore = StopWordsStore()
 
     private let sharedModelContainer: ModelContainer
     private let containerLoadWarning: String?
@@ -62,6 +63,7 @@ struct QuotationsApp: App {
                 .modelContainer(sharedModelContainer)
                 .environment(backupManager)
                 .environment(deepLinkRouter)
+                .environment(stopWordsStore)
                 .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         }
         .handlesExternalEvents(matching: ["*"])
@@ -96,6 +98,11 @@ struct QuotationsApp: App {
                 }
                 .keyboardShortcut("B", modifiers: [.command, .shift])
             }
+        }
+
+        Settings {
+            SettingsView()
+                .environment(stopWordsStore)
         }
     }
 }

@@ -22,27 +22,30 @@ struct QuotationWidgetView: View {
     private var lineLimit: Int? {
         switch family {
         case .systemSmall: 4
-        case .systemMedium: 6
+        case .systemMedium: 4
         default: nil
         }
     }
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            widgetContent
-            refreshButton
+        Group {
+            if family == .systemMedium {
+                mediumWidgetContent
+            } else {
+                overlayWidgetContent
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(backgroundColor, for: .widget)
     }
 
     @ViewBuilder
-    private var widgetContent: some View {
+    private var mediumWidgetContent: some View {
         let content = Group {
             if let body = entry.content {
-                quotationContent(body)
+                mediumQuotationContent(body)
             } else {
-                emptyState
+                mediumEmptyState
             }
         }
 
@@ -56,6 +59,30 @@ struct QuotationWidgetView: View {
         }
     }
 
+    @ViewBuilder
+    private var overlayWidgetContent: some View {
+        ZStack(alignment: .bottomTrailing) {
+            let content = Group {
+                if let body = entry.content {
+                    quotationContent(body)
+                } else {
+                    emptyState
+                }
+            }
+
+            if let url = entry.deepLinkURL, QuotationDeepLink.isQuotationDeepLink(url) {
+                Link(destination: url) {
+                    content
+                }
+                .widgetURL(url)
+            } else {
+                content
+            }
+
+            refreshButton
+        }
+    }
+
     private var refreshButton: some View {
         Button(intent: RefreshQuotationWidgetIntent()) {
             Image(systemName: "arrow.clockwise")
@@ -65,6 +92,74 @@ struct QuotationWidgetView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Refresh quotation")
+    }
+
+    private var mediumRefreshButton: some View {
+        Button(intent: RefreshQuotationWidgetIntent()) {
+            Image(systemName: "arrow.clockwise")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.tertiary)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Refresh quotation")
+    }
+
+    private func mediumQuotationContent(_ content: String) -> some View {
+        GeometryReader { geometry in
+            let horizontalInset = mediumHorizontalPadding
+            let topInset = mediumTopPadding
+            let bottomInset = mediumBottomPadding
+            let footerHeight = mediumFooterHeight
+            let contentWidth = max(0, geometry.size.width - horizontalInset * 2)
+            let textHeight = max(
+                0,
+                geometry.size.height - topInset - bottomInset - footerHeight
+            )
+            let fontSize = mediumFontSize(forAvailableHeight: textHeight)
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text(displayText(from: content))
+                    .font(.system(size: fontSize, design: .serif))
+                    .foregroundStyle(.primary)
+                    .lineSpacing(0)
+                    .lineLimit(4, reservesSpace: false)
+                    .multilineTextAlignment(.leading)
+                    .frame(width: contentWidth, height: textHeight, alignment: .topLeading)
+                    .clipped()
+                    .invalidatableContent()
+
+                mediumFooterRow
+                    .frame(width: contentWidth, height: footerHeight, alignment: .leading)
+            }
+            .padding(.horizontal, horizontalInset)
+            .padding(.top, topInset)
+            .padding(.bottom, bottomInset)
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+        }
+    }
+
+    private func mediumFontSize(forAvailableHeight height: CGFloat) -> CGFloat {
+        let lineHeightRatio: CGFloat = 1.16
+        let computed = height / 4 / lineHeightRatio
+        return min(max(computed, 14), 30)
+    }
+
+    private var mediumFooterRow: some View {
+        HStack(alignment: .center, spacing: 8) {
+            if let attribution = attributionLabel {
+                Text(attribution)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .invalidatableContent()
+            } else {
+                Spacer(minLength: 0)
+            }
+
+            mediumRefreshButton
+        }
     }
 
     private func quotationContent(_ content: String) -> some View {
@@ -106,6 +201,46 @@ struct QuotationWidgetView: View {
         .foregroundStyle(.secondary)
     }
 
+    private var attributionLabel: String? {
+        switch (entry.authorName, entry.sourceTitle) {
+        case let (author?, source?):
+            return "\(author) · \(source)"
+        case let (author?, nil):
+            return author
+        case let (nil, source?):
+            return source
+        default:
+            return nil
+        }
+    }
+
+    private var mediumEmptyState: some View {
+        GeometryReader { geometry in
+            let horizontalInset = mediumHorizontalPadding
+            let topInset = mediumTopPadding
+            let bottomInset = mediumBottomPadding
+            let footerHeight = mediumFooterHeight
+            let contentWidth = max(0, geometry.size.width - horizontalInset * 2)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("No quotations yet")
+                    .font(.system(.headline, design: .serif))
+                    .foregroundStyle(.primary)
+                Text("Add quotations to your library with at least five words and a single paragraph.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+                mediumFooterRow
+                    .frame(width: contentWidth, height: footerHeight, alignment: .leading)
+            }
+            .padding(.horizontal, horizontalInset)
+            .padding(.top, topInset)
+            .padding(.bottom, bottomInset)
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+        }
+    }
+
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("No quotations yet")
@@ -123,6 +258,14 @@ struct QuotationWidgetView: View {
     private var bodyFontSize: CGFloat {
         family == .systemSmall ? 13 : 15
     }
+
+    private var mediumHorizontalPadding: CGFloat { 8 }
+
+    private var mediumTopPadding: CGFloat { 4 }
+
+    private var mediumBottomPadding: CGFloat { 2 }
+
+    private var mediumFooterHeight: CGFloat { 12 }
 
     private func displayText(from markdown: String) -> AttributedString {
         let plain = QuotationWidgetFilter.plainText(from: markdown)
@@ -144,3 +287,4 @@ struct QuotationWidgetView: View {
     QuotationWidgetEntry.placeholder
     QuotationWidgetEntry.empty
 }
+

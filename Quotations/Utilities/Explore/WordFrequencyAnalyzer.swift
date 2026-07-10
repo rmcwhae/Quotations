@@ -18,7 +18,7 @@ enum WordFrequencyAnalyzer {
         quotations: [Quotation],
         minimumLength: Int = 3,
         maximumEntries: Int = 40,
-        extraStopwords: Set<String> = []
+        stopwords: Set<String>
     ) -> [WordFrequencyEntry] {
         var counts: [String: Int] = [:]
 
@@ -33,7 +33,7 @@ enum WordFrequencyAnalyzer {
                 let token = String(text[range]).lowercased()
                 guard token.count >= minimumLength,
                       token.allSatisfy({ $0.isLetter || $0 == "'" }),
-                      !EnglishStopwords.isStopword(token, extra: extraStopwords) else {
+                      !EnglishStopwords.isStopword(token, in: stopwords) else {
                     return true
                 }
                 counts[token, default: 0] += 1
@@ -51,7 +51,7 @@ enum WordFrequencyAnalyzer {
             .map { $0 }
     }
 
-    static func topWords(in quotations: [Quotation], limit: Int = 3) -> [String] {
-        analyze(quotations: quotations, minimumLength: 3, maximumEntries: limit).map(\.word)
+    static func topWords(in quotations: [Quotation], limit: Int = 3, stopwords: Set<String>) -> [String] {
+        analyze(quotations: quotations, minimumLength: 3, maximumEntries: limit, stopwords: stopwords).map(\.word)
     }
 }

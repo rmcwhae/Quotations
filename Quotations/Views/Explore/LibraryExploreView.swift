@@ -13,6 +13,8 @@ struct LibraryExploreView: View {
     @Binding var selectedSourceIdBinding: PersistentIdentifier?
     var onWordSelected: (String) -> Void
 
+    @Environment(StopWordsStore.self) private var stopWordsStore
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             controls
@@ -35,6 +37,7 @@ struct LibraryExploreView: View {
         .padding(.bottom, 8)
         .onAppear { refresh() }
         .onChange(of: exploreState.minimumWordLength) { _, _ in refresh() }
+        .onChange(of: stopWordsStore.words) { _, _ in refresh() }
         .onChange(of: quotations.count) { _, _ in refresh() }
         .onReceive(NotificationCenter.default.publisher(for: .quotationsDataDidChange)) { _ in
             refresh()
@@ -110,7 +113,7 @@ struct LibraryExploreView: View {
     }
 
     private func refresh() {
-        exploreState.refresh(quotations: quotations)
+        exploreState.refresh(quotations: quotations, stopwords: stopWordsStore.wordSet)
     }
 
     private func selectQuotation(_ quotationId: PersistentIdentifier, sourceId: PersistentIdentifier?) {

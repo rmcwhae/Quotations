@@ -23,7 +23,7 @@ final class ExploreState {
         analysisTask?.cancel()
     }
 
-    func refresh(quotations: [Quotation]) {
+    func refresh(quotations: [Quotation], stopwords: Set<String>) {
         analysisTask?.cancel()
         isAnalyzing = true
         statusMessage = nil
@@ -45,7 +45,8 @@ final class ExploreState {
             wordFrequencies = WordFrequencyAnalyzer.analyze(
                 quotations: active,
                 minimumLength: minimumWordLength,
-                maximumEntries: 40
+                maximumEntries: 40,
+                stopwords: stopwords
             )
 
             if wordFrequencies.isEmpty {
@@ -56,7 +57,11 @@ final class ExploreState {
             guard !Task.isCancelled else { return }
 
             if active.count >= 2 {
-                semanticClusters = SemanticClusterAnalyzer.analyze(quotations: active, entries: entries)
+                semanticClusters = SemanticClusterAnalyzer.analyze(
+                    quotations: active,
+                    entries: entries,
+                    stopwords: stopwords
+                )
             } else {
                 semanticClusters = nil
                 if active.count == 1 {

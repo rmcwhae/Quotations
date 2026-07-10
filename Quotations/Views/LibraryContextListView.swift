@@ -26,6 +26,7 @@ struct LibraryContextListView: View {
     var onSourceDelete: (Source) -> Void
 
     @AppStorage("sourceListSortOption") private var sourceSortOption: SourceSortOption = .dateRead
+    @Environment(StopWordsStore.self) private var stopWordsStore
     @FocusState private var isSearchFieldFocused: Bool
 
     private var isExplorePage: Bool {
@@ -147,7 +148,7 @@ struct LibraryContextListView: View {
                 isSearchFieldFocused = true
             }
             if isExplorePage {
-                exploreState.refresh(quotations: quotations)
+                exploreState.refresh(quotations: quotations, stopwords: stopWordsStore.wordSet)
             }
         }
         .onChange(of: filter) { _, newFilter in
@@ -155,7 +156,7 @@ struct LibraryContextListView: View {
                 isSearchFieldFocused = true
             }
             if newFilter == .explore {
-                exploreState.refresh(quotations: quotations)
+                exploreState.refresh(quotations: quotations, stopwords: stopWordsStore.wordSet)
             }
         }
     }

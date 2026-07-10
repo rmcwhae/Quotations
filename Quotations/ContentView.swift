@@ -485,4 +485,5 @@ private extension ContentView {
         .modelContainer(for: [Author.self, Source.self, Quotation.self], inMemory: true)
         .environment(BackupManager(storeURL: URL(fileURLWithPath: "/tmp/default.store")))
         .environment(DeepLinkRouter())
+        .environment(StopWordsStore(userDefaults: UserDefaults(suiteName: "ContentViewPreview")!))
 }
