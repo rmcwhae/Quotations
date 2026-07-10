@@ -20,7 +20,7 @@ extension LibraryContextListView {
         .safeAreaInset(edge: .bottom) {
             LibraryStatsFooterView(stats: resolved.stats)
         }
-        .navigationSplitViewColumnWidth(min: 220, ideal: 300)
+        .navigationSplitViewColumnWidth(min: 220, ideal: 500)
         .toolbar {
             if !isSearchPage && !isExplorePage && !isAskPage {
                 ToolbarItem(placement: .primaryAction) {
