@@ -64,7 +64,12 @@ struct QuotationRowView: View {
     @State private var locationSaveTask: Task<Void, Never>?
     @State private var isTextFocused = false
     @FocusState private var isLocationFocused: Bool
+    @FocusState private var isRowFocused: Bool
     @State private var didBeginEditing = false
+
+    private var isEditing: Bool {
+        isTextFocused || isLocationFocused
+    }
 
     private var textFieldWidth: CGFloat {
         min(textContainerWidth, quotationTextMaxWidth)
@@ -186,6 +191,9 @@ struct QuotationRowView: View {
                 commitEdit()
                 selectAllOnFocus = false
                 pendingClickWindowLocation = nil
+                if isSelected {
+                    isRowFocused = true
+                }
             }
         }
         .onChange(of: isLocationFocused) { _, focused in
@@ -195,6 +203,9 @@ struct QuotationRowView: View {
             } else {
                 locationSaveTask?.cancel()
                 commitLocation()
+                if isSelected, !isTextFocused {
+                    isRowFocused = true
+                }
             }
         }
         .onDisappear {
@@ -204,11 +215,16 @@ struct QuotationRowView: View {
             commitLocation()
         }
         .onChange(of: isSelected) { _, selected in
-            if !selected {
+            if selected {
+                if !isEditing {
+                    isRowFocused = true
+                }
+            } else {
                 locationSaveTask?.cancel()
                 commitLocation()
                 isTextFocused = false
                 isLocationFocused = false
+                isRowFocused = false
             }
         }
         .onChange(of: quotation.content) { _, newValue in
@@ -227,6 +243,9 @@ struct QuotationRowView: View {
         .onChange(of: editedLocation) { _, _ in
             scheduleLocationSave()
         }
+        .focusable(isSelected && !isEditing)
+        .focused($isRowFocused)
+        .focusEffectDisabled()
         .onKeyPress(.escape) {
             if isTextFocused {
                 isTextFocused = false
@@ -234,6 +253,10 @@ struct QuotationRowView: View {
             }
             if isLocationFocused {
                 isLocationFocused = false
+                return .handled
+            }
+            if isSelected {
+                onDeselect?()
                 return .handled
             }
             return .ignored
