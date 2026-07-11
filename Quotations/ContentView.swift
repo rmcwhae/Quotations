@@ -47,16 +47,14 @@ struct ContentView: View {
 
     var selectedSource: Source? {
         guard let id = navigation.selectedSourceId else { return nil }
-        if let source = modelContext.model(for: id) as? Source,
-           source.deletedAt == nil {
-            return source
-        }
-        return sources.first { $0.id == id }
+        // Prefer @Query results. Avoid `model(for:)` — it returns a stub for stale/
+        // temporary IDs, and reading any property (e.g. deletedAt) traps.
+        return sources.first { $0.persistentModelID == id }
     }
 
     var selectedQuotation: Quotation? {
         guard let id = navigation.selectedQuotationId else { return nil }
-        return modelContext.model(for: id) as? Quotation
+        return quotations.first { $0.persistentModelID == id }
     }
 
     var body: some View {

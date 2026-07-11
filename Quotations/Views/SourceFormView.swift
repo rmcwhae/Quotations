@@ -224,7 +224,9 @@ struct SourceFormView: View {
         let year = Int(publicationYear.trimmingCharacters(in: .whitespacesAndNewlines))
         let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let savedSourceId: PersistentIdentifier
+        // Capture the persistent ID only after save — pre-save IDs are temporary and
+        // crash later when `model(for:)` materializes a stub and properties are read.
+        let savedSource: Source
         if let existing = existingSource {
             existing.title = trimmedTitle
             existing.author = author
@@ -234,7 +236,7 @@ struct SourceFormView: View {
             existing.dateReadMonth = dateReadMonth
             existing.dateReadYear = dateReadYear
             existing.updatedAt = Date()
-            savedSourceId = existing.id
+            savedSource = existing
         } else {
             let source = Source(
                 title: trimmedTitle,
@@ -246,12 +248,12 @@ struct SourceFormView: View {
                 dateReadYear: dateReadYear
             )
             modelContext.insert(source)
-            savedSourceId = source.id
+            savedSource = source
         }
 
         do {
             try modelContext.saveAndNotify()
-            onSuccess(savedSourceId)
+            onSuccess(savedSource.persistentModelID)
         } catch {
             onError(error.localizedDescription)
         }

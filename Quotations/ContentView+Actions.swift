@@ -30,14 +30,15 @@ extension ContentView {
         let quotation = Quotation(content: "", source: source)
         modelContext.insert(quotation)
         try? modelContext.save()
-        newQuotationId = quotation.id
-        navigation.selectedQuotationId = quotation.id
+        let quotationId = quotation.persistentModelID
+        newQuotationId = quotationId
+        navigation.selectedQuotationId = quotationId
     }
 
     func cleanupNewQuotationIfEmpty() {
         defer { newQuotationId = nil }
         guard let id = newQuotationId,
-              let quotation = modelContext.model(for: id) as? Quotation else { return }
+              let quotation = quotations.first(where: { $0.persistentModelID == id }) else { return }
         if quotation.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             try? SoftDelete.quotation(quotation, in: modelContext)
             if navigation.selectedQuotationId == id {
