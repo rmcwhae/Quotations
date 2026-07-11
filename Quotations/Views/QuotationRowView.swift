@@ -26,6 +26,7 @@ struct QuotationRowView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @State private var editedContent: String
+    @State private var editedLocation: String
     @State private var showDeleteConfirmation = false
     @State private var textContainerWidth: CGFloat = quotationTextMaxWidth
     @State private var isHovering = false
@@ -57,9 +58,12 @@ struct QuotationRowView: View {
         self.onEdit = onEdit
         self.onDelete = onDelete
         _editedContent = State(initialValue: quotation.content)
+        _editedLocation = State(initialValue: quotation.location ?? "")
     }
     @State private var saveTask: Task<Void, Never>?
+    @State private var locationSaveTask: Task<Void, Never>?
     @State private var isTextFocused = false
+    @FocusState private var isLocationFocused: Bool
     @State private var didBeginEditing = false
 
     private var textFieldWidth: CGFloat {
@@ -93,10 +97,16 @@ struct QuotationRowView: View {
     }
 
     private var accessibilitySummary: String {
-        if quotation.content.isEmpty { return "New quotation" }
-        let trimmed = quotation.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count <= 120 { return trimmed }
-        return String(trimmed.prefix(120)) + "…"
+        let contentSummary: String
+        if quotation.content.isEmpty {
+            contentSummary = "New quotation"
+        } else {
+            let trimmed = quotation.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            contentSummary = trimmed.count <= 120 ? trimmed : String(trimmed.prefix(120)) + "…"
+        }
+        let location = quotation.location?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard !location.isEmpty else { return contentSummary }
+        return "\(contentSummary), location \(location)"
     }
 
     var body: some View {
@@ -109,34 +119,44 @@ struct QuotationRowView: View {
                 .accessibilityHidden(true)
                 .contentShape(Rectangle())
                 .onTapGesture { onDeselect?() }
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 textEditor
-            }
-            .frame(maxWidth: quotationTextMaxWidth, alignment: .leading)
-            .background {
-                GeometryReader { geometry in
-                    Color.clear
-                        .onChange(of: geometry.size.width, initial: true) { _, newWidth in
-                            textContainerWidth = newWidth
+                    .frame(maxWidth: quotationTextMaxWidth, alignment: .leading)
+                    .background {
+                        GeometryReader { geometry in
+                            Color.clear
+                                .onChange(of: geometry.size.width, initial: true) { _, newWidth in
+                                    textContainerWidth = newWidth
+                                }
                         }
-                }
-            }
-            .padding(.horizontal, textContainerPadding.width)
-            .padding(.vertical, textContainerPadding.height)
-            .background(
-                isTextFocused
-                    ? AppColors.editingBackground(colorScheme: colorScheme)
-                    : Color.clear,
-                in: RoundedRectangle(cornerRadius: 6)
-            )
-            .overlay {
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(borderColor, lineWidth: borderWidth)
-            }
-            .contentShape(Rectangle())
-            .onHover { isHovering = $0 }
-            .overlay {
-                QuotationClickView(isEditing: isTextFocused, onClick: handleClick)
+                    }
+                    .padding(.horizontal, textContainerPadding.width)
+                    .padding(.vertical, textContainerPadding.height)
+                    .background(
+                        isTextFocused
+                            ? AppColors.editingBackground(colorScheme: colorScheme)
+                            : Color.clear,
+                        in: RoundedRectangle(cornerRadius: 6)
+                    )
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(borderColor, lineWidth: borderWidth)
+                    }
+                    .contentShape(Rectangle())
+                    .onHover { isHovering = $0 }
+                    .overlay {
+                        QuotationClickView(isEditing: isTextFocused, onClick: handleClick)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(accessibilitySummary)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    .accessibilityHint(
+                        isTextFocused
+                            ? "Return to save, Shift-Return for new line"
+                            : "Double-click to edit"
+                    )
+
+                locationField
             }
             Spacer(minLength: 0)
                 .contentShape(Rectangle())
@@ -145,10 +165,6 @@ struct QuotationRowView: View {
         .padding(.vertical, 10)
         .padding(.leading, 28)
         .padding(.trailing, 16)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilitySummary)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityHint(isTextFocused ? "Return to save, Shift-Return for new line" : "Double-click to edit")
         .onAppear {
             if beginEditing, !didBeginEditing {
                 didBeginEditing = true
@@ -159,6 +175,12 @@ struct QuotationRowView: View {
             if focused, !isSelected {
                 onSelect?()
             }
+            if focused, isLocationFocused {
+                // Text edit stole focus — persist location before the field hides.
+                locationSaveTask?.cancel()
+                commitLocation()
+                isLocationFocused = false
+            }
             if !focused {
                 saveTask?.cancel()
                 commitEdit()
@@ -166,13 +188,27 @@ struct QuotationRowView: View {
                 pendingClickWindowLocation = nil
             }
         }
+        .onChange(of: isLocationFocused) { _, focused in
+            if focused {
+                if !isSelected { onSelect?() }
+                isTextFocused = false
+            } else {
+                locationSaveTask?.cancel()
+                commitLocation()
+            }
+        }
         .onDisappear {
             saveTask?.cancel()
+            locationSaveTask?.cancel()
             commitEdit()
+            commitLocation()
         }
         .onChange(of: isSelected) { _, selected in
             if !selected {
+                locationSaveTask?.cancel()
+                commitLocation()
                 isTextFocused = false
+                isLocationFocused = false
             }
         }
         .onChange(of: quotation.content) { _, newValue in
@@ -180,12 +216,24 @@ struct QuotationRowView: View {
                 editedContent = newValue
             }
         }
+        .onChange(of: quotation.location) { _, newValue in
+            if !isLocationFocused {
+                editedLocation = newValue ?? ""
+            }
+        }
         .onChange(of: editedContent) { _, _ in
             scheduleDebouncedSave()
+        }
+        .onChange(of: editedLocation) { _, _ in
+            scheduleLocationSave()
         }
         .onKeyPress(.escape) {
             if isTextFocused {
                 isTextFocused = false
+                return .handled
+            }
+            if isLocationFocused {
+                isLocationFocused = false
                 return .handled
             }
             return .ignored
@@ -241,6 +289,65 @@ struct QuotationRowView: View {
             .frame(maxWidth: textFieldWidth, alignment: .leading)
         }
     }
+
+    private var hasLocationText: Bool {
+        !editedLocation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Visible when there is a value, or when selected/focused for editing.
+    private var isLocationFieldVisible: Bool {
+        hasLocationText || isSelected || isLocationFocused
+    }
+
+    private var locationField: some View {
+        let showsEditChrome = isSelected || isLocationFocused
+        return HStack(spacing: 0) {
+            Spacer(minLength: 8)
+            TextField(
+                "",
+                text: $editedLocation,
+                prompt: Text("Location")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            )
+                .font(.caption)
+                .foregroundStyle(hasLocationText ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.trailing)
+                .focused($isLocationFocused)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .frame(width: 88, alignment: .trailing)
+                .background {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(
+                            showsEditChrome
+                                ? AppColors.editingBackground(colorScheme: colorScheme)
+                                : Color.clear
+                        )
+                }
+                .overlay {
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(
+                            showsEditChrome
+                                ? Color.secondary.opacity(0.45)
+                                : Color.clear,
+                            lineWidth: showsEditChrome ? 1 : 0
+                        )
+                }
+                .padding(.horizontal, textContainerPadding.width - 6)
+                .padding(.top, 1)
+                .opacity(isLocationFieldVisible ? 1 : 0)
+                .allowsHitTesting(isLocationFieldVisible)
+                .accessibilityHidden(!isLocationFieldVisible)
+                .accessibilityLabel("Location")
+                .accessibilityHint("Page number or percentage")
+                .onSubmit {
+                    isLocationFocused = false
+                }
+        }
+        .frame(maxWidth: textFieldWidth + textContainerPadding.width * 2)
+    }
 }
 
 private extension QuotationRowView {
@@ -283,6 +390,17 @@ private extension QuotationRowView {
         }
     }
 
+    func scheduleLocationSave() {
+        locationSaveTask?.cancel()
+        locationSaveTask = Task {
+            try? await Task.sleep(for: debounceInterval)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                commitLocation()
+            }
+        }
+    }
+
     func commitEdit() {
         let trimmed = editedContent.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
@@ -298,6 +416,15 @@ private extension QuotationRowView {
             quotation.updatedAt = Date()
             onEdit(quotation)
         }
+    }
+
+    func commitLocation() {
+        let trimmed = editedLocation.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newValue = trimmed.isEmpty ? nil : trimmed
+        guard newValue != quotation.location else { return }
+        quotation.location = newValue
+        quotation.updatedAt = Date()
+        onEdit(quotation)
     }
 
     func copyQuotation() {
