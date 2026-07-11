@@ -114,10 +114,16 @@ struct QuotationRichTextEditor: NSViewRepresentable {
         var lastMarkdown: String = ""
         var isUpdatingFromView = false
         var lastAppliedSelectionID = 0
+        /// Owned by the editor so Cmd-Z keeps working inside SwiftUI hosting.
+        let textUndoManager = UndoManager()
 
         init(parent: QuotationRichTextEditor) {
             self.parent = parent
             self.lastMarkdown = parent.markdown
+        }
+
+        func undoManager(for view: NSTextView) -> UndoManager? {
+            textUndoManager
         }
 
         func load(markdown: String, into textView: NSTextView) {
@@ -127,12 +133,18 @@ struct QuotationRichTextEditor: NSViewRepresentable {
             textView.typingAttributes = MarkdownCodec.editorTypingAttributes
             textView.selectedRanges = selectedRanges
             lastMarkdown = markdown
+            // Programmatic replacement is not an undoable user edit.
+            textUndoManager.removeAllActions()
             isUpdatingFromView = false
             textView.invalidateIntrinsicContentSize()
         }
 
         func syncMarkdownIfNeeded(into textView: NSTextView) {
             guard parent.markdown != lastMarkdown else { return }
+            // Reloading attributed text clears the undo stack — never do it mid-edit.
+            if textView.window?.firstResponder === textView {
+                return
+            }
             load(markdown: parent.markdown, into: textView)
         }
 
@@ -257,19 +269,31 @@ final class QuotationTextView: NSTextView {
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if isEditable, window?.firstResponder === self,
-           event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
-           let characters = event.charactersIgnoringModifiers?.lowercased() {
-            switch characters {
-            case "b":
-                toggleFontTrait(.boldFontMask)
+        guard isEditable, window?.firstResponder === self,
+              let characters = event.charactersIgnoringModifiers?.lowercased() else {
+            return super.performKeyEquivalent(with: event)
+        }
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+
+        switch characters {
+        case "z" where flags == .command:
+            if let undoManager, undoManager.canUndo {
+                undoManager.undo()
                 return true
-            case "i":
-                toggleFontTrait(.italicFontMask)
-                return true
-            default:
-                break
             }
+        case "z" where flags == [.command, .shift]:
+            if let undoManager, undoManager.canRedo {
+                undoManager.redo()
+                return true
+            }
+        case "b" where flags == .command:
+            toggleFontTrait(.boldFontMask)
+            return true
+        case "i" where flags == .command:
+            toggleFontTrait(.italicFontMask)
+            return true
+        default:
+            break
         }
         return super.performKeyEquivalent(with: event)
     }
