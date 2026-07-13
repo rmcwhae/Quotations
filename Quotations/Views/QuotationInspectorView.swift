@@ -15,6 +15,7 @@ struct QuotationInspectorView: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var location = ""
+    @State private var locationDraftEdited = false
     @State private var locationSaveTask: Task<Void, Never>?
     @FocusState private var isLocationFocused: Bool
 
@@ -63,15 +64,20 @@ struct QuotationInspectorView: View {
         .onChange(of: selectedQuotationId) { oldId, newId in
             handleQuotationSelectionChange(from: oldId, to: newId)
         }
+        .onChange(of: quotation.location) { _, newValue in
+            guard !isLocationFocused else { return }
+            location = newValue ?? ""
+            locationDraftEdited = false
+        }
         .onChange(of: isLocationFocused) { _, focused in
             if !focused {
                 locationSaveTask?.cancel()
-                applyLocation(to: quotation)
+                applyInspectorLocation(to: quotation)
             }
         }
         .onDisappear {
             locationSaveTask?.cancel()
-            applyLocation(to: quotation)
+            applyInspectorLocation(to: quotation)
         }
     }
 
@@ -94,6 +100,7 @@ struct QuotationInspectorView: View {
                         isLocationFocused = false
                     }
                     .onChange(of: location) { _, _ in
+                        locationDraftEdited = true
                         scheduleLocationSave(for: quotation)
                     }
             }
@@ -143,7 +150,7 @@ struct QuotationInspectorView: View {
         if let oldId, oldId != newId,
            let previous = modelContext.model(for: oldId) as? Quotation {
             locationSaveTask?.cancel()
-            applyLocation(to: previous)
+            applyInspectorLocation(to: previous)
         }
         if let newId,
            let resolved = modelContext.model(for: newId) as? Quotation {
@@ -166,6 +173,7 @@ struct QuotationInspectorView: View {
 
     private func syncFromQuotation(_ quotation: Quotation) {
         location = quotation.location ?? ""
+        locationDraftEdited = false
     }
 
     private func scheduleLocationSave(for quotation: Quotation) {
@@ -174,17 +182,23 @@ struct QuotationInspectorView: View {
             try? await Task.sleep(for: locationDebounceInterval)
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                applyLocation(to: quotation)
+                applyInspectorLocation(to: quotation)
             }
         }
     }
 
-    private func applyLocation(to quotation: Quotation) {
+    /// Persists the inspector draft only when the user edited location in the inspector.
+    private func applyInspectorLocation(to quotation: Quotation) {
+        guard locationDraftEdited else { return }
         let trimmed = location.trimmingCharacters(in: .whitespacesAndNewlines)
         let newValue = trimmed.isEmpty ? nil : trimmed
-        guard newValue != quotation.location else { return }
+        guard newValue != quotation.location else {
+            locationDraftEdited = false
+            return
+        }
         quotation.location = newValue
         quotation.updatedAt = Date()
+        locationDraftEdited = false
         try? modelContext.saveAndNotify()
     }
 }

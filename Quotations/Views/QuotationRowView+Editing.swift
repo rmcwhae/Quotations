@@ -55,8 +55,24 @@ extension QuotationRowView {
             try? await Task.sleep(for: quotationEditDebounceInterval)
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                commitLocation()
+                commitLocationAfterFieldFlush()
             }
+        }
+    }
+
+    /// Resigns the location field when needed, then commits after SwiftUI flushes the binding.
+    func persistLocationField() {
+        locationSaveTask?.cancel()
+        if isLocationFocused {
+            isLocationFocused = false
+        } else {
+            commitLocationAfterFieldFlush()
+        }
+    }
+
+    func commitLocationAfterFieldFlush() {
+        DispatchQueue.main.async {
+            commitLocation()
         }
     }
 
@@ -65,9 +81,7 @@ extension QuotationRowView {
             onSelect?()
         }
         if focused, isLocationFocused {
-            // Text edit stole focus — persist location before the field hides.
-            locationSaveTask?.cancel()
-            commitLocation()
+            // Text edit stole focus — resign location; focus handler commits after flush.
             isLocationFocused = false
         }
         if !focused {
@@ -86,8 +100,7 @@ extension QuotationRowView {
             if !isSelected { onSelect?() }
             isTextFocused = false
         } else {
-            locationSaveTask?.cancel()
-            commitLocation()
+            commitLocationAfterFieldFlush()
             if isSelected, !isTextFocused {
                 isRowFocused = true
             }
@@ -100,10 +113,8 @@ extension QuotationRowView {
                 isRowFocused = true
             }
         } else {
-            locationSaveTask?.cancel()
-            commitLocation()
+            persistLocationField()
             isTextFocused = false
-            isLocationFocused = false
             isRowFocused = false
         }
     }

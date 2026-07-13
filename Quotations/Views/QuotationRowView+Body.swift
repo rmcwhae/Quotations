@@ -118,9 +118,8 @@ extension QuotationRowView {
         }
         .onDisappear {
             saveTask?.cancel()
-            locationSaveTask?.cancel()
+            persistLocationField()
             commitEdit()
-            commitLocation()
         }
         .onChange(of: isSelected) { _, selected in
             handleSelectionChange(selected)
