@@ -49,7 +49,7 @@ Switch to Semantic Map to plot quotations by meaning. Related passages cluster t
 
 ## Ask
 
-Ask questions about your library in natural language (runs on device if you have macOS 25+). The assistant will retrieve relevant quotations and summarize the findings (Retrieval Augmented Generation). Note that results may not be perfect.
+Ask questions about your library in natural language (runs on device if you have macOS 26+). The assistant will retrieve relevant quotations and summarize the findings (Retrieval Augmented Generation). Note that results may not be perfect.
 
 ![Ask](documentation/ask.png)
 
