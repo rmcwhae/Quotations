@@ -60,3 +60,4 @@ A list of some other features:
 - Library backups
 - Semantic search (search by meaning, not just string matching)
 - Demo mode (a pre-populated list of quotations)
+- Desktop widget that rotates through quotations (medium size is optimized), with deep linking
