@@ -13,7 +13,7 @@ alias qab="cd path/to/repo && \
   open /Applications/Quotations.app"
 ```
 
-Built with SwiftUI, AppKit and SwiftData. This app is open source; free free to fork it.
+Built with SwiftUI, AppKit and SwiftData (data is stored locally, not in iCloud). This app is open source; free free to fork it.
 
 ## Library
 
