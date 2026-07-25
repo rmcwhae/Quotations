@@ -1,6 +1,19 @@
 # Quotations
 
-Quotations is a native macOS app for collecting and revisiting passages from books, designed to be as minimalistic as possible. Organize entries by author and source, search across your library, and edit quotations inline with rich text formatting. Built with SwiftUI, AppKit and SwiftData. This app is open source; free free to fork it.
+Quotations is a native macOS app for collecting and revisiting passages from books, designed to be as minimalistic as possible. Organize entries by author and source, search across your library, and edit quotations inline with rich text formatting.
+
+To run it, you will need Xcode installed and a valid Development Team set (does not require a paid Apple Developer account). Compile the app within Xcode or via the CLI. I made a terminal alias to automate app builds outside of Xcode (update `path/to/repo` accordingly).
+
+```bash
+alias qab="cd path/to/repo && \
+  xcodebuild -scheme Quotations -configuration Release -destination 'platform=macOS' \
+    -derivedDataPath build -allowProvisioningUpdates clean build && \
+  rm -rf /Applications/Quotations.app && \
+  cp -R build/Build/Products/Release/Quotations.app /Applications/ && \
+  open /Applications/Quotations.app"
+```
+
+Built with SwiftUI, AppKit and SwiftData. This app is open source; free free to fork it.
 
 ## Library
 
@@ -47,16 +60,3 @@ A list of some other features:
 - Library backups
 - Semantic search (search by meaning, not just string matching)
 - Demo mode (a pre-populated list of quotations)
-
-## Building via CLI
-
-I also made a terminal alias to automate app builds outside of Xcode (update `path/to/repo` accordingly). Note that you’ll need to set your development team within Xcode first.
-
-```bash
-alias qab="cd path/to/repo && \
-  xcodebuild -scheme Quotations -configuration Release -destination 'platform=macOS' \
-    -derivedDataPath build -allowProvisioningUpdates clean build && \
-  rm -rf /Applications/Quotations.app && \
-  cp -R build/Build/Products/Release/Quotations.app /Applications/ && \
-  open /Applications/Quotations.app"
-```
