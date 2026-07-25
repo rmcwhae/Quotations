@@ -26,6 +26,7 @@ actor EmbeddingSearchIndex {
     private let maxResults = 50
     private var snapshot = EmbeddingIndexSnapshot(version: 1, entries: [:])
     private var isLoaded = false
+    private var modelsLoaded = false
     private var contextualEmbedding: NLContextualEmbedding?
     private var sentenceEmbedding: NLEmbedding?
 
@@ -53,10 +54,11 @@ actor EmbeddingSearchIndex {
         return Array(ranked)
     }
 
-    func sync(quotations: [Quotation]) async {
+    func sync(quotations: [Quotation], persist: Bool = true) async {
         await ensureLoaded()
 
-        var nextEntries = snapshot.entries
+        // Demo mode rebuilds an ephemeral in-memory index so personal entries are not mixed in.
+        var nextEntries = persist ? snapshot.entries : [:]
         var liveEncodedIDs = Set<String>()
 
         for quotation in quotations {
@@ -91,12 +93,26 @@ actor EmbeddingSearchIndex {
         staleIDs.forEach { nextEntries.removeValue(forKey: $0) }
 
         snapshot = EmbeddingIndexSnapshot(version: 1, entries: nextEntries)
-        persistSnapshot()
+        if persist {
+            persistSnapshot()
+        }
     }
 
     func removeAll() async {
         snapshot = EmbeddingIndexSnapshot(version: 1, entries: [:])
         persistSnapshot()
+    }
+
+    /// Restores the on-disk personal index into memory (e.g. after leaving demo mode).
+    func reloadPersistedSnapshot() async {
+        loadModelsIfNeeded()
+        if let data = try? Data(contentsOf: indexURL),
+           let decoded = try? JSONDecoder().decode(EmbeddingIndexSnapshot.self, from: data) {
+            snapshot = decoded
+        } else {
+            snapshot = EmbeddingIndexSnapshot(version: 1, entries: [:])
+        }
+        isLoaded = true
     }
 
     func allEntries() async -> [EmbeddingIndexEntry] {
@@ -105,13 +121,23 @@ actor EmbeddingSearchIndex {
     }
 
     private func ensureLoaded() async {
-        guard !isLoaded else { return }
+        guard !isLoaded else {
+            loadModelsIfNeeded()
+            return
+        }
         defer { isLoaded = true }
 
         if let data = try? Data(contentsOf: indexURL),
            let decoded = try? JSONDecoder().decode(EmbeddingIndexSnapshot.self, from: data) {
             snapshot = decoded
         }
+
+        loadModelsIfNeeded()
+    }
+
+    private func loadModelsIfNeeded() {
+        guard !modelsLoaded else { return }
+        modelsLoaded = true
 
         contextualEmbedding = NLContextualEmbedding(language: .english)
         if contextualEmbedding?.hasAvailableAssets == true {

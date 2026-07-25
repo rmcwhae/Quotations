@@ -23,23 +23,31 @@ enum QuotationSearchIndexManager {
     @MainActor
     static func reindexIfNeeded(modelContext: ModelContext) async {
         let quotations = fetchLiveQuotations(modelContext: modelContext)
-        let fingerprint = fingerprint(for: quotations)
+        let fingerprint = indexFingerprint(for: quotations)
         guard fingerprint != lastIndexedFingerprint else { return }
         await sync(modelContext: modelContext)
     }
 
     @MainActor
+    static func invalidateFingerprint() {
+        lastIndexedFingerprint = nil
+    }
+
+    @MainActor
     private static func sync(modelContext: ModelContext) async {
         let quotations = fetchLiveQuotations(modelContext: modelContext)
-        let fingerprint = fingerprint(for: quotations)
+        let fingerprint = indexFingerprint(for: quotations)
+        let isDemo = LibraryModeController.isDemoModeActive
 
-        do {
-            try await QuotationSpotlightIndexer.index(quotations: quotations)
-        } catch {
-            // Spotlight indexing is best-effort; embedding sync still runs.
+        if !isDemo {
+            do {
+                try await QuotationSpotlightIndexer.index(quotations: quotations)
+            } catch {
+                // Spotlight indexing is best-effort; embedding sync still runs.
+            }
         }
 
-        await EmbeddingSearchIndex.shared.sync(quotations: quotations)
+        await EmbeddingSearchIndex.shared.sync(quotations: quotations, persist: !isDemo)
         lastIndexedFingerprint = fingerprint
     }
 
@@ -51,8 +59,9 @@ enum QuotationSearchIndexManager {
         return (try? modelContext.fetch(descriptor)) ?? []
     }
 
-    private static func fingerprint(for quotations: [Quotation]) -> String {
-        quotations
+    private static func indexFingerprint(for quotations: [Quotation]) -> String {
+        let mode = LibraryModeController.isDemoModeActive ? "demo" : "personal"
+        let body = quotations
             .map {
                 let updated = ($0.updatedAt ?? $0.createdAt ?? .distantPast).timeIntervalSince1970
                 let encoded = QuotationDeepLink.encode($0.persistentModelID) ?? "missing"
@@ -60,5 +69,6 @@ enum QuotationSearchIndexManager {
             }
             .sorted()
             .joined(separator: "|")
+        return "\(mode)|\(body)"
     }
 }

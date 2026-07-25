@@ -56,10 +56,20 @@ final class ExploreState {
             let entries = await EmbeddingSearchIndex.shared.allEntries()
             guard !Task.isCancelled else { return }
 
+            var indexEntries = entries
+            if matchingEntryCount(in: entries, for: active) < 2 {
+                await EmbeddingSearchIndex.shared.sync(
+                    quotations: active,
+                    persist: !LibraryModeController.isDemoModeActive
+                )
+                guard !Task.isCancelled else { return }
+                indexEntries = await EmbeddingSearchIndex.shared.allEntries()
+            }
+
             if active.count >= 2 {
                 semanticClusters = SemanticClusterAnalyzer.analyze(
                     quotations: active,
-                    entries: entries,
+                    entries: indexEntries,
                     stopwords: stopwords
                 )
             } else {
@@ -76,6 +86,17 @@ final class ExploreState {
         clearResults()
         isAnalyzing = false
         statusMessage = nil
+    }
+
+    private func matchingEntryCount(in entries: [EmbeddingIndexEntry], for quotations: [Quotation]) -> Int {
+        let ids = Set(entries.map(\.encodedQuotationID))
+        return quotations.reduce(0) { count, quotation in
+            guard let encoded = QuotationDeepLink.encode(quotation.persistentModelID),
+                  ids.contains(encoded) else {
+                return count
+            }
+            return count + 1
+        }
     }
 
     private func clearResults() {

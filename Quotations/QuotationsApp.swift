@@ -11,8 +11,8 @@ struct QuotationsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var deepLinkRouter = DeepLinkRouter()
     @State private var stopWordsStore = StopWordsStore()
+    @State private var libraryMode: LibraryModeController
 
-    private let sharedModelContainer: ModelContainer
     private let containerLoadWarning: String?
     private let backupManager: BackupManager
 
@@ -27,6 +27,8 @@ struct QuotationsApp: App {
 
         BackupManager.applyPendingRestoreIfNeeded(storeURL: persistentConfiguration.url)
 
+        let personalContainer: ModelContainer
+        let loadWarning: String?
         do {
             let container = try ModelContainer(for: schema, configurations: [persistentConfiguration])
             let context = ModelContext(container)
@@ -34,8 +36,8 @@ struct QuotationsApp: App {
                 context: context,
                 storeURL: persistentConfiguration.url
             )
-            sharedModelContainer = container
-            containerLoadWarning = nil
+            personalContainer = container
+            loadWarning = nil
         } catch {
             let fallbackConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
             do {
@@ -45,8 +47,8 @@ struct QuotationsApp: App {
                     context: context,
                     storeURL: fallbackConfiguration.url
                 )
-                sharedModelContainer = container
-                containerLoadWarning =
+                personalContainer = container
+                loadWarning =
                     "Your library could not be opened (\(error.localizedDescription)). " +
                     "A temporary in-memory library is being used instead."
             } catch {
@@ -54,16 +56,20 @@ struct QuotationsApp: App {
             }
         }
 
+        containerLoadWarning = loadWarning
         backupManager = BackupManager(storeURL: persistentConfiguration.url)
+        _libraryMode = State(initialValue: LibraryModeController(personalContainer: personalContainer))
     }
 
     var body: some Scene {
-        WindowGroup("Quotations", id: "MainQuotationsWindow") {
+        WindowGroup(libraryMode.windowTitle, id: "MainQuotationsWindow") {
             RootView(loadWarning: containerLoadWarning)
-                .modelContainer(sharedModelContainer)
+                .modelContainer(libraryMode.activeContainer)
                 .environment(backupManager)
                 .environment(deepLinkRouter)
                 .environment(stopWordsStore)
+                .environment(libraryMode)
+                .id(libraryMode.isDemoMode)
                 .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         }
         .handlesExternalEvents(matching: ["*"])
@@ -90,13 +96,18 @@ struct QuotationsApp: App {
                 Button("Import from Apple Books…") {
                     NotificationCenter.default.post(name: .importFromAppleBooks, object: nil)
                 }
+                .disabled(libraryMode.isDemoMode)
                 Button("Import Quotations from CSV…") {
                     NotificationCenter.default.post(name: .importQuotationsFromCSV, object: nil)
                 }
+                .disabled(libraryMode.isDemoMode)
                 Button("Backups…") {
                     NotificationCenter.default.post(name: .showBackupsPanel, object: nil)
                 }
                 .keyboardShortcut("B", modifiers: [.command, .shift])
+                .disabled(libraryMode.isDemoMode)
+                Divider()
+                Toggle("Demo Mode", isOn: libraryMode.isDemoModeBinding)
             }
         }
 
@@ -110,17 +121,16 @@ struct QuotationsApp: App {
 private struct RootView: View {
     let loadWarning: String?
     @Environment(DeepLinkRouter.self) private var deepLinkRouter
+    @Environment(LibraryModeController.self) private var libraryMode
     @Environment(\.modelContext) private var modelContext
     @State private var showLoadWarning = false
 
     var body: some View {
         ContentView()
             .onAppear {
-                showLoadWarning = loadWarning != nil
+                showLoadWarning = loadWarning != nil && !libraryMode.isDemoMode
                 DeepLinkLaunchQueue.flush(into: deepLinkRouter)
-                Task {
-                    await QuotationSearchIndexManager.reindexIfNeeded(modelContext: modelContext)
-                }
+                prepareSearchIndexes()
             }
             .onOpenURL { url in
                 deepLinkRouter.enqueue(url)
@@ -135,5 +145,17 @@ private struct RootView: View {
                     Text(loadWarning)
                 }
             }
+    }
+
+    private func prepareSearchIndexes() {
+        Task {
+            QuotationSearchIndexManager.invalidateFingerprint()
+            if libraryMode.isDemoMode {
+                await QuotationSearchIndexManager.reindexIfNeeded(modelContext: modelContext)
+            } else {
+                await EmbeddingSearchIndex.shared.reloadPersistedSnapshot()
+                await QuotationSearchIndexManager.reindexIfNeeded(modelContext: modelContext)
+            }
+        }
     }
 }
