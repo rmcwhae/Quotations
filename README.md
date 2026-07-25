@@ -1,3 +1,5 @@
+<img src="documentation/icon.png" alt="Quotations" width="128">
+
 # Quotations
 
 Quotations is a native macOS app for collecting and revisiting passages from books, designed to be as minimalistic as possible. Organize entries by author and source, search across your library, and edit quotations inline with rich text formatting.
