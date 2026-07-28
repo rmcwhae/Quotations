@@ -97,6 +97,10 @@ struct QuotationsApp: App {
                     NotificationCenter.default.post(name: .importFromAppleBooks, object: nil)
                 }
                 .disabled(libraryMode.isDemoMode)
+                Button("Import from Kobo annotations text file…") {
+                    NotificationCenter.default.post(name: .importFromKoboAnnotations, object: nil)
+                }
+                .disabled(libraryMode.isDemoMode)
                 Button("Import Quotations from CSV…") {
                     NotificationCenter.default.post(name: .importQuotationsFromCSV, object: nil)
                 }

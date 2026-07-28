@@ -27,7 +27,8 @@ struct ContentView: View {
     @State var showAuthorList = false
     @State var showBackups = false
     @State var isImporting = false
-    @State var showCSVImporter = false
+    @State var showFileImporter = false
+    @State var fileImportKind: ContentViewFileImportKind = .csv
     @State var csvImportSourceId: PersistentIdentifier?
     @State var showImportSuccess = false
     @State var importSuccessMessage: String?
@@ -94,13 +95,16 @@ struct ContentView: View {
             onCleanupNewQuotation: cleanupNewQuotationIfEmpty
         ))
         .modifier(ContentViewImportLifecycleModifier(
-            showCSVImporter: $showCSVImporter,
+            showFileImporter: $showFileImporter,
+            fileImportKind: $fileImportKind,
             showBackups: $showBackups,
             showError: $showError,
             errorMessage: $errorMessage,
             onImportCSV: importCSV,
             onBeginCSVImport: beginCSVImport,
             onImportFromAppleBooks: importFromAppleBooks,
+            onBeginKoboImport: beginKoboImport,
+            onImportFromKoboAnnotations: importFromKoboAnnotations,
             onAddQuotation: addQuotation,
             onOpenAdvancedSearch: { selectFilter(.searchResults) }
         ))

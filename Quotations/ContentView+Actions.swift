@@ -80,7 +80,8 @@ extension ContentView {
             return
         }
         csvImportSourceId = source.persistentModelID
-        showCSVImporter = true
+        fileImportKind = .csv
+        showFileImporter = true
     }
 
     func importCSV(from url: URL) {
@@ -135,6 +136,38 @@ extension ContentView {
             searchState.runSearchIfNeeded(modelContext: modelContext)
         } catch let error as AppleBooksImportError where error == .userCancelled {
             // User dismissed the file picker; no alert needed.
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    func beginKoboImport() {
+        fileImportKind = .koboAnnotations
+        showFileImporter = true
+    }
+
+    func importFromKoboAnnotations(from url: URL) {
+        guard !isImporting else { return }
+        isImporting = true
+        defer { isImporting = false }
+
+        let accessGranted = url.startAccessingSecurityScopedResource()
+        defer {
+            if accessGranted {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        do {
+            let result = try KoboAnnotationsImportService.importFile(
+                url: url,
+                into: modelContext,
+                backupManager: backupManager
+            )
+            importSuccessMessage = result.summaryMessage
+            showImportSuccess = true
+            searchState.runSearchIfNeeded(modelContext: modelContext)
         } catch {
             errorMessage = error.localizedDescription
             showError = true

@@ -7,16 +7,33 @@ import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum ContentViewFileImportKind {
+    case csv
+    case koboAnnotations
+}
+
 struct ContentViewImportLifecycleModifier: ViewModifier {
-    @Binding var showCSVImporter: Bool
+    @Binding var showFileImporter: Bool
+    @Binding var fileImportKind: ContentViewFileImportKind
     @Binding var showBackups: Bool
     @Binding var showError: Bool
     @Binding var errorMessage: String?
     let onImportCSV: (URL) -> Void
     let onBeginCSVImport: () -> Void
     let onImportFromAppleBooks: () -> Void
+    let onBeginKoboImport: () -> Void
+    let onImportFromKoboAnnotations: (URL) -> Void
     let onAddQuotation: () -> Void
     let onOpenAdvancedSearch: () -> Void
+
+    private var allowedContentTypes: [UTType] {
+        switch fileImportKind {
+        case .csv:
+            [.commaSeparatedText, .plainText, .text]
+        case .koboAnnotations:
+            [.plainText, .text]
+        }
+    }
 
     func body(content: Content) -> some View {
         content
@@ -32,6 +49,9 @@ struct ContentViewImportLifecycleModifier: ViewModifier {
             .onReceive(NotificationCenter.default.publisher(for: .importFromAppleBooks)) { _ in
                 onImportFromAppleBooks()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .importFromKoboAnnotations)) { _ in
+                onBeginKoboImport()
+            }
             .onReceive(NotificationCenter.default.publisher(for: .importQuotationsFromCSV)) { _ in
                 onBeginCSVImport()
             }
@@ -39,14 +59,19 @@ struct ContentViewImportLifecycleModifier: ViewModifier {
                 onAddQuotation()
             }
             .fileImporter(
-                isPresented: $showCSVImporter,
-                allowedContentTypes: [.commaSeparatedText, .plainText, .text],
+                isPresented: $showFileImporter,
+                allowedContentTypes: allowedContentTypes,
                 allowsMultipleSelection: false
             ) { result in
                 switch result {
                 case .success(let urls):
                     guard let url = urls.first else { return }
-                    onImportCSV(url)
+                    switch fileImportKind {
+                    case .csv:
+                        onImportCSV(url)
+                    case .koboAnnotations:
+                        onImportFromKoboAnnotations(url)
+                    }
                 case .failure(let error):
                     errorMessage = error.localizedDescription
                     showError = true
