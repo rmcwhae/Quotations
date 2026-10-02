@@ -7,7 +7,7 @@ import Foundation
 import SwiftData
 
 enum AppGroupStore {
-    static let identifier = "group.com.russellmcwhae.Quotations"
+    static let identifier = "group.com.russellmcwhae.Quotations.personal"
     static let configurationName = "Quotations"
 
     static var containerURL: URL? {
