@@ -183,6 +183,10 @@ struct ContentView: View {
             onSelectFilter: selectFilter
         )
         .equatable()
+        // Set here, outside `.equatable()`: inside it the width was ignored, so the sidebar
+        // shrank (truncating "Quotations by Source") when Explore/Ask switch the window to
+        // two columns. The minimum keeps it from getting narrower than the title needs.
+        .navigationSplitViewColumnWidth(min: 200, ideal: 220, max: 320)
     }
 
     private func contextList(shell: ContentViewShellState) -> some View {

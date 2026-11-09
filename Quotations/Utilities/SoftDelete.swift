@@ -3,7 +3,6 @@
 //  Quotations
 //
 
-import AppKit
 import Foundation
 import SwiftData
 
@@ -88,8 +87,6 @@ enum SoftDelete {
             )
         }
         undoManager.setActionName(actionName)
-        // DEBUG-UNDO-TITLE (temporary)
-        NSLog("UNDO-DEBUG title=%@ sameAsKeyWindow=%d groupingLevel=%d", undoManager.undoMenuItemTitle, (undoManager === NSApp.mainWindow?.undoManager) ? 1 : 0, undoManager.groupingLevel)
     }
 
     /// Soft-deletes live quotations whose text is empty or whitespace, e.g. a new draft

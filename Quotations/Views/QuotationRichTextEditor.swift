@@ -109,8 +109,10 @@ struct QuotationRichTextEditor: NSViewRepresentable {
             }
         } else {
             context.coordinator.lastAppliedSelectionID = selectionRequestID
-            if textView.window?.firstResponder === textView {
-                textView.window?.makeFirstResponder(nil)
+            if let window = textView.window, window.firstResponder === textView {
+                // Hand focus back to the SwiftUI content (not nil): with no first responder,
+                // SwiftUI can't focus the selected row, so Delete and arrow keys stop working.
+                window.makeFirstResponder(window.contentView)
             }
             // Collapse any lingering selection (e.g. a previous select-all) so it
             // doesn't briefly flash highlighted when this editor regains focus.
@@ -211,6 +213,45 @@ final class QuotationTextView: NSTextView {
     /// Set when SwiftUI asked for focus (and a caret position) before the view had a window.
     var focusWhenAttached = false
     var selectionWhenAttached: (() -> Void)?
+
+    /// While editing, watches for clicks anywhere else in the window and ends editing
+    /// exactly like Escape. The click still goes through (e.g. selecting another row).
+    private var outsideClickMonitor: Any?
+
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted { installOutsideClickMonitor() }
+        return accepted
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        if resigned { removeOutsideClickMonitor() }
+        return resigned
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        super.viewWillMove(toWindow: newWindow)
+        if newWindow == nil { removeOutsideClickMonitor() }
+    }
+
+    private func installOutsideClickMonitor() {
+        guard outsideClickMonitor == nil else { return }
+        outsideClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] event in
+            guard let self, event.window === self.window else { return event }
+            // Count the padded editing box around the text as "inside".
+            let point = self.convert(event.locationInWindow, from: nil)
+            if !self.bounds.insetBy(dx: -12, dy: -10).contains(point) {
+                DispatchQueue.main.async { [weak self] in self?.onEscape?() }
+            }
+            return event
+        }
+    }
+
+    private func removeOutsideClickMonitor() {
+        if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
+        outsideClickMonitor = nil
+    }
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()

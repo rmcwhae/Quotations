@@ -89,9 +89,7 @@ extension QuotationRowView {
             commitEdit()
             selectAllOnFocus = false
             pendingClickWindowLocation = nil
-            if isSelected {
-                isRowFocused = true
-            }
+            focusRowIfSelected()
         }
     }
 
@@ -101,7 +99,18 @@ extension QuotationRowView {
             isTextFocused = false
         } else {
             commitLocationAfterFieldFlush()
-            if isSelected, !isTextFocused {
+            if !isTextFocused {
+                focusRowIfSelected()
+            }
+        }
+    }
+
+    /// Gives keyboard focus back to the selected row after editing ends, so Delete and the
+    /// arrow keys keep working. Deferred one turn: the row only becomes `.focusable` once
+    /// `isEditing` is false, and a focus request in the same update is dropped.
+    func focusRowIfSelected() {
+        DispatchQueue.main.async {
+            if isSelected, !isEditing {
                 isRowFocused = true
             }
         }
