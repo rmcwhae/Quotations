@@ -33,6 +33,9 @@ struct WordBubbleChartView: View {
     /// and only recomputed when the entries or the rounded container size change.
     @State private var layouts: [BubbleLayout] = []
     @State private var layoutKey: LayoutKey?
+    /// Shrinks the cloud when the packed bubbles are taller or wider than the space,
+    /// so none spill over the controls above it.
+    @State private var fitScale: CGFloat = 1
 
     var body: some View {
         GeometryReader { geometry in
@@ -63,6 +66,8 @@ struct WordBubbleChartView: View {
                     .help("\(bubble.entry.word): \(bubble.entry.count)")
                 }
             }
+            .frame(width: geometry.size.width, height: geometry.size.height)
+            .scaleEffect(fitScale)
             .onAppear { updateLayout(for: key, size: geometry.size) }
             .onChange(of: key) { _, newKey in updateLayout(for: newKey, size: geometry.size) }
         }
@@ -72,6 +77,16 @@ struct WordBubbleChartView: View {
         guard key != layoutKey else { return }
         layoutKey = key
         layouts = bubbleLayout(in: size)
+        fitScale = Self.fitScale(for: layouts, in: size)
+    }
+
+    private static func fitScale(for layouts: [BubbleLayout], in size: CGSize) -> CGFloat {
+        guard !layouts.isEmpty, size.width > 0, size.height > 0 else { return 1 }
+        let minX = layouts.map { $0.center.x - $0.radius }.min() ?? 0
+        let maxX = layouts.map { $0.center.x + $0.radius }.max() ?? 0
+        let minY = layouts.map { $0.center.y - $0.radius }.min() ?? 0
+        let maxY = layouts.map { $0.center.y + $0.radius }.max() ?? 0
+        return min(1, size.width / (maxX - minX), size.height / (maxY - minY))
     }
 
     private func bubbleLayout(in size: CGSize) -> [BubbleLayout] {

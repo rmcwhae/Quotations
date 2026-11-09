@@ -74,20 +74,17 @@ struct QuotationRichTextEditor: NSViewRepresentable {
         }
 
         if isFocused {
-            guard let window = textView.window else { return }
-            if window.firstResponder !== textView {
-                window.makeFirstResponder(textView)
-            }
             // Apply each selection request exactly once (keyed by id), never on every
             // keystroke (which would re-run "select all" and reduce typing to one letter).
             // Keying on the id lets a triple-click re-apply select-all even though the
             // preceding double-click already focused the view.
+            var pendingSelection: (() -> Void)?
             let needsSelection = selectAllOnFocus || clickWindowLocation != nil
             if needsSelection, context.coordinator.lastAppliedSelectionID != selectionRequestID {
                 context.coordinator.lastAppliedSelectionID = selectionRequestID
                 let windowPoint = clickWindowLocation
                 let selectAll = selectAllOnFocus
-                DispatchQueue.main.async { [weak textView] in
+                pendingSelection = { [weak textView] in
                     guard let textView else { return }
                     Coordinator.applySelection(
                         in: textView,
@@ -95,6 +92,20 @@ struct QuotationRichTextEditor: NSViewRepresentable {
                         selectAllOnFocus: selectAll
                     )
                 }
+            }
+
+            guard let window = textView.window else {
+                // A freshly created editor isn't in a window yet. Without this retry the focus
+                // request is dropped, keys go to the window, and Delete opens "Remove quotation?".
+                textView.focusWhenAttached = true
+                if let pendingSelection { textView.selectionWhenAttached = pendingSelection }
+                return
+            }
+            if window.firstResponder !== textView {
+                window.makeFirstResponder(textView)
+            }
+            if let pendingSelection {
+                DispatchQueue.main.async(execute: pendingSelection)
             }
         } else {
             context.coordinator.lastAppliedSelectionID = selectionRequestID
@@ -197,6 +208,20 @@ struct QuotationRichTextEditor: NSViewRepresentable {
 final class QuotationTextView: NSTextView {
     var onEscape: (() -> Void)?
     var onCommit: (() -> Void)?
+    /// Set when SwiftUI asked for focus (and a caret position) before the view had a window.
+    var focusWhenAttached = false
+    var selectionWhenAttached: (() -> Void)?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        guard focusWhenAttached, let window else { return }
+        focusWhenAttached = false
+        window.makeFirstResponder(self)
+        if let selection = selectionWhenAttached {
+            selectionWhenAttached = nil
+            DispatchQueue.main.async(execute: selection)
+        }
+    }
 
     override func cancelOperation(_ sender: Any?) {
         if let onEscape {
@@ -252,6 +277,12 @@ final class QuotationTextView: NSTextView {
     }
 
     override func keyDown(with event: NSEvent) {
+        // Escape ends editing here (NSTextView would otherwise run completion, and the key
+        // falls through to the window, which clears the quotation selection).
+        if event.keyCode == 53, !hasMarkedText(), let onEscape {
+            onEscape()
+            return
+        }
         // Let Return confirm an input-method composition (e.g. Japanese, Chinese) first.
         if isEditable,
            window?.firstResponder === self,

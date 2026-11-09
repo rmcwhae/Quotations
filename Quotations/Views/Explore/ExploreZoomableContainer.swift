@@ -19,6 +19,9 @@ struct ExploreZoomableContainer<Content: View>: View {
             .offset(offset)
             .gesture(panGesture.simultaneously(with: zoomGesture))
             .animation(.easeOut(duration: 0.15), value: scale)
+            // Panned or zoomed content stays inside its area instead of covering the controls.
+            .clipped()
+            .contentShape(Rectangle())
     }
 
     private var panGesture: some Gesture {

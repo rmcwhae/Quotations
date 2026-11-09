@@ -25,7 +25,10 @@ struct LibraryFilterSidebarView: View, Equatable {
                 }
             }
         }
-        .navigationSplitViewColumnWidth(min: 160, ideal: 200, max: 300)
+        // Fixed width: the window switches between a two- and three-column split view
+        // (Explore/Ask vs. the rest), and a flexible min/ideal was not honoured across that
+        // switch, so the sidebar shrank and truncated "Quotations by Source".
+        .navigationSplitViewColumnWidth(200)
     }
 
     /// Native List selection: arrow keys, full-row hit targets and the system highlight.
