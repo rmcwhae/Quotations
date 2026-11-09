@@ -69,4 +69,16 @@ final class SoftDeleteTests: XCTestCase {
         XCTAssertNotNil(source.deletedAt)
         XCTAssertNotNil(quotation.deletedAt)
     }
+
+    func testBlankQuotationsAreSoftDeletedAndOthersKept() throws {
+        let blank = Quotation(content: "  \n ")
+        let kept = Quotation(content: "Keep me")
+        context.insert(blank)
+        context.insert(kept)
+        try context.save()
+
+        XCTAssertEqual(try SoftDelete.blankQuotations(in: context), 1)
+        XCTAssertNotNil(blank.deletedAt)
+        XCTAssertNil(kept.deletedAt)
+    }
 }

@@ -50,55 +50,22 @@ enum AppleBooksImportService {
 }
 
 private extension AppleBooksImportService {
-    /// Tracks lookup tables and running counts while importing a batch of rows.
+    /// Tracks running counts while importing a batch of rows.
     final class Importer {
-        private let modelContext: ModelContext
+        private let lookup: ImportLookup
 
-        private var sourceByExternalID: [String: Source] = [:]
-        private var sourceByTitleAuthor: [String: Source] = [:]
-        private var quotationByExternalID: [String: Quotation] = [:]
-        private var authorByName: [String: Author] = [:]
-
-        private var importedAuthors = 0
-        private var importedSources = 0
         private var importedQuotations = 0
         private var skippedDuplicates = 0
         private var skippedEmpty = 0
 
         init(modelContext: ModelContext) throws {
-            self.modelContext = modelContext
-
-            let sources = try modelContext.fetch(FetchDescriptor<Source>(
-                predicate: #Predicate<Source> { $0.deletedAt == nil }
-            ))
-            for source in sources {
-                if let id = source.externalIdentifier {
-                    sourceByExternalID[id] = source
-                }
-                sourceByTitleAuthor[sourceMatchKey(title: source.title, author: source.author?.name)] = source
-            }
-
-            let quotations = try modelContext.fetch(FetchDescriptor<Quotation>(
-                predicate: #Predicate<Quotation> { $0.deletedAt == nil }
-            ))
-            for quotation in quotations {
-                if let id = quotation.externalIdentifier {
-                    quotationByExternalID[id] = quotation
-                }
-            }
-
-            let authors = try modelContext.fetch(FetchDescriptor<Author>(
-                predicate: #Predicate<Author> { $0.deletedAt == nil }
-            ))
-            for author in authors {
-                authorByName[author.name.lowercased()] = author
-            }
+            self.lookup = try ImportLookup(modelContext: modelContext)
         }
 
         var result: AppleBooksImportResult {
             AppleBooksImportResult(
-                importedAuthors: importedAuthors,
-                importedSources: importedSources,
+                importedAuthors: lookup.importedAuthors,
+                importedSources: lookup.importedSources,
                 importedQuotations: importedQuotations,
                 skippedDuplicates: skippedDuplicates,
                 skippedEmpty: skippedEmpty
@@ -113,54 +80,29 @@ private extension AppleBooksImportService {
             }
 
             let quotationExternalID = quotationExternalIdentifier(for: row.annotationUUID)
-            guard quotationByExternalID[quotationExternalID] == nil else {
+            guard !lookup.containsQuotation(externalID: quotationExternalID) else {
                 skippedDuplicates += 1
                 return
             }
 
-            let source = resolveSource(for: row)
+            let source = lookup.resolveSource(
+                externalID: sourceExternalIdentifier(for: row.assetID),
+                title: row.bookTitle,
+                authorName: row.authorName ?? "Unknown Author",
+                format: .appleBooks
+            )
             applyDateReadIfMissing(row.dateReadComponents, to: source)
 
-            let quotation = Quotation(
+            guard lookup.insertQuotation(
                 content: trimmed,
                 source: source,
                 location: row.location,
-                externalIdentifier: quotationExternalID
-            )
-            modelContext.insert(quotation)
-            quotationByExternalID[quotationExternalID] = quotation
+                externalID: quotationExternalID
+            ) else {
+                skippedDuplicates += 1
+                return
+            }
             importedQuotations += 1
-        }
-
-        private func resolveSource(for row: AppleBooksHighlightRow) -> Source {
-            let sourceExternalID = sourceExternalIdentifier(for: row.assetID)
-            if let existing = sourceByExternalID[sourceExternalID] {
-                return existing
-            }
-
-            let matchKey = sourceMatchKey(title: row.bookTitle, author: row.authorName)
-            if let existing = sourceByTitleAuthor[matchKey] {
-                if existing.externalIdentifier == nil {
-                    existing.externalIdentifier = sourceExternalID
-                }
-                sourceByExternalID[sourceExternalID] = existing
-                return existing
-            }
-
-            let dateRead = row.dateReadComponents
-            let source = Source(
-                title: row.bookTitle,
-                author: resolveAuthor(named: row.authorName ?? "Unknown Author"),
-                format: SourceFormat.appleBooks.rawValue,
-                dateReadMonth: dateRead?.month,
-                dateReadYear: dateRead?.year,
-                externalIdentifier: sourceExternalID
-            )
-            modelContext.insert(source)
-            sourceByExternalID[sourceExternalID] = source
-            sourceByTitleAuthor[matchKey] = source
-            importedSources += 1
-            return source
         }
 
         private func applyDateReadIfMissing(_ dateRead: (month: Int, year: Int)?, to source: Source) {
@@ -168,25 +110,6 @@ private extension AppleBooksImportService {
             source.dateReadMonth = dateRead.month
             source.dateReadYear = dateRead.year
             source.updatedAt = Date()
-        }
-
-        private func resolveAuthor(named name: String) -> Author {
-            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            let key = trimmed.lowercased()
-            if let existing = authorByName[key] {
-                return existing
-            }
-            let author = Author(name: trimmed)
-            modelContext.insert(author)
-            authorByName[key] = author
-            importedAuthors += 1
-            return author
-        }
-
-        private func sourceMatchKey(title: String, author: String?) -> String {
-            let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let normalizedAuthor = (author ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            return "\(normalizedAuthor)\u{1F}|\(normalizedTitle)"
         }
     }
 }

@@ -162,6 +162,36 @@ final class QuotationCSVImportTests: XCTestCase {
     XCTAssertTrue(quotations.contains { $0.content == "New quotation" })
   }
 
+  func testParserDecodesWindows1252() throws {
+    // "Café — ok" with é = 0xE9 and em dash = 0x97 in Windows-1252.
+    var data = Data("content\n\"Caf".utf8)
+    data.append(contentsOf: [0xE9, 0x20, 0x97, 0x20])
+    data.append(contentsOf: Array("ok\"\n".utf8))
+
+    let rows = try QuotationCSVParser.parse(data: data)
+    XCTAssertEqual(rows.map(\.content), ["Café — ok"])
+  }
+
+  func testReimportSkipsSoftDeletedQuotation() throws {
+    let author = Author(name: "Test Author")
+    let source = Source(title: "Target Book", author: author)
+    context.insert(author)
+    context.insert(source)
+    let deleted = Quotation(content: "Deleted one", source: source)
+    deleted.deletedAt = Date()
+    context.insert(deleted)
+    try context.save()
+
+    let result = try QuotationCSVImportService.importRows(
+      [QuotationCSVRow(content: "Deleted one", location: nil, sourceImage: nil)],
+      into: source,
+      modelContext: context,
+      backupManager: backupManager
+    )
+    XCTAssertEqual(result.importedQuotations, 0)
+    XCTAssertEqual(result.skippedDuplicates, 1)
+  }
+
   func testImportCSVReadsFile() throws {
     let author = Author(name: "Test Author")
     let source = Source(title: "Target Book", author: author)

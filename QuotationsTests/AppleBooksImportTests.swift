@@ -158,6 +158,31 @@ final class AppleBooksImportTests: XCTestCase {
         XCTAssertEqual(rows.first?.selectedText, "Fixture highlight.")
         XCTAssertEqual(rows.first?.authorName, "Fixture Author")
     }
+
+    func testSQLiteReaderIncludesHighlightsStillInWAL() throws {
+        let fixtureDirectory = tempDirectory.appendingPathComponent("AppleBooksWAL", isDirectory: true)
+        try FileManager.default.createDirectory(at: fixtureDirectory, withIntermediateDirectories: true)
+        let annotationURL = fixtureDirectory.appendingPathComponent("AEAnnotation_test.sqlite")
+        let libraryURL = fixtureDirectory.appendingPathComponent("BKLibrary_test.sqlite")
+        try AppleBooksTestFixtures.write(annotationDatabase: annotationURL, libraryDatabase: libraryURL)
+
+        // Keep a writer open so the new row stays in the -wal file, as with a running Apple Books.
+        var writer: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(annotationURL.path, &writer), SQLITE_OK)
+        defer { sqlite3_close(writer) }
+        XCTAssertEqual(sqlite3_exec(writer, """
+        PRAGMA journal_mode=WAL;
+        PRAGMA wal_autocheckpoint=0;
+        INSERT INTO ZAEANNOTATION VALUES ('wal-annotation', 'fixture-asset', 'From the WAL.', NULL, NULL, 0, 1);
+        """, nil, nil, nil), SQLITE_OK)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: annotationURL.path + "-wal"))
+
+        let rows = try AppleBooksSQLiteReader.readHighlights(
+            annotationDatabase: annotationURL,
+            libraryDatabase: libraryURL
+        )
+        XCTAssertEqual(rows.map(\.selectedText), ["Fixture highlight.", "From the WAL."])
+    }
 }
 
 private enum AppleBooksTestFixtures {

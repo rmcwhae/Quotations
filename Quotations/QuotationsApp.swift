@@ -36,6 +36,7 @@ struct QuotationsApp: App {
                 context: context,
                 storeURL: persistentConfiguration.url
             )
+            try? SoftDelete.blankQuotations(in: context)
             personalContainer = container
             loadWarning = nil
         } catch {

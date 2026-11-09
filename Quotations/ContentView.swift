@@ -129,6 +129,10 @@ struct ContentView: View {
                 },
                 onSourceCreated: handleSourceCreated
             ))
+            .environment(\.reportEditError) { message in
+                errorMessage = message
+                showError = true
+            }
     }
 
     @ViewBuilder

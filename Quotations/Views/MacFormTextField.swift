@@ -25,6 +25,7 @@ struct MacFormTextField: NSViewRepresentable {
     }
 
     func updateNSView(_ nsView: NSTextField, context: Context) {
+        context.coordinator.parent = self
         guard nsView.stringValue != text else { return }
         if let editor = nsView.currentEditor() as? NSTextView {
             editor.string = text

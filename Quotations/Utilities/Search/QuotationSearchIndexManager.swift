@@ -41,6 +41,8 @@ enum QuotationSearchIndexManager {
 
         if !isDemo {
             do {
+                // Replace the whole domain so deleted quotations drop out of Spotlight.
+                try await QuotationSpotlightIndexer.deleteAll()
                 try await QuotationSpotlightIndexer.index(quotations: quotations)
             } catch {
                 // Spotlight indexing is best-effort; embedding sync still runs.

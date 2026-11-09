@@ -252,8 +252,10 @@ final class QuotationTextView: NSTextView {
     }
 
     override func keyDown(with event: NSEvent) {
+        // Let Return confirm an input-method composition (e.g. Japanese, Chinese) first.
         if isEditable,
            window?.firstResponder === self,
+           !hasMarkedText(),
            event.keyCode == 36 || event.keyCode == 76 {
             let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if flags.contains(.shift) {

@@ -49,8 +49,7 @@ enum QuotationCSVImportService {
 private extension QuotationCSVImportService {
     final class Importer {
         private let source: Source
-        private let modelContext: ModelContext
-        private var existingContentKeys: Set<String>
+        private let lookup: ImportLookup
 
         private var importedQuotations = 0
         private var skippedDuplicates = 0
@@ -58,16 +57,7 @@ private extension QuotationCSVImportService {
 
         init(source: Source, modelContext: ModelContext) throws {
             self.source = source
-            self.modelContext = modelContext
-            let sourceID = source.persistentModelID
-            let quotations = try modelContext.fetch(FetchDescriptor<Quotation>(
-                predicate: #Predicate<Quotation> { $0.deletedAt == nil }
-            ))
-            self.existingContentKeys = Set(
-                quotations
-                    .filter { $0.source?.persistentModelID == sourceID }
-                    .map { Self.normalizedContentKey($0.content) }
-            )
+            self.lookup = try ImportLookup(modelContext: modelContext)
         }
 
         var result: QuotationCSVImportResult {
@@ -85,24 +75,11 @@ private extension QuotationCSVImportService {
                 return
             }
 
-            let key = Self.normalizedContentKey(trimmed)
-            guard !existingContentKeys.contains(key) else {
+            guard lookup.insertQuotation(content: trimmed, source: source, location: row.location) else {
                 skippedDuplicates += 1
                 return
             }
-
-            let quotation = Quotation(
-                content: trimmed,
-                source: source,
-                location: row.location
-            )
-            modelContext.insert(quotation)
-            existingContentKeys.insert(key)
             importedQuotations += 1
-        }
-
-        private static func normalizedContentKey(_ content: String) -> String {
-            content.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
     }
 }

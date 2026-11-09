@@ -11,12 +11,7 @@ enum QuotationCSVParser {
             throw QuotationCSVImportError.emptyFile
         }
 
-        var bytes = Array(data)
-        if bytes.starts(with: [0xEF, 0xBB, 0xBF]) {
-            bytes.removeFirst(3)
-        }
-
-        let records = try parseRecords(bytes)
+        let records = try parseRecords(utf8Bytes(from: data))
         guard let headerRecord = records.first else {
             throw QuotationCSVImportError.emptyFile
         }
@@ -48,6 +43,20 @@ enum QuotationCSVParser {
         return fields[index]
     }
 
+    /// Decodes the file as UTF-8 (dropping a BOM), falling back to Windows-1252 as Excel
+    /// writes it, and returns UTF-8 bytes so fields split on ASCII delimiters stay valid.
+    private static func utf8Bytes(from data: Data) throws -> [UInt8] {
+        var bytes = Array(data)
+        if bytes.starts(with: [0xEF, 0xBB, 0xBF]) {
+            bytes.removeFirst(3)
+        }
+        guard let text = String(bytes: bytes, encoding: .utf8)
+                ?? String(bytes: bytes, encoding: .windowsCP1252) else {
+            throw QuotationCSVImportError.invalidFormat("CSV must be UTF-8 or Windows-1252 encoded.")
+        }
+        return Array(text.utf8)
+    }
+
     private static func parseRecords(_ bytes: [UInt8]) throws -> [[String]] {
         var builder = RecordBuilder()
         var index = 0
@@ -67,11 +76,7 @@ enum QuotationCSVParser {
     #if DEBUG
     static func debugRecordCount(data: Data) throws -> Int {
         guard !data.isEmpty else { return 0 }
-        var bytes = Array(data)
-        if bytes.starts(with: [0xEF, 0xBB, 0xBF]) {
-            bytes.removeFirst(3)
-        }
-        return try parseRecords(bytes).count
+        return try parseRecords(utf8Bytes(from: data)).count
     }
     #endif
 }
@@ -133,7 +138,7 @@ private extension QuotationCSVParser {
         }
 
         private mutating func finishField() {
-            let field = String(bytes: currentFieldBytes, encoding: .utf8) ?? ""
+            let field = String(decoding: currentFieldBytes, as: UTF8.self)
             currentRecord.append(field)
             currentFieldBytes.removeAll(keepingCapacity: true)
         }

@@ -46,16 +46,14 @@ struct ContentViewSheetsModifier: ViewModifier {
                             onSourceCreated(sourceId)
                         }
                     },
-                    onCancel: { newSourceSession = nil },
-                    onError: onEditError
+                    onCancel: { newSourceSession = nil }
                 )
             }
             .sheet(item: $sourceToEdit) { source in
                 SourceFormView(
                     existingSource: source,
                     onSuccess: { _ in sourceToEdit = nil },
-                    onCancel: { sourceToEdit = nil },
-                    onError: onEditError
+                    onCancel: { sourceToEdit = nil }
                 )
             }
             .modifier(DeleteSourceConfirmationModifier(
@@ -117,7 +115,6 @@ struct DeleteSourceConfirmationModifier: ViewModifier {
             Button("Delete", role: .destructive) {
                 deleteSelectedSource()
             }
-            .keyboardShortcut(.defaultAction)
             Button("Cancel", role: .cancel) {
                 sourceToDelete = nil
             }
@@ -160,7 +157,6 @@ struct DeleteQuotationConfirmationModifier: ViewModifier {
             Button("Remove", role: .destructive) {
                 deleteSelectedQuotation()
             }
-            .keyboardShortcut(.defaultAction)
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This quotation will be removed from your library.")

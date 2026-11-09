@@ -51,19 +51,6 @@ enum QuotationSpotlightIndexer {
         }
     }
 
-    static func remove(encodedIDs: [String]) async throws {
-        guard !encodedIDs.isEmpty else { return }
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            CSSearchableIndex.default().deleteSearchableItems(withIdentifiers: encodedIDs) { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
-        }
-    }
-
     static func deleteAll() async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             CSSearchableIndex.default().deleteSearchableItems(

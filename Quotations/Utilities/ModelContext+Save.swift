@@ -5,6 +5,7 @@
 
 import Foundation
 import SwiftData
+import SwiftUI
 import WidgetKit
 
 extension ModelContext {
@@ -21,4 +22,9 @@ extension ModelContext {
         WidgetCenter.shared.reloadAllTimelines()
         QuotationSearchIndexManager.scheduleSync(modelContext: self)
     }
+}
+
+extension EnvironmentValues {
+    /// Shows a save/delete failure to the user. ContentView wires this to its error alert.
+    @Entry var reportEditError: (String) -> Void = { _ in }
 }

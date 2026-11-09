@@ -44,7 +44,7 @@ extension QuotationRowView {
             try? await Task.sleep(for: quotationEditDebounceInterval)
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                commitEdit()
+                commitEdit(isFinal: false)
             }
         }
     }
@@ -135,29 +135,35 @@ extension QuotationRowView {
         return .ignored
     }
 
-    func commitEdit() {
+    /// Writes the edited text to the model. Intermediate (debounced) commits only save the
+    /// store; the final commit when editing ends also notifies widget and search indexing.
+    func commitEdit(isFinal: Bool = true) {
         let trimmed = editedContent.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
+            guard isFinal else { return }
             if isNewDraft {
                 onDelete(quotation.id)
-            } else if quotation.content != "" {
-                quotation.content = ""
-                quotation.updatedAt = Date()
-                onEdit(quotation)
+                return
             }
+            // Emptying the text never wipes a quotation; use Delete to remove it.
+            editedContent = quotation.content
         } else if trimmed != quotation.content {
             quotation.content = trimmed
             quotation.updatedAt = Date()
+            hasUnpublishedEdit = true
+        }
+        guard hasUnpublishedEdit else { return }
+        if isFinal {
+            hasUnpublishedEdit = false
             onEdit(quotation)
+        } else {
+            // Crash safety only; a failure here is reported by the final commit.
+            try? quotation.modelContext?.save()
         }
     }
 
     func commitLocation() {
-        let trimmed = editedLocation.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newValue = trimmed.isEmpty ? nil : trimmed
-        guard newValue != quotation.location else { return }
-        quotation.location = newValue
-        quotation.updatedAt = Date()
+        guard quotation.applyLocationInput(editedLocation) else { return }
         onEdit(quotation)
     }
 

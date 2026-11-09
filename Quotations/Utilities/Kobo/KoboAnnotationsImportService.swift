@@ -78,61 +78,31 @@ private extension KoboAnnotationsImportService {
     }
 
     final class Importer {
-        private let modelContext: ModelContext
+        private let lookup: ImportLookup
         private let bookTitle: String
         private let authorName: String
-        private let sourceExternalID: String
 
-        private var sourceByExternalID: [String: Source] = [:]
-        private var sourceByTitleAuthor: [String: Source] = [:]
-        private var quotationByExternalID: [String: Quotation] = [:]
-        private var authorByName: [String: Author] = [:]
-
-        private var importedAuthors = 0
-        private var importedSources = 0
         private var importedQuotations = 0
         private var skippedDuplicates = 0
         private var skippedEmpty = 0
 
-        private lazy var resolvedSource: Source = resolveSource()
+        private lazy var resolvedSource: Source = lookup.resolveSource(
+            externalID: sourceExternalIdentifier(title: bookTitle, author: authorName),
+            title: bookTitle,
+            authorName: authorName,
+            format: .kobo
+        )
 
         init(modelContext: ModelContext, bookTitle: String, authorName: String) throws {
-            self.modelContext = modelContext
+            self.lookup = try ImportLookup(modelContext: modelContext)
             self.bookTitle = bookTitle
             self.authorName = authorName
-            self.sourceExternalID = sourceExternalIdentifier(title: bookTitle, author: authorName)
-
-            let sources = try modelContext.fetch(FetchDescriptor<Source>(
-                predicate: #Predicate<Source> { $0.deletedAt == nil }
-            ))
-            for source in sources {
-                if let id = source.externalIdentifier {
-                    sourceByExternalID[id] = source
-                }
-                sourceByTitleAuthor[sourceMatchKey(title: source.title, author: source.author?.name)] = source
-            }
-
-            let quotations = try modelContext.fetch(FetchDescriptor<Quotation>(
-                predicate: #Predicate<Quotation> { $0.deletedAt == nil }
-            ))
-            for quotation in quotations {
-                if let id = quotation.externalIdentifier {
-                    quotationByExternalID[id] = quotation
-                }
-            }
-
-            let authors = try modelContext.fetch(FetchDescriptor<Author>(
-                predicate: #Predicate<Author> { $0.deletedAt == nil }
-            ))
-            for author in authors {
-                authorByName[author.name.lowercased()] = author
-            }
         }
 
         var result: KoboAnnotationsImportResult {
             KoboAnnotationsImportResult(
-                importedAuthors: importedAuthors,
-                importedSources: importedSources,
+                importedAuthors: lookup.importedAuthors,
+                importedSources: lookup.importedSources,
                 importedQuotations: importedQuotations,
                 skippedDuplicates: skippedDuplicates,
                 skippedEmpty: skippedEmpty
@@ -152,70 +122,17 @@ private extension KoboAnnotationsImportService {
                 location: highlight.location,
                 content: trimmed
             )
-            guard quotationByExternalID[quotationExternalID] == nil else {
+            guard !lookup.containsQuotation(externalID: quotationExternalID),
+                  lookup.insertQuotation(
+                      content: trimmed,
+                      source: resolvedSource,
+                      location: highlight.location,
+                      externalID: quotationExternalID
+                  ) else {
                 skippedDuplicates += 1
                 return
             }
-
-            let quotation = Quotation(
-                content: trimmed,
-                source: resolvedSource,
-                location: highlight.location,
-                externalIdentifier: quotationExternalID
-            )
-            modelContext.insert(quotation)
-            quotationByExternalID[quotationExternalID] = quotation
             importedQuotations += 1
-        }
-
-        private func resolveSource() -> Source {
-            if let existing = sourceByExternalID[sourceExternalID] {
-                return existing
-            }
-
-            let matchKey = sourceMatchKey(title: bookTitle, author: authorName)
-            if let existing = sourceByTitleAuthor[matchKey] {
-                if existing.externalIdentifier == nil {
-                    existing.externalIdentifier = sourceExternalID
-                }
-                if existing.format == nil {
-                    existing.format = SourceFormat.kobo.rawValue
-                    existing.updatedAt = Date()
-                }
-                sourceByExternalID[sourceExternalID] = existing
-                return existing
-            }
-
-            let source = Source(
-                title: bookTitle,
-                author: resolveAuthor(named: authorName),
-                format: SourceFormat.kobo.rawValue,
-                externalIdentifier: sourceExternalID
-            )
-            modelContext.insert(source)
-            sourceByExternalID[sourceExternalID] = source
-            sourceByTitleAuthor[matchKey] = source
-            importedSources += 1
-            return source
-        }
-
-        private func resolveAuthor(named name: String) -> Author {
-            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-            let key = trimmed.lowercased()
-            if let existing = authorByName[key] {
-                return existing
-            }
-            let author = Author(name: trimmed)
-            modelContext.insert(author)
-            authorByName[key] = author
-            importedAuthors += 1
-            return author
-        }
-
-        private func sourceMatchKey(title: String, author: String?) -> String {
-            let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            let normalizedAuthor = (author ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-            return "\(normalizedAuthor)\u{1F}|\(normalizedTitle)"
         }
     }
 }

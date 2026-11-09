@@ -118,7 +118,9 @@ extension QuotationRowView {
         }
         .onDisappear {
             saveTask?.cancel()
-            persistLocationField()
+            locationSaveTask?.cancel()
+            // Commit directly: focus-change handlers may not run on a view that is going away.
+            commitLocation()
             commitEdit()
         }
         .onChange(of: isSelected) { _, selected in

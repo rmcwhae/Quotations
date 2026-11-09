@@ -42,6 +42,8 @@ struct QuotationRowView: View {
     @FocusState var isLocationFocused: Bool
     @FocusState var isRowFocused: Bool
     @State var didBeginEditing = false
+    /// Content was written to the model by a debounced commit but not yet announced via `onEdit`.
+    @State var hasUnpublishedEdit = false
 
     init(
         quotation: Quotation,

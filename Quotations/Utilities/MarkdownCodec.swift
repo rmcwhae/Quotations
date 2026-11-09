@@ -93,31 +93,50 @@ enum MarkdownCodec {
     // MARK: - Serialize
 
     static func markdown(from attributedString: NSAttributedString) -> String {
-        let string = attributedString.string
-        guard !string.isEmpty else { return "" }
+        let string = attributedString.string as NSString
+        guard string.length > 0 else { return "" }
 
-        var result = ""
-        var index = 0
-
-        while index < attributedString.length {
-            var effectiveRange = NSRange(location: 0, length: 0)
-            let attributes = attributedString.attributes(at: index, effectiveRange: &effectiveRange)
-            let substring = (string as NSString).substring(with: effectiveRange)
+        // Merge adjacent runs whose bold/italic traits match (they may differ in other
+        // attributes), so `**a**` + `**b**` serializes as `**ab**`, not `**a****b**`.
+        var runs: [Segment] = []
+        attributedString.enumerateAttributes(
+            in: NSRange(location: 0, length: string.length),
+            options: []
+        ) { attributes, range, _ in
             let traits = fontTraits(from: attributes)
-
-            if traits.bold && traits.italic {
-                result += "***\(escapeMarkdown(substring))***"
-            } else if traits.bold {
-                result += "**\(escapeMarkdown(substring))**"
-            } else if traits.italic {
-                result += "*\(escapeMarkdown(substring))*"
+            let text = string.substring(with: range)
+            if let last = runs.last, last.bold == traits.bold, last.italic == traits.italic {
+                runs[runs.count - 1] = Segment(text: last.text + text, bold: traits.bold, italic: traits.italic)
             } else {
-                result += escapeMarkdown(substring)
+                runs.append(Segment(text: text, bold: traits.bold, italic: traits.italic))
             }
-
-            index = effectiveRange.location + effectiveRange.length
         }
 
+        return runs.map { run in
+            let marker = (run.bold ? "**" : "") + (run.italic ? "*" : "")
+            // Emphasis markers must hug non-whitespace, so keep surrounding whitespace outside.
+            let leading = run.text.prefix { $0.isWhitespace }
+            let rest = run.text.dropFirst(leading.count)
+            let trailing = String(rest.reversed().prefix { $0.isWhitespace }.reversed())
+            let core = String(rest.dropLast(trailing.count))
+            guard !marker.isEmpty, !core.isEmpty else { return escapeMarkdown(run.text) }
+            return escapeMarkdown(String(leading)) + marker + escapeMarkdown(core) + marker + escapeMarkdown(trailing)
+        }.joined()
+    }
+
+    /// The visible text of stored markdown, with formatting markers and escapes removed.
+    static func plainText(from markdown: String) -> String {
+        segments(from: markdown).map(\.text).joined()
+    }
+
+    /// Backslash-escapes characters that inline markdown would otherwise interpret, so
+    /// plain text (e.g. imported highlights) round-trips through `attributedString(from:)`.
+    static func escapeMarkdown(_ text: String) -> String {
+        var result = ""
+        for character in text {
+            if "\\*_`[]~<&".contains(character) { result.append("\\") }
+            result.append(character)
+        }
         return result
     }
 
@@ -170,12 +189,5 @@ enum MarkdownCodec {
         guard let font = attributes[.font] as? NSFont else { return (false, false) }
         let traits = font.fontDescriptor.symbolicTraits
         return (traits.contains(.bold), traits.contains(.italic))
-    }
-
-    private static func escapeMarkdown(_ text: String) -> String {
-        text
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "*", with: "\\*")
-            .replacingOccurrences(of: "_", with: "\\_")
     }
 }

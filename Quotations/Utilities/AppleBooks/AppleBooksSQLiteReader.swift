@@ -38,10 +38,32 @@ enum AppleBooksSQLiteReader {
         let libraryScoped = libraryDatabase.startAccessingSecurityScopedResource()
         defer { if libraryScoped { libraryDatabase.stopAccessingSecurityScopedResource() } }
 
-        let database = try openAnnotationDatabase(at: annotationDatabase)
+        // Apple Books keeps recent highlights in the -wal file. Copy each database with its
+        // sidecars so SQLite can read them without `immutable=1` (which ignores the WAL)
+        // and without touching the live files.
+        let workDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("AppleBooksImport-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: workDirectory) }
+        let annotationCopy = try copyDatabase(
+            annotationDatabase,
+            into: workDirectory.appendingPathComponent("annotation", isDirectory: true),
+            failure: .annotationDatabaseUnreadable
+        )
+        let libraryCopy = try copyDatabase(
+            libraryDatabase,
+            into: workDirectory.appendingPathComponent("library", isDirectory: true),
+            failure: .libraryDatabaseUnreadable
+        )
+
+        var database: OpaquePointer?
+        guard sqlite3_open_v2(annotationCopy.path, &database, SQLITE_OPEN_READONLY, nil) == SQLITE_OK,
+              let database else {
+            sqlite3_close(database)
+            throw AppleBooksImportError.annotationDatabaseUnreadable
+        }
         defer { sqlite3_close(database) }
 
-        try attachLibrary(libraryDatabase, to: database)
+        try attachLibrary(libraryCopy, to: database)
 
         var queryStmt: OpaquePointer?
         guard sqlite3_prepare_v2(database, highlightsQuery, -1, &queryStmt, nil) == SQLITE_OK,
@@ -51,24 +73,49 @@ enum AppleBooksSQLiteReader {
         defer { sqlite3_finalize(queryStmt) }
 
         var rows: [AppleBooksHighlightRow] = []
-        while sqlite3_step(queryStmt) == SQLITE_ROW {
+        var rc = sqlite3_step(queryStmt)
+        while rc == SQLITE_ROW {
             if let row = makeRow(from: queryStmt) {
                 rows.append(row)
             }
+            rc = sqlite3_step(queryStmt)
+        }
+        guard rc == SQLITE_DONE else {
+            throw AppleBooksImportError.importFailed(String(cString: sqlite3_errmsg(database)))
         }
         return rows
     }
 
-    private static func openAnnotationDatabase(at url: URL) throws -> OpaquePointer {
-        var database: OpaquePointer?
-        // `immutable=1` reads the file without touching the -wal/-shm sidecar files,
-        // which the sandbox does not grant access to when only the .sqlite is chosen.
-        let flags = SQLITE_OPEN_READONLY | SQLITE_OPEN_URI
-        guard sqlite3_open_v2(immutableURI(for: url), &database, flags, nil) == SQLITE_OK,
-              let database else {
-            throw AppleBooksImportError.annotationDatabaseUnreadable
+    /// Copies `url` and any `-wal`/`-shm` sidecars into `directory`. Sidecars are copied only
+    /// as a pair (the sandbox may not grant access to them); without them the main file is
+    /// still a consistent, if possibly older, snapshot.
+    private static func copyDatabase(
+        _ url: URL,
+        into directory: URL,
+        failure: AppleBooksImportError
+    ) throws -> URL {
+        let fileManager = FileManager.default
+        let destination = directory.appendingPathComponent(url.lastPathComponent)
+        do {
+            try fileManager.createDirectory(at: directory, withIntermediateDirectories: true)
+            try fileManager.copyItem(at: url, to: destination)
+        } catch {
+            throw failure
         }
-        return database
+
+        let sidecars = ["-wal", "-shm"].map { suffix in
+            (URL(fileURLWithPath: url.path + suffix), URL(fileURLWithPath: destination.path + suffix))
+        }
+        do {
+            for (source, target) in sidecars where fileManager.fileExists(atPath: source.path) {
+                try fileManager.copyItem(at: source, to: target)
+            }
+        } catch {
+            for (_, target) in sidecars {
+                try? fileManager.removeItem(at: target)
+            }
+        }
+        return destination
     }
 
     private static func attachLibrary(_ libraryDatabase: URL, to database: OpaquePointer) throws {
@@ -79,19 +126,10 @@ enum AppleBooksSQLiteReader {
         }
         defer { sqlite3_finalize(attachStmt) }
 
-        sqlite3_bind_text(attachStmt, 1, immutableURI(for: libraryDatabase), -1, transientDestructor)
+        sqlite3_bind_text(attachStmt, 1, libraryDatabase.path, -1, transientDestructor)
         guard sqlite3_step(attachStmt) == SQLITE_DONE else {
             throw AppleBooksImportError.libraryDatabaseUnreadable
         }
-    }
-
-    /// Builds a SQLite `file:` URI with `immutable=1`, percent-encoding the path.
-    private static func immutableURI(for url: URL) -> String {
-        var components = URLComponents()
-        components.scheme = "file"
-        components.path = url.path
-        components.queryItems = [URLQueryItem(name: "immutable", value: "1")]
-        return components.string ?? "file:\(url.path)?immutable=1"
     }
 
     private static func makeRow(from statement: OpaquePointer) -> AppleBooksHighlightRow? {

@@ -38,3 +38,15 @@ final class Quotation {
         self.deletedAt = nil
     }
 }
+
+extension Quotation {
+    /// Stores a user-typed location (trimmed, empty = nil). Returns false when nothing changed.
+    func applyLocationInput(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newValue = trimmed.isEmpty ? nil : trimmed
+        guard newValue != location else { return false }
+        location = newValue
+        updatedAt = Date()
+        return true
+    }
+}

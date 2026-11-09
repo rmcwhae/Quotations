@@ -50,5 +50,32 @@ final class AppGroupStoreTests: XCTestCase {
         try AppGroupStore.consolidateSiblingStoresIfNeeded(around: canonicalURL)
 
         XCTAssertEqual(try BackupManager.liveQuotationCount(forStoreAt: canonicalURL), 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: legacySiblingURL.path))
+    }
+
+    func testRetiredSiblingNeverOverwritesLiveStoreAgain() throws {
+        let schema = Schema([Author.self, Source.self, Quotation.self])
+        let canonicalURL = tempDirectory.appendingPathComponent("Quotations.store")
+        let siblingURL = tempDirectory.appendingPathComponent("default.store")
+
+        // Sibling has 2 quotations, canonical has 3: canonical wins, sibling is retired.
+        for (url, count) in [(siblingURL, 2), (canonicalURL, 3)] {
+            let context = ModelContext(try ModelContainer(for: schema, configurations: ModelConfiguration(url: url)))
+            for index in 0..<count {
+                context.insert(Quotation(content: "Quote \(index)"))
+            }
+            try context.save()
+        }
+        try AppGroupStore.consolidateSiblingStoresIfNeeded(around: canonicalURL)
+
+        // User deletes two quotations; the live store now has fewer than the old sibling had.
+        let liveContext = ModelContext(try ModelContainer(for: schema, configurations: ModelConfiguration(url: canonicalURL)))
+        let live = try liveContext.fetch(FetchDescriptor<Quotation>())
+        live.prefix(2).forEach { $0.deletedAt = Date() }
+        try liveContext.save()
+
+        try AppGroupStore.consolidateSiblingStoresIfNeeded(around: canonicalURL)
+
+        XCTAssertEqual(try BackupManager.liveQuotationCount(forStoreAt: canonicalURL), 1)
     }
 }

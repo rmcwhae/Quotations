@@ -90,16 +90,14 @@ struct AuthorListView: View {
         .sheet(isPresented: $showCreateForm) {
             AuthorFormView(
                 onSuccess: { showCreateForm = false },
-                onCancel: { showCreateForm = false },
-                onError: { msg in errorMessage = msg; showError = true }
+                onCancel: { showCreateForm = false }
             )
         }
         .sheet(item: $authorToEdit) { author in
             AuthorFormView(
                 existingAuthor: author,
                 onSuccess: { authorToEdit = nil },
-                onCancel: { authorToEdit = nil },
-                onError: { msg in errorMessage = msg; showError = true }
+                onCancel: { authorToEdit = nil }
             )
         }
         .confirmationDialog("Delete Author?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {

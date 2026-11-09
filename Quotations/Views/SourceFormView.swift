@@ -72,7 +72,9 @@ struct SourceFormView: View {
 
     var onSuccess: (PersistentIdentifier?) -> Void
     var onCancel: () -> Void
-    var onError: (String) -> Void
+
+    /// Shown inside the sheet: an alert on the presenting view can't appear while this sheet is up.
+    @State private var saveError: String?
 
     private var isEditing: Bool { existingSource != nil }
 
@@ -92,11 +94,23 @@ struct SourceFormView: View {
         !authorText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private var trimmedPublicationYear: String {
+        publicationYear.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Empty is allowed (no year); anything else must be a whole number.
+    private var publicationYearIsValid: Bool {
+        trimmedPublicationYear.isEmpty || Int(trimmedPublicationYear) != nil
+    }
+
     private let monthSymbols = Calendar.current.monthSymbols
-    /// Reading years limited to the last 15 years (most recent first).
+    /// The last 15 years (most recent first), extended back to an older stored year so
+    /// editing such a source still shows its value.
     private var yearRange: [Int] {
         let currentYear = Calendar.current.component(.year, from: Date())
-        return Array(((currentYear - 15)...currentYear).reversed())
+        let earliest = min(dateReadYear ?? currentYear, currentYear - 15)
+        let latest = max(dateReadYear ?? currentYear, currentYear)
+        return Array((earliest...latest).reversed())
     }
 
     var body: some View {
@@ -124,7 +138,9 @@ struct SourceFormView: View {
                 MacFormTextField(placeholder: "", text: $url)
             }
 
-            TextField("Publication year", text: $publicationYear)
+            LabeledContent("Publication year") {
+                MacFormTextField(placeholder: "", text: $publicationYear)
+            }
 
             Picker("Format", selection: $format) {
                 Text("—").tag(Optional<SourceFormat>.none)
@@ -145,6 +161,12 @@ struct SourceFormView: View {
                 ForEach(1...12, id: \.self) { month in
                     Text(monthSymbols[month - 1]).tag(Optional(month))
                 }
+            }
+
+            if let message = publicationYearIsValid ? saveError : "Publication year must be a number, like 1984." {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
         }
         .formStyle(.grouped)
@@ -179,7 +201,11 @@ struct SourceFormView: View {
                 Button(isEditing ? "Save" : "Add") { submit() }
                     .accessibilityLabel(isEditing ? "Save source" : "Add source")
                     .help(isEditing ? "Save changes" : "Add source")
-                    .disabled(!authorNameIsValid || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(
+                        !authorNameIsValid
+                            || title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                            || !publicationYearIsValid
+                    )
             }
         }
         .onAppear {
@@ -210,18 +236,11 @@ struct SourceFormView: View {
 
     private func submit() {
         let authorName = authorText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !authorName.isEmpty else {
-            onError("Author is required.")
-            return
-        }
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedTitle.isEmpty else {
-            onError("Title is required.")
-            return
-        }
+        guard !authorName.isEmpty, !trimmedTitle.isEmpty, publicationYearIsValid else { return }
 
         let author = resolveAuthor(named: authorName)
-        let year = Int(publicationYear.trimmingCharacters(in: .whitespacesAndNewlines))
+        let year = Int(trimmedPublicationYear)
         let trimmedURL = url.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Capture the persistent ID only after save — pre-save IDs are temporary and
@@ -255,7 +274,7 @@ struct SourceFormView: View {
             try modelContext.saveAndNotify()
             onSuccess(savedSource.persistentModelID)
         } catch {
-            onError(error.localizedDescription)
+            saveError = error.localizedDescription
         }
     }
 }

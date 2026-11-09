@@ -172,6 +172,64 @@ final class KoboAnnotationsImportTests: XCTestCase {
         XCTAssertEqual(quotations.count, 25)
     }
 
+    func testReimportSkipsSoftDeletedHighlights() throws {
+        let parsed = try KoboAnnotationsParser.parse(text: try sampleExportText())
+        _ = try KoboAnnotationsImportService.importParsed(parsed, into: context, backupManager: backupManager)
+
+        let quotations = try context.fetch(FetchDescriptor<Quotation>())
+        quotations.first?.deletedAt = Date()
+        try context.save()
+
+        let second = try KoboAnnotationsImportService.importParsed(parsed, into: context, backupManager: backupManager)
+        XCTAssertEqual(second.importedQuotations, 0)
+        XCTAssertEqual(second.skippedDuplicates, 25)
+
+        let live = try context.fetch(FetchDescriptor<Quotation>(
+            predicate: #Predicate<Quotation> { $0.deletedAt == nil }
+        ))
+        XCTAssertEqual(live.count, 24)
+    }
+
+    func testImportSkipsContentAlreadyInMatchedSource() throws {
+        let author = Author(name: " Sample Author ")
+        let source = Source(title: "Sample Title", author: author)
+        context.insert(author)
+        context.insert(source)
+        context.insert(Quotation(content: "An **existing** passage", source: source))
+        try context.save()
+
+        let text = """
+        Sample Title
+
+        Sample Author
+
+        2 Highlights | Exported July 28, 2026
+
+        Chapter 1
+
+        Highlight (yellow)
+        An existing passage
+
+        Highlight (yellow)
+        A new [bracketed] `passage`
+        """
+        let result = try KoboAnnotationsImportService.importParsed(
+            try KoboAnnotationsParser.parse(text: text),
+            into: context,
+            backupManager: backupManager
+        )
+
+        XCTAssertEqual(result.importedAuthors, 0)
+        XCTAssertEqual(result.importedSources, 0)
+        XCTAssertEqual(result.importedQuotations, 1)
+        XCTAssertEqual(result.skippedDuplicates, 1)
+        XCTAssertEqual(source.format, SourceFormat.kobo.rawValue)
+
+        let imported = try context.fetch(FetchDescriptor<Quotation>()).first { $0.externalIdentifier != nil }
+        XCTAssertEqual(imported?.source?.persistentModelID, source.persistentModelID)
+        XCTAssertEqual(imported?.content, "A new \\[bracketed\\] \\`passage\\`")
+    }
+
     func testImportFileFromURL() throws {
         let url = try sampleExportURL()
         let result = try KoboAnnotationsImportService.importFile(

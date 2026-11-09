@@ -29,7 +29,14 @@ extension ContentView {
         cleanupNewQuotationIfEmpty()
         let quotation = Quotation(content: "", source: source)
         modelContext.insert(quotation)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.delete(quotation)
+            errorMessage = error.localizedDescription
+            showError = true
+            return
+        }
         let quotationId = quotation.persistentModelID
         newQuotationId = quotationId
         navigation.selectedQuotationId = quotationId
@@ -40,7 +47,12 @@ extension ContentView {
         guard let id = newQuotationId,
               let quotation = quotations.first(where: { $0.persistentModelID == id }) else { return }
         if quotation.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            try? SoftDelete.quotation(quotation, in: modelContext)
+            do {
+                try SoftDelete.quotation(quotation, in: modelContext)
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
             if navigation.selectedQuotationId == id {
                 navigation.selectedQuotationId = nil
             }

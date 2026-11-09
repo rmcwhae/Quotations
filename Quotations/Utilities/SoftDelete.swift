@@ -40,6 +40,24 @@ enum SoftDelete {
         try context.saveAndNotify()
     }
 
+    /// Soft-deletes live quotations whose text is empty or whitespace, e.g. a new draft
+    /// left open when the app quit. Returns how many were removed.
+    @discardableResult
+    static func blankQuotations(in context: ModelContext) throws -> Int {
+        let live = try context.fetch(FetchDescriptor<Quotation>(
+            predicate: #Predicate<Quotation> { $0.deletedAt == nil }
+        ))
+        let blank = live.filter { $0.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard !blank.isEmpty else { return 0 }
+        let now = Date()
+        for quotation in blank {
+            quotation.deletedAt = now
+            quotation.updatedAt = now
+        }
+        try context.save()
+        return blank.count
+    }
+
     /// Soft-deletes a single quotation.
     static func quotation(_ quotation: Quotation, in context: ModelContext) throws {
         let now = Date()

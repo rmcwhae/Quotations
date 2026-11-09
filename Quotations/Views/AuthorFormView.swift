@@ -14,17 +14,36 @@ struct AuthorFormView: View {
     var existingAuthor: Author?
     var onSuccess: () -> Void
     var onCancel: () -> Void
-    var onError: (String) -> Void
 
     @State private var name = ""
     @State private var hasPrefilled = false
+    /// Shown inside the sheet: an alert on the presenting view can't appear while this sheet is up.
+    @State private var saveError: String?
 
     private var isEditing: Bool { existingAuthor != nil }
+
+    private var trimmedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var nameIsTaken: Bool {
+        let key = trimmedName.lowercased()
+        return authors.contains { $0.id != existingAuthor?.id && $0.name.lowercased() == key }
+    }
+
+    private var validationMessage: String? {
+        nameIsTaken ? "An author with this name already exists." : saveError
+    }
 
     var body: some View {
         Form {
             LabeledContent("Author name") {
                 MacFormTextField(placeholder: "", text: $name)
+            }
+            if let validationMessage {
+                Text(validationMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
             }
         }
         .formStyle(.grouped)
@@ -41,9 +60,10 @@ struct AuthorFormView: View {
                 Button(isEditing ? "Save" : "Add") { submit() }
                     .accessibilityLabel(isEditing ? "Save author" : "Add author")
                     .help(isEditing ? "Save changes" : "Add author")
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(trimmedName.isEmpty || nameIsTaken)
             }
         }
+        .onChange(of: name) { _, _ in saveError = nil }
         .onAppear {
             guard let author = existingAuthor, !hasPrefilled else { return }
             name = author.name
@@ -52,28 +72,18 @@ struct AuthorFormView: View {
     }
 
     private func submit() {
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmedName.isEmpty else {
-            onError("Name is required.")
-            return
-        }
-        if existingAuthor == nil,
-           authors.contains(where: { $0.name.lowercased() == trimmedName.lowercased() }) {
-            onError("An author with this name already exists.")
-            return
-        }
+        guard !trimmedName.isEmpty, !nameIsTaken else { return }
         do {
             if let existing = existingAuthor {
                 existing.name = trimmedName
                 existing.updatedAt = Date()
             } else {
-                let author = Author(name: trimmedName)
-                modelContext.insert(author)
+                modelContext.insert(Author(name: trimmedName))
             }
             try modelContext.saveAndNotify()
             onSuccess()
         } catch {
-            onError(error.localizedDescription)
+            saveError = error.localizedDescription
         }
     }
 }

@@ -78,9 +78,7 @@ private struct SingleSourceSearchSection: View {
                     quotations: resolvedQuotations,
                     findQuery: findQuery,
                     newQuotationId: newQuotationId,
-                    selectedQuotationIdBinding: $selectedQuotationId,
-                    onEdit: saveQuotation,
-                    onDelete: deleteQuotation
+                    selectedQuotationIdBinding: $selectedQuotationId
                 )
                 .padding(.top, LayoutMetrics.quotationListTopPadding)
                 .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
@@ -91,20 +89,6 @@ private struct SingleSourceSearchSection: View {
                 findQuery: findQuery,
                 selectedQuotationId: $selectedQuotationId
             )
-        }
-    }
-
-    private func saveQuotation(_ quotation: Quotation) {
-        quotation.updatedAt = Date()
-        try? modelContext.saveAndNotify()
-    }
-
-    private func deleteQuotation(id: PersistentIdentifier) {
-        guard let quotation = modelContext.model(for: id) as? Quotation,
-              quotation.deletedAt == nil else { return }
-        try? SoftDelete.quotation(quotation, in: modelContext)
-        if selectedQuotationId == id {
-            selectedQuotationId = nil
         }
     }
 }

@@ -14,6 +14,7 @@ struct QuotationInspectorView: View {
     @Binding var showDeleteConfirmation: Bool
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.reportEditError) private var reportEditError
     @State private var location = ""
     @State private var locationDraftEdited = false
     @State private var locationSaveTask: Task<Void, Never>?
@@ -99,7 +100,9 @@ struct QuotationInspectorView: View {
                     .onSubmit {
                         isLocationFocused = false
                     }
-                    .onChange(of: location) { _, _ in
+                    .onChange(of: location) { _, newValue in
+                        // Programmatic syncs set `location` to the stored value; only user edits differ.
+                        guard newValue != (quotation.location ?? "") else { return }
                         locationDraftEdited = true
                         scheduleLocationSave(for: quotation)
                     }
@@ -190,16 +193,13 @@ struct QuotationInspectorView: View {
     /// Persists the inspector draft only when the user edited location in the inspector.
     private func applyInspectorLocation(to quotation: Quotation) {
         guard locationDraftEdited else { return }
-        let trimmed = location.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newValue = trimmed.isEmpty ? nil : trimmed
-        guard newValue != quotation.location else {
-            locationDraftEdited = false
-            return
-        }
-        quotation.location = newValue
-        quotation.updatedAt = Date()
         locationDraftEdited = false
-        try? modelContext.saveAndNotify()
+        guard quotation.applyLocationInput(location) else { return }
+        do {
+            try modelContext.saveAndNotify()
+        } catch {
+            reportEditError(error.localizedDescription)
+        }
     }
 }
 

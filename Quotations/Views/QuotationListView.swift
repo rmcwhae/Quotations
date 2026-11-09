@@ -12,8 +12,9 @@ struct QuotationRowsContent: View {
     let findQuery: String
     var newQuotationId: PersistentIdentifier?
     @Binding var selectedQuotationIdBinding: PersistentIdentifier?
-    var onEdit: (Quotation) -> Void
-    var onDelete: (PersistentIdentifier) -> Void
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.reportEditError) private var reportEditError
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
@@ -26,8 +27,8 @@ struct QuotationRowsContent: View {
                     newQuotationId: newQuotationId,
                     onSelect: { selectedQuotationIdBinding = quotation.id },
                     onDeselect: { selectedQuotationIdBinding = nil },
-                    onEdit: onEdit,
-                    onDelete: onDelete
+                    onEdit: saveQuotation,
+                    onDelete: deleteQuotation
                 )
                 .id(quotation.id)
                 .padding(.vertical, 2)
@@ -35,6 +36,27 @@ struct QuotationRowsContent: View {
         }
         .frame(maxWidth: LayoutMetrics.quotationColumnMaxWidth, alignment: .leading)
         .frame(maxWidth: .infinity)
+    }
+
+    private func saveQuotation(_ quotation: Quotation) {
+        do {
+            try modelContext.saveAndNotify()
+        } catch {
+            reportEditError(error.localizedDescription)
+        }
+    }
+
+    private func deleteQuotation(id: PersistentIdentifier) {
+        guard let quotation = modelContext.model(for: id) as? Quotation,
+              quotation.deletedAt == nil else { return }
+        do {
+            try SoftDelete.quotation(quotation, in: modelContext)
+        } catch {
+            reportEditError(error.localizedDescription)
+        }
+        if selectedQuotationIdBinding == id {
+            selectedQuotationIdBinding = nil
+        }
     }
 }
 
@@ -46,7 +68,6 @@ struct QuotationListView: View {
     var newQuotationId: PersistentIdentifier?
 
     @Query private var quotations: [Quotation]
-    @Environment(\.modelContext) private var modelContext
 
     init(
         source: Source,
@@ -93,24 +114,8 @@ struct QuotationListView: View {
                 quotations: displayedQuotations,
                 findQuery: findQuery,
                 newQuotationId: newQuotationId,
-                selectedQuotationIdBinding: $selectedQuotationId,
-                onEdit: saveQuotation,
-                onDelete: deleteQuotation
+                selectedQuotationIdBinding: $selectedQuotationId
             )
-        }
-    }
-
-    private func saveQuotation(_ quotation: Quotation) {
-        quotation.updatedAt = Date()
-        try? modelContext.saveAndNotify()
-    }
-
-    private func deleteQuotation(id: PersistentIdentifier) {
-        guard let quotation = modelContext.model(for: id) as? Quotation,
-              quotation.deletedAt == nil else { return }
-        try? SoftDelete.quotation(quotation, in: modelContext)
-        if selectedQuotationId == id {
-            selectedQuotationId = nil
         }
     }
 }
