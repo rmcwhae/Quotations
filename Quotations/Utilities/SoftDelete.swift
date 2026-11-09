@@ -9,35 +9,84 @@ import SwiftData
 /// Centralized soft-delete policies for Authors, Sources, and Quotations.
 enum SoftDelete {
     /// Soft-deletes a source and all of its non-deleted quotations.
-    static func source(_ source: Source, in context: ModelContext) throws {
-        let now = Date()
-        source.deletedAt = now
-        source.updatedAt = now
-
-        for quotation in source.quotations where quotation.deletedAt == nil {
-            quotation.deletedAt = now
-            quotation.updatedAt = now
-        }
-
-        try context.saveAndNotify()
+    /// With an `undoManager`, Edit > Undo restores exactly the records this call deleted.
+    static func source(_ source: Source, in context: ModelContext, undoManager: UndoManager? = nil) throws {
+        try setDeleted(
+            Date(),
+            sources: [source],
+            quotations: source.quotations.filter { $0.deletedAt == nil },
+            in: context,
+            undoManager: undoManager,
+            actionName: "Delete Source"
+        )
     }
 
     /// Soft-deletes an author and cascades to all of their sources and quotations.
-    static func author(_ author: Author, in context: ModelContext) throws {
+    static func author(_ author: Author, in context: ModelContext, undoManager: UndoManager? = nil) throws {
+        let sources = author.sources.filter { $0.deletedAt == nil }
+        try setDeleted(
+            Date(),
+            authors: [author],
+            sources: sources,
+            quotations: sources.flatMap { $0.quotations.filter { $0.deletedAt == nil } },
+            in: context,
+            undoManager: undoManager,
+            actionName: "Delete Author"
+        )
+    }
+
+    /// Soft-deletes a single quotation.
+    static func quotation(_ quotation: Quotation, in context: ModelContext, undoManager: UndoManager? = nil) throws {
+        try setDeleted(
+            Date(),
+            quotations: [quotation],
+            in: context,
+            undoManager: undoManager,
+            actionName: "Delete Quotation"
+        )
+    }
+
+    /// Sets (or clears, for undo) `deletedAt` on exactly these records, saves, and registers
+    /// the inverse so undo and redo alternate.
+    private static func setDeleted(
+        _ date: Date?,
+        authors: [Author] = [],
+        sources: [Source] = [],
+        quotations: [Quotation] = [],
+        in context: ModelContext,
+        undoManager: UndoManager?,
+        actionName: String
+    ) throws {
         let now = Date()
-        author.deletedAt = now
-        author.updatedAt = now
-
-        for source in author.sources where source.deletedAt == nil {
-            source.deletedAt = now
-            source.updatedAt = now
-            for quotation in source.quotations where quotation.deletedAt == nil {
-                quotation.deletedAt = now
-                quotation.updatedAt = now
-            }
+        for author in authors {
+            author.deletedAt = date
+            author.updatedAt = now
         }
-
+        for source in sources {
+            source.deletedAt = date
+            source.updatedAt = now
+        }
+        for quotation in quotations {
+            quotation.deletedAt = date
+            quotation.updatedAt = now
+        }
         try context.saveAndNotify()
+
+        guard let undoManager else { return }
+        undoManager.registerUndo(withTarget: context) { [weak undoManager] context in
+            // Undo runs outside any view; a failed save here leaves the change in memory
+            // and it is written by the next successful save.
+            try? setDeleted(
+                date == nil ? Date() : nil,
+                authors: authors,
+                sources: sources,
+                quotations: quotations,
+                in: context,
+                undoManager: undoManager,
+                actionName: actionName
+            )
+        }
+        undoManager.setActionName(actionName)
     }
 
     /// Soft-deletes live quotations whose text is empty or whitespace, e.g. a new draft
@@ -57,19 +106,12 @@ enum SoftDelete {
         try context.save()
         return blank.count
     }
-
-    /// Soft-deletes a single quotation.
-    static func quotation(_ quotation: Quotation, in context: ModelContext) throws {
-        let now = Date()
-        quotation.deletedAt = now
-        quotation.updatedAt = now
-        try context.saveAndNotify()
-    }
 }
 
 extension Notification.Name {
     static let quotationsDataDidChange = Notification.Name("quotationsDataDidChange")
     static let addQuotation = Notification.Name("addQuotation")
+    static let addSource = Notification.Name("addSource")
     static let focusFindInPage = Notification.Name("focusFindInPage")
     static let openAdvancedSearch = Notification.Name("openAdvancedSearch")
 }

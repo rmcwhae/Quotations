@@ -7,7 +7,7 @@ import CoreGraphics
 import Foundation
 import SwiftData
 
-struct SemanticClusterPoint: Identifiable, Hashable {
+nonisolated struct SemanticClusterPoint: Identifiable, Hashable, Sendable {
     let quotationId: PersistentIdentifier
     let sourceId: PersistentIdentifier?
     let position: CGPoint
@@ -17,29 +17,68 @@ struct SemanticClusterPoint: Identifiable, Hashable {
     var id: PersistentIdentifier { quotationId }
 }
 
-struct SemanticClusterResult: Equatable {
+nonisolated struct SemanticClusterResult: Equatable, Sendable {
     let points: [SemanticClusterPoint]
     let clusterCount: Int
 }
 
-enum SemanticClusterAnalyzer {
+/// Plain-value snapshot of a quotation for off-main-actor clustering.
+nonisolated struct SemanticClusterInput: Sendable {
+    let encodedQuotationID: String
+    let quotationId: PersistentIdentifier
+    let sourceId: PersistentIdentifier?
+    let plainText: String
+}
+
+nonisolated enum SemanticClusterAnalyzer {
+    /// Main-actor convenience: snapshots live models, then analyzes.
+    @MainActor
     static func analyze(
         quotations: [Quotation],
         entries: [EmbeddingIndexEntry],
         stopwords: Set<String>
     ) -> SemanticClusterResult? {
-        let active = quotations.filter { $0.deletedAt == nil }
-        guard active.count >= 2 else { return nil }
+        analyze(
+            inputs: inputs(for: quotations),
+            vectorsByEncodedID: vectorsByEncodedID(entries),
+            stopwords: stopwords
+        )
+    }
 
-        let entryMap = Dictionary(uniqueKeysWithValues: entries.map { ($0.encodedQuotationID, $0) })
-        var items: [(quotation: Quotation, vector: [Double])] = []
-
-        for quotation in active {
-            guard let encoded = QuotationDeepLink.encode(quotation.persistentModelID),
-                  let entry = entryMap[encoded] else {
-                continue
+    /// Snapshots non-deleted quotations that have an encodable ID.
+    @MainActor
+    static func inputs(for quotations: [Quotation]) -> [SemanticClusterInput] {
+        quotations.compactMap { quotation in
+            guard quotation.deletedAt == nil,
+                  let encoded = QuotationDeepLink.encode(quotation.persistentModelID) else {
+                return nil
             }
-            items.append((quotation, entry.vector))
+            return SemanticClusterInput(
+                encodedQuotationID: encoded,
+                quotationId: quotation.persistentModelID,
+                sourceId: quotation.source?.persistentModelID,
+                plainText: QuotationSearchText.plainContent(from: quotation.content)
+            )
+        }
+    }
+
+    @MainActor
+    static func vectorsByEncodedID(_ entries: [EmbeddingIndexEntry]) -> [String: [Double]] {
+        Dictionary(uniqueKeysWithValues: entries.map { ($0.encodedQuotationID, $0.vector) })
+    }
+
+    /// Pure PCA + k-means analysis; safe to run off the main actor.
+    static func analyze(
+        inputs: [SemanticClusterInput],
+        vectorsByEncodedID: [String: [Double]],
+        stopwords: Set<String>
+    ) -> SemanticClusterResult? {
+        guard inputs.count >= 2 else { return nil }
+
+        var items: [(input: SemanticClusterInput, vector: [Double])] = []
+        for input in inputs {
+            guard let vector = vectorsByEncodedID[input.encodedQuotationID] else { continue }
+            items.append((input, vector))
         }
 
         guard items.count >= 2 else { return nil }
@@ -49,22 +88,22 @@ enum SemanticClusterAnalyzer {
         let clusterCount = KMeansClustering.recommendedClusterCount(for: positions.count)
         let assignments = KMeansClustering.cluster(points: positions, clusterCount: clusterCount)
 
-        var quotationsByCluster: [Int: [Quotation]] = [:]
+        var textsByCluster: [Int: [String]] = [:]
         for (index, assignment) in assignments.enumerated() {
-            quotationsByCluster[assignment, default: []].append(items[index].quotation)
+            textsByCluster[assignment, default: []].append(items[index].input.plainText)
         }
 
         var labels: [Int: String] = [:]
-        for (cluster, clusterQuotations) in quotationsByCluster {
-            let words = WordFrequencyAnalyzer.topWords(in: clusterQuotations, limit: 3, stopwords: stopwords)
+        for (cluster, clusterTexts) in textsByCluster {
+            let words = WordFrequencyAnalyzer.topWords(in: clusterTexts, limit: 3, stopwords: stopwords)
             labels[cluster] = words.isEmpty ? "Theme \(cluster + 1)" : words.joined(separator: ", ")
         }
 
         let points = zip(zip(positions, assignments), items).map { pair, item in
             let (position, clusterIndex) = pair
             return SemanticClusterPoint(
-                quotationId: item.quotation.persistentModelID,
-                sourceId: item.quotation.source?.persistentModelID,
+                quotationId: item.input.quotationId,
+                sourceId: item.input.sourceId,
                 position: position,
                 clusterIndex: clusterIndex,
                 clusterLabel: labels[clusterIndex] ?? "Theme \(clusterIndex + 1)"

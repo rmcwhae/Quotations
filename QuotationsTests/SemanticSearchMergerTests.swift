@@ -72,7 +72,6 @@ final class SemanticSearchMergerTests: XCTestCase {
         )
 
         XCTAssertEqual(merged.results.count, 2)
-        XCTAssertEqual(merged.quotationsBySourceId[source.persistentModelID]?.count, 2)
         XCTAssertFalse(merged.semanticQuotationIds.contains(first.persistentModelID))
         XCTAssertTrue(merged.semanticQuotationIds.contains(second.persistentModelID))
     }

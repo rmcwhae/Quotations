@@ -15,6 +15,7 @@ struct QuotationRowsContent: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.reportEditError) private var reportEditError
+    @Environment(\.undoManager) private var undoManager
 
     var body: some View {
         LazyVStack(alignment: .leading, spacing: 0) {
@@ -34,6 +35,7 @@ struct QuotationRowsContent: View {
                 .padding(.vertical, 2)
             }
         }
+        .scrollTargetLayout()
         .frame(maxWidth: LayoutMetrics.quotationColumnMaxWidth, alignment: .leading)
         .frame(maxWidth: .infinity)
     }
@@ -50,7 +52,7 @@ struct QuotationRowsContent: View {
         guard let quotation = modelContext.model(for: id) as? Quotation,
               quotation.deletedAt == nil else { return }
         do {
-            try SoftDelete.quotation(quotation, in: modelContext)
+            try SoftDelete.quotation(quotation, in: modelContext, undoManager: undoManager)
         } catch {
             reportEditError(error.localizedDescription)
         }

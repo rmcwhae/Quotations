@@ -75,19 +75,25 @@ struct QuotationsApp: App {
         }
         .handlesExternalEvents(matching: ["*"])
         .commands {
-            CommandMenu("Find") {
-                Button("Find…") {
-                    NotificationCenter.default.post(name: .focusFindInPage, object: nil)
+            // Edit > Find, where Mac apps keep it, instead of two one-item menus.
+            CommandGroup(after: .textEditing) {
+                Menu("Find") {
+                    Button("Find…") {
+                        NotificationCenter.default.post(name: .focusFindInPage, object: nil)
+                    }
+                    .keyboardShortcut("f", modifiers: .command)
+                    Button("Advanced Search…") {
+                        NotificationCenter.default.post(name: .openAdvancedSearch, object: nil)
+                    }
+                    .keyboardShortcut("f", modifiers: [.command, .shift])
                 }
-                .keyboardShortcut("f", modifiers: .command)
             }
-            CommandMenu("Advanced Search") {
-                Button("Show Advanced Search") {
-                    NotificationCenter.default.post(name: .openAdvancedSearch, object: nil)
+            // Replaces "New Window": one library window; Cmd-N makes a source.
+            CommandGroup(replacing: .newItem) {
+                Button("New Source") {
+                    NotificationCenter.default.post(name: .addSource, object: nil)
                 }
-                .keyboardShortcut("f", modifiers: [.command, .shift])
-            }
-            CommandGroup(after: .newItem) {
+                .keyboardShortcut("n", modifiers: .command)
                 Button("New Quotation") {
                     NotificationCenter.default.post(name: .addQuotation, object: nil)
                 }

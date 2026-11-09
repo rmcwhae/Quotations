@@ -106,6 +106,7 @@ struct ContentView: View {
             onBeginKoboImport: beginKoboImport,
             onImportFromKoboAnnotations: importFromKoboAnnotations,
             onAddQuotation: addQuotation,
+            onAddSource: { newSourceSession = NewSourceSheetSession() },
             onOpenAdvancedSearch: { selectFilter(.searchResults) }
         ))
         .modifier(ContentViewSheetsModifier(
@@ -190,7 +191,7 @@ struct ContentView: View {
             sources: sources,
             quotations: quotations,
             searchState: searchState,
-            findQuery: shell.findInPage.query,
+            findQuery: shell.findInPage.appliedQuery,
             exploreState: shell.exploreState,
             chatState: shell.chatState,
             onExploreWordSelected: { openAdvancedSearch(for: $0) },

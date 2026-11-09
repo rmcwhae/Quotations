@@ -6,7 +6,7 @@
 import CoreGraphics
 import Foundation
 
-enum KMeansClustering {
+nonisolated enum KMeansClustering {
     static func cluster(points: [CGPoint], clusterCount requestedCount: Int, maxIterations: Int = 50) -> [Int] {
         guard !points.isEmpty else { return [] }
         let clusterCount = min(max(1, requestedCount), points.count)

@@ -46,22 +46,26 @@ final class SearchStateTests: XCTestCase {
 
         XCTAssertTrue(state.searchResults.isEmpty)
         XCTAssertNil(state.matchSets)
-        XCTAssertTrue(state.quotationsBySourceId.isEmpty)
         XCTAssertFalse(state.isSearching)
     }
 
-    func testNewSearchClearsStaleMatchSetsWhileSearching() {
+    func testNewSearchKeepsPreviousResultsUntilNewOnesArrive() async {
         let state = SearchState()
-        state.matchSets = MatchSets(authorIds: [], sourceIds: [], quotationIds: [])
-        state.quotationsBySourceId = [:]
-
         state.query = "control"
         state.runSearchIfNeeded(modelContext: context)
+        try? await Task.sleep(for: .milliseconds(300))
+        XCTAssertEqual(state.searchResults.count, 1)
 
+        state.query = "what"
+        state.runSearchIfNeeded(modelContext: context)
+
+        // While the next search is pending, the old results stay on screen (no flash).
         XCTAssertTrue(state.isSearching)
-        XCTAssertNil(state.matchSets)
-        XCTAssertTrue(state.quotationsBySourceId.isEmpty)
-        XCTAssertTrue(state.searchResults.isEmpty)
+        XCTAssertEqual(state.searchResults.count, 1)
+        XCTAssertNotNil(state.matchSets)
+
+        try? await Task.sleep(for: .milliseconds(300))
+        XCTAssertFalse(state.isSearching)
     }
 
     func testSearchPopulatesMatchSets() async {
@@ -74,6 +78,5 @@ final class SearchStateTests: XCTestCase {
         XCTAssertFalse(state.isSearching)
         XCTAssertEqual(state.searchResults.count, 1)
         XCTAssertEqual(state.matchSets?.quotationIds.count, 1)
-        XCTAssertEqual(state.quotationsBySourceId.values.first?.count, 1)
     }
 }

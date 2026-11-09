@@ -16,6 +16,8 @@ struct SourceDetailView: View {
     var newQuotationId: PersistentIdentifier?
 
     @State private var isScrolledPastTop = false
+    /// Quotation rows at least half on screen; a selection among these is not scrolled to.
+    @State private var visibleQuotationIds: Set<PersistentIdentifier> = []
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -39,6 +41,9 @@ struct SourceDetailView: View {
                     .padding(.bottom, LayoutMetrics.quotationListBottomPadding)
                 }
                 .scrollContentBackground(.hidden)
+                .onScrollTargetVisibilityChange(idType: PersistentIdentifier.self, threshold: 0.5) { ids in
+                    visibleQuotationIds = Set(ids)
+                }
                 .onScrollGeometryChange(for: Bool.self) { geometry in
                     geometry.contentOffset.y > geometry.contentInsets.top + 4
                 } action: { _, isScrolled in
@@ -56,8 +61,10 @@ struct SourceDetailView: View {
         .deselectQuotationOnBackgroundTap($selectedQuotationId)
     }
 
+    /// Scrolls only when the selection is off screen (deep link, list column, chat, map) —
+    /// never when the user just clicked a row they can see, which would move it under the mouse.
     private func scrollToSelectedQuotation(using proxy: ScrollViewProxy) {
-        guard let id = selectedQuotationId else { return }
+        guard let id = selectedQuotationId, !visibleQuotationIds.contains(id) else { return }
         Task { @MainActor in
             await Task.yield()
             try? await Task.sleep(for: .milliseconds(100))

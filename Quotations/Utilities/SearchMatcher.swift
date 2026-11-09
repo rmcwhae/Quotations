@@ -10,7 +10,6 @@ enum SearchMatcher {
     struct MatchResult {
         let results: [SearchResultItem]
         let matchSets: MatchSets
-        let quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]]
         let semanticQuotationIds: Set<PersistentIdentifier>
     }
 
@@ -20,7 +19,6 @@ enum SearchMatcher {
             return MatchResult(
                 results: [],
                 matchSets: emptyMatchSets,
-                quotationsBySourceId: [:],
                 semanticQuotationIds: []
             )
         }
@@ -29,7 +27,6 @@ enum SearchMatcher {
         var authorIds = Set<PersistentIdentifier>()
         var sourceIds = Set<PersistentIdentifier>()
         var quotationIds = Set<PersistentIdentifier>()
-        var quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]] = [:]
 
         for quotation in quotations {
             guard let source = quotation.source, source.deletedAt == nil else { continue }
@@ -47,14 +44,12 @@ enum SearchMatcher {
                 if let author { authorIds.insert(author.persistentModelID) }
                 sourceIds.insert(sourceId)
                 quotationIds.insert(quotationId)
-                quotationsBySourceId[sourceId, default: []].append(quotationId)
             }
         }
 
         return MatchResult(
             results: results,
             matchSets: MatchSets(authorIds: authorIds, sourceIds: sourceIds, quotationIds: quotationIds),
-            quotationsBySourceId: quotationsBySourceId,
             semanticQuotationIds: []
         )
     }

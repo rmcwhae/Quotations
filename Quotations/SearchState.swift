@@ -24,8 +24,6 @@ final class SearchState {
     var searchResults: [SearchResultItem] = []
     var isSearching: Bool = false
     var matchSets: MatchSets?
-    /// Quotation IDs grouped by source, for search results rendering without per-section `@Query`.
-    var quotationsBySourceId: [PersistentIdentifier: [PersistentIdentifier]] = [:]
     /// Quotation IDs found by semantic search but not by keyword matching.
     var semanticQuotationIds: Set<PersistentIdentifier> = []
     /// Optional Apple Intelligence summary for the latest semantic search.
@@ -51,13 +49,10 @@ final class SearchState {
             return
         }
 
+        // Keep the previous results on screen until the new ones are ready; clearing here
+        // made the list flash and briefly un-filtered the detail pane on every keystroke/save.
         searchTask?.cancel()
         isSearching = true
-        searchResults = []
-        matchSets = nil
-        quotationsBySourceId = [:]
-        semanticQuotationIds = []
-        semanticSummary = nil
 
         searchTask = Task { @MainActor in
             try? await Task.sleep(for: debounceInterval)
@@ -74,6 +69,7 @@ final class SearchState {
 
                 let keywordMatch = SearchMatcher.match(quotations: allQuotations, query: trimmed)
                 applyMatch(keywordMatch)
+                semanticSummary = nil
 
                 if SemanticSearchMerger.shouldRunSemanticSearch(query: trimmed, keywordResult: keywordMatch) {
                     let semanticResponse = await SemanticSearchService.search(
@@ -112,7 +108,6 @@ final class SearchState {
     private func applyMatch(_ match: SearchMatcher.MatchResult) {
         searchResults = match.results
         matchSets = match.matchSets
-        quotationsBySourceId = match.quotationsBySourceId
         semanticQuotationIds = match.semanticQuotationIds
     }
 
@@ -120,7 +115,6 @@ final class SearchState {
         searchResults = []
         isSearching = false
         matchSets = nil
-        quotationsBySourceId = [:]
         semanticQuotationIds = []
         semanticSummary = nil
     }

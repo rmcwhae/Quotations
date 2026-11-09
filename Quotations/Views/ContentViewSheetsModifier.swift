@@ -99,6 +99,7 @@ private struct ContentViewAlertsModifier: ViewModifier {
 }
 
 struct DeleteSourceConfirmationModifier: ViewModifier {
+    @Environment(\.undoManager) private var undoManager
     @Binding var isPresented: Bool
     @Binding var sourceToDelete: Source?
     @Binding var selectedSourceId: PersistentIdentifier?
@@ -129,7 +130,7 @@ struct DeleteSourceConfirmationModifier: ViewModifier {
         if let source = sourceToDelete {
             let sourceId = source.persistentModelID
             do {
-                try SoftDelete.source(source, in: modelContext)
+                try SoftDelete.source(source, in: modelContext, undoManager: undoManager)
             } catch {
                 onEditError(error.localizedDescription)
             }
@@ -143,6 +144,7 @@ struct DeleteSourceConfirmationModifier: ViewModifier {
 }
 
 struct DeleteQuotationConfirmationModifier: ViewModifier {
+    @Environment(\.undoManager) private var undoManager
     @Binding var isPresented: Bool
     @Binding var selectedQuotationId: PersistentIdentifier?
     let modelContext: ModelContext
@@ -168,7 +170,7 @@ struct DeleteQuotationConfirmationModifier: ViewModifier {
               let quotation = modelContext.model(for: id) as? Quotation,
               quotation.deletedAt == nil else { return }
         do {
-            try SoftDelete.quotation(quotation, in: modelContext)
+            try SoftDelete.quotation(quotation, in: modelContext, undoManager: undoManager)
         } catch {
             onEditError(error.localizedDescription)
         }

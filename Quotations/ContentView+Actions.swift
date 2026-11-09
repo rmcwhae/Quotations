@@ -200,7 +200,7 @@ extension ContentView {
             if let source = selectedSource {
                 SourceDetailView(
                     source: source,
-                    findQuery: findInPage.query,
+                    findQuery: findInPage.appliedQuery,
                     quotationIdsFilter: isOnSearchPage
                         ? searchState.matchSetsForQuery()?.quotationIds
                         : nil,
@@ -228,7 +228,6 @@ extension ContentView {
                 }
                 .accessibilityLabel("Add quotation")
                 .help("Add quotation (⌘⇧N)")
-                .keyboardShortcut("n", modifiers: [.command, .shift])
                 .disabled(selectedSource == nil)
             }
             ToolbarItem(placement: .primaryAction) {

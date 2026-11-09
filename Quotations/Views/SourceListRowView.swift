@@ -12,11 +12,9 @@ struct SourceListRowView: View {
     let source: Source
     let searchQuery: String
     var isSelected: Bool = false
-    var showsQuotationCount: Bool = false
-
-    private var activeQuotationCount: Int {
-        source.quotations.filter { $0.deletedAt == nil }.count
-    }
+    /// Live quotation count to show, or nil to hide it. Passed in (counted once by the
+    /// parent) so each row doesn't fault its `quotations` relationship on every render.
+    var quotationCount: Int?
 
     private var accessibilitySummary: String {
         var summary: String
@@ -26,9 +24,8 @@ struct SourceListRowView: View {
         } else {
             summary = source.title
         }
-        if showsQuotationCount {
-            let count = activeQuotationCount
-            summary += ", \(count == 1 ? "1 quotation" : "\(count) quotations")"
+        if let quotationCount {
+            summary += ", \(quotationCountLabel(quotationCount))"
         }
         return summary
     }
@@ -56,8 +53,8 @@ struct SourceListRowView: View {
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    if showsQuotationCount {
-                        Text(quotationCountLabel(activeQuotationCount))
+                    if let quotationCount {
+                        Text(quotationCountLabel(quotationCount))
                             .font(.system(size: 11))
                             .foregroundStyle(.tertiary)
                             .fixedSize()

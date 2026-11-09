@@ -24,6 +24,7 @@ struct ContentViewImportLifecycleModifier: ViewModifier {
     let onBeginKoboImport: () -> Void
     let onImportFromKoboAnnotations: (URL) -> Void
     let onAddQuotation: () -> Void
+    let onAddSource: () -> Void
     let onOpenAdvancedSearch: () -> Void
 
     private var allowedContentTypes: [UTType] {
@@ -57,6 +58,9 @@ struct ContentViewImportLifecycleModifier: ViewModifier {
             }
             .onReceive(NotificationCenter.default.publisher(for: .addQuotation)) { _ in
                 onAddQuotation()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .addSource)) { _ in
+                onAddSource()
             }
             .fileImporter(
                 isPresented: $showFileImporter,

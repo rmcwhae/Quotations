@@ -5,7 +5,7 @@
 
 import Foundation
 
-enum EnglishStopwords {
+nonisolated enum EnglishStopwords {
     static let defaultWords: Set<String> = [
         "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any",
         "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below",

@@ -17,7 +17,6 @@ enum AppColors {
     })
 
     /// Warm tan fill behind a selected sidebar row.
-    static let selectionBackground = highlightColor.opacity(0.25)
 
     /// Soft tan for the decorative opening-quote glyph.
     static let quoteGlyph = highlightColor.opacity(0.5)

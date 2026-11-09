@@ -19,7 +19,8 @@ struct LibraryExploreView: View {
         VStack(alignment: .leading, spacing: 12) {
             controls
 
-            if exploreState.isAnalyzing {
+            // Full-screen spinner only on first load; refreshes keep the chart visible.
+            if exploreState.isAnalyzing && !exploreState.hasResults {
                 ProgressView("Analyzing library…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let message = exploreState.statusMessage,
@@ -61,6 +62,12 @@ struct LibraryExploreView: View {
                 Text("Minimum characters in word: \(exploreState.minimumWordLength)")
             }
             .fixedSize()
+
+            if exploreState.isAnalyzing && exploreState.hasResults {
+                ProgressView()
+                    .controlSize(.small)
+                    .help("Updating…")
+            }
         }
     }
 

@@ -9,21 +9,12 @@ import SwiftUI
 struct FormattedQuotationText: View {
     let text: String
 
-    @State private var cachedAttributed = AttributedString()
-    @State private var cacheKey = ""
-
+    // No cache: SwiftUI only re-runs `body` when `text` changes, and building here means
+    // the first frame already has the real text and height.
     var body: some View {
-        Text(cachedAttributed)
+        Text(MarkdownCodec.attributedString(from: text))
             .font(MarkdownCodec.quotationFont)
             .lineSpacing(MarkdownCodec.quotationLineSpacing)
-            .onAppear { rebuildCacheIfNeeded() }
-            .onChange(of: text) { _, _ in rebuildCacheIfNeeded() }
-    }
-
-    private func rebuildCacheIfNeeded() {
-        guard text != cacheKey else { return }
-        cacheKey = text
-        cachedAttributed = MarkdownCodec.attributedString(from: text)
     }
 }
 

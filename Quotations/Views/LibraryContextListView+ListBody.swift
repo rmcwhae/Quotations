@@ -9,11 +9,17 @@ import SwiftUI
 extension LibraryContextListView {
     @ViewBuilder
     func listBody(resolved: ResolvedListContent) -> some View {
-        List {
+        // Native List selection gives arrow-key navigation, type-select, full-row hit
+        // targets and the system selection highlight.
+        Group {
             if filter.showsQuotations {
-                quotationRows(resolved.quotations)
+                List(selection: quotationSelection(in: resolved.quotations)) {
+                    quotationRows(resolved.quotations)
+                }
             } else {
-                sourceRows(resolved.sources)
+                List(selection: sourceSelection) {
+                    sourceRows(resolved.sources, counts: resolved.quotationCountsBySourceId)
+                }
             }
         }
         .overlay { emptyOverlay(sources: resolved.sources, quotations: resolved.quotations) }
@@ -57,21 +63,15 @@ extension LibraryContextListView {
     }
 
     @ViewBuilder
-    func sourceRows(_ resolvedSources: [Source]) -> some View {
+    func sourceRows(_ resolvedSources: [Source], counts: [PersistentIdentifier: Int]) -> some View {
         ForEach(resolvedSources) { source in
             SourceListRowView(
                 source: source,
                 searchQuery: listHighlightQuery,
                 isSelected: source.id == selectedSourceId,
-                showsQuotationCount: filter == .quotationsBySource
+                quotationCount: filter == .quotationsBySource ? counts[source.id] ?? 0 : nil
             )
             .tag(source.id)
-            .listRowBackground(selectionBackground(isSelected: source.id == selectedSourceId))
-            .contentShape(Rectangle())
-            .onTapGesture {
-                selectedSourceId = source.id
-                selectedQuotationId = nil
-            }
             .contextMenu {
                 Button("Edit…") { onSourceEdit(source) }
                 Button("Delete", role: .destructive) { onSourceDelete(source) }
@@ -89,21 +89,41 @@ extension LibraryContextListView {
                 isSemanticMatch: searchState.isSemanticMatch(quotation.id)
             )
             .tag(quotation.id)
-            .listRowBackground(selectionBackground(isSelected: quotation.id == selectedQuotationId))
-            .contentShape(Rectangle())
-            .onTapGesture {
-                selectedQuotationId = quotation.id
-                if let sourceId = quotation.source?.id {
+        }
+    }
+
+    /// Choosing a source clears any quotation selected in the previous source.
+    var sourceSelection: Binding<PersistentIdentifier?> {
+        Binding(
+            get: { selectedSourceId },
+            set: { newValue in
+                guard newValue != selectedSourceId else { return }
+                selectedSourceId = newValue
+                selectedQuotationId = nil
+            }
+        )
+    }
+
+    /// Choosing a quotation also selects its source so the detail pane can show it.
+    func quotationSelection(in quotations: [Quotation]) -> Binding<PersistentIdentifier?> {
+        Binding(
+            get: { selectedQuotationId },
+            set: { newValue in
+                selectedQuotationId = newValue
+                if let newValue,
+                   let sourceId = quotations.first(where: { $0.id == newValue })?.source?.id {
                     selectedSourceId = sourceId
                 }
             }
-        }
+        )
     }
 
     @ViewBuilder
     func emptyOverlay(sources: [Source], quotations: [Quotation]) -> some View {
         if filter == .searchResults {
-            if searchState.isSearching {
+            // Previous results stay visible while a new search runs; only show the
+            // placeholder when there is nothing on screen yet.
+            if searchState.isSearching, quotations.isEmpty, sources.isEmpty {
                 Text("Searching…")
                     .foregroundStyle(.secondary)
             } else if let summary = searchState.semanticSummary, !summary.isEmpty {
@@ -137,11 +157,5 @@ extension LibraryContextListView {
         case .format: "No sources in this format."
         default: "No sources yet."
         }
-    }
-
-    func selectionBackground(isSelected: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(isSelected ? AppColors.selectionBackground : Color.clear)
-            .padding(.horizontal, 4)
     }
 }

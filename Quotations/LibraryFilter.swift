@@ -66,9 +66,3 @@ enum LibraryFilter: Hashable, Identifiable {
         SourceFormat.allCases.map { .format($0) }
     }
 }
-
-/// Selection emitted by column 2.
-enum LibraryListSelection: Hashable {
-    case source(PersistentIdentifier)
-    case quotation(PersistentIdentifier, sourceId: PersistentIdentifier?)
-}

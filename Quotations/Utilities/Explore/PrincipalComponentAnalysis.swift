@@ -6,7 +6,7 @@
 import CoreGraphics
 import Foundation
 
-enum PrincipalComponentAnalysis {
+nonisolated enum PrincipalComponentAnalysis {
     /// Projects high-dimensional vectors to 2D using power iteration for the top two principal components.
     static func project2D(vectors: [[Double]]) -> [CGPoint] {
         guard !vectors.isEmpty, !vectors[0].isEmpty else { return [] }

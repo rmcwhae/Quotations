@@ -27,7 +27,6 @@ enum SemanticSearchMerger {
         var authorIds = keywordResult.matchSets.authorIds
         var sourceIds = keywordResult.matchSets.sourceIds
         var quotationIds = keywordResult.matchSets.quotationIds
-        var quotationsBySourceId = keywordResult.quotationsBySourceId
         var seenQuotationIds = Set(quotationIds)
         var semanticQuotationIds = keywordResult.semanticQuotationIds
 
@@ -56,13 +55,11 @@ enum SemanticSearchMerger {
             sourceIds.insert(sourceID)
             quotationIds.insert(quotationID)
             semanticQuotationIds.insert(quotationID)
-            quotationsBySourceId[sourceID, default: []].append(quotationID)
         }
 
         return SearchMatcher.MatchResult(
             results: results,
             matchSets: MatchSets(authorIds: authorIds, sourceIds: sourceIds, quotationIds: quotationIds),
-            quotationsBySourceId: quotationsBySourceId,
             semanticQuotationIds: semanticQuotationIds
         )
     }

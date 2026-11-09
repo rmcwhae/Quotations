@@ -35,7 +35,6 @@ final class SearchMatcherTests: XCTestCase {
         let result = SearchMatcher.match(quotations: [quotation], query: "   ")
         XCTAssertTrue(result.results.isEmpty)
         XCTAssertTrue(result.matchSets.quotationIds.isEmpty)
-        XCTAssertTrue(result.quotationsBySourceId.isEmpty)
     }
 
     func testMatchesContentTitleAuthorAndLocation() {
@@ -88,6 +87,5 @@ final class SearchMatcherTests: XCTestCase {
 
         let result = SearchMatcher.match(quotations: [first, second], query: "philosophize")
         XCTAssertEqual(result.results.count, 2)
-        XCTAssertEqual(result.quotationsBySourceId[source.persistentModelID]?.count, 2)
     }
 }

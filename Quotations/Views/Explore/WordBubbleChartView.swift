@@ -17,9 +17,26 @@ struct WordBubbleChartView: View {
         var id: String { entry.id }
     }
 
+    private struct LayoutKey: Equatable {
+        let entries: [WordFrequencyEntry]
+        let width: Int
+        let height: Int
+
+        init(entries: [WordFrequencyEntry], size: CGSize) {
+            self.entries = entries
+            width = Int(size.width.rounded())
+            height = Int(size.height.rounded())
+        }
+    }
+
+    /// The force-directed layout is expensive (hundreds of iterations), so it's cached
+    /// and only recomputed when the entries or the rounded container size change.
+    @State private var layouts: [BubbleLayout] = []
+    @State private var layoutKey: LayoutKey?
+
     var body: some View {
         GeometryReader { geometry in
-            let layouts = bubbleLayout(in: geometry.size)
+            let key = LayoutKey(entries: entries, size: geometry.size)
             ZStack {
                 ForEach(layouts) { bubble in
                     Button {
@@ -46,7 +63,15 @@ struct WordBubbleChartView: View {
                     .help("\(bubble.entry.word): \(bubble.entry.count)")
                 }
             }
+            .onAppear { updateLayout(for: key, size: geometry.size) }
+            .onChange(of: key) { _, newKey in updateLayout(for: newKey, size: geometry.size) }
         }
+    }
+
+    private func updateLayout(for key: LayoutKey, size: CGSize) {
+        guard key != layoutKey else { return }
+        layoutKey = key
+        layouts = bubbleLayout(in: size)
     }
 
     private func bubbleLayout(in size: CGSize) -> [BubbleLayout] {

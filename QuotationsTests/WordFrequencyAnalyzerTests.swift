@@ -7,6 +7,7 @@ import SwiftData
 import XCTest
 @testable import Quotations
 
+@MainActor
 final class WordFrequencyAnalyzerTests: XCTestCase {
     func testCountsDistinctWordsAndIgnoresStopwords() {
         let quotation = Quotation(content: "The mountains are calling and the mountains echo freedom")
@@ -36,5 +37,24 @@ final class WordFrequencyAnalyzerTests: XCTestCase {
 
         XCTAssertFalse(results.contains(where: { $0.word == "freedom" }))
         XCTAssertTrue(results.contains(where: { $0.word == "mountains" }))
+    }
+
+    func testAnalyzeTextsMatchesQuotationOverload() {
+        let content = "Rivers run; rivers **rest**, and rivers return"
+        let fromQuotations = WordFrequencyAnalyzer.analyze(
+            quotations: [Quotation(content: content)],
+            minimumLength: 3,
+            maximumEntries: 10,
+            stopwords: EnglishStopwords.defaultWords
+        )
+        let fromTexts = WordFrequencyAnalyzer.analyze(
+            texts: [QuotationSearchText.plainContent(from: content), ""],
+            minimumLength: 3,
+            maximumEntries: 10,
+            stopwords: EnglishStopwords.defaultWords
+        )
+
+        XCTAssertEqual(fromTexts, fromQuotations)
+        XCTAssertEqual(fromTexts.first, WordFrequencyEntry(word: "rivers", count: 3))
     }
 }

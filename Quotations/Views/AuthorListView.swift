@@ -8,6 +8,7 @@ import SwiftData
 
 struct AuthorListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.undoManager) private var undoManager
     @Query(filter: #Predicate<Author> { $0.deletedAt == nil }, sort: \Author.name)
     private var authors: [Author]
     @Query(filter: #Predicate<Source> { $0.deletedAt == nil })
@@ -104,7 +105,7 @@ struct AuthorListView: View {
             Button("Delete", role: .destructive) {
                 if let author = authorToDelete {
                     do {
-                        try SoftDelete.author(author, in: modelContext)
+                        try SoftDelete.author(author, in: modelContext, undoManager: undoManager)
                     } catch {
                         errorMessage = error.localizedDescription
                         showError = true

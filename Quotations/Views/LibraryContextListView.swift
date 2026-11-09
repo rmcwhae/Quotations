@@ -26,7 +26,6 @@ struct LibraryContextListView: View {
     var onSourceDelete: (Source) -> Void
 
     @AppStorage("sourceListSortOption") var sourceListSortOption: SourceSortOption = .dateRead
-    @Environment(StopWordsStore.self) private var stopWordsStore
     @FocusState private var isSearchFieldFocused: Bool
 
     var isExplorePage: Bool {
@@ -57,6 +56,7 @@ struct LibraryContextListView: View {
         let sources: [Source]
         let quotations: [Quotation]
         let stats: LibraryStats
+        let quotationCountsBySourceId: [PersistentIdentifier: Int]
     }
 
     private var listContent: ResolvedListContent {
@@ -73,6 +73,7 @@ struct LibraryContextListView: View {
             matchSets: matchSets,
             searchResultIds: LibraryFilterResolver.searchResultQuotationIds(from: searchState)
         )
+        let counts = LibraryFilterResolver.quotationCountsBySourceId(self.quotations)
         let stats: LibraryStats
         if filter == .explore || filter == .ask {
             let active = self.quotations.filter { $0.deletedAt == nil }
@@ -84,9 +85,19 @@ struct LibraryContextListView: View {
                 authorCount: authorIds.count
             )
         } else {
-            stats = LibraryFilterResolver.stats(for: filter, resolvedSources: sources, resolvedQuotations: quotations)
+            stats = LibraryFilterResolver.stats(
+                for: filter,
+                resolvedSources: sources,
+                resolvedQuotations: quotations,
+                quotationCountsBySourceId: counts
+            )
         }
-        return ResolvedListContent(sources: sources, quotations: quotations, stats: stats)
+        return ResolvedListContent(
+            sources: sources,
+            quotations: quotations,
+            stats: stats,
+            quotationCountsBySourceId: counts
+        )
     }
 
     var body: some View {
@@ -152,16 +163,10 @@ struct LibraryContextListView: View {
             if isSearchPage {
                 isSearchFieldFocused = true
             }
-            if isExplorePage {
-                exploreState.refresh(quotations: quotations, stopwords: stopWordsStore.wordSet)
-            }
         }
         .onChange(of: filter) { _, newFilter in
             if newFilter == .searchResults {
                 isSearchFieldFocused = true
-            }
-            if newFilter == .explore {
-                exploreState.refresh(quotations: quotations, stopwords: stopWordsStore.wordSet)
             }
         }
     }

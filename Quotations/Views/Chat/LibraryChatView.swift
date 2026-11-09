@@ -121,6 +121,10 @@ struct LibraryChatView: View {
                 .focused($isComposerFocused)
                 .onSubmit(sendDraft)
                 .disabled(!chatState.isAvailable || chatState.isGenerating)
+                .onChange(of: chatState.isGenerating) { _, isGenerating in
+                    // Disabling the field during generation drops focus; give it back.
+                    if !isGenerating { isComposerFocused = true }
+                }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Button("Send", action: sendDraft)

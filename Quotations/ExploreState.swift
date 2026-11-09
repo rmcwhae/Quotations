@@ -23,6 +23,12 @@ final class ExploreState {
         analysisTask?.cancel()
     }
 
+    var hasResults: Bool {
+        !wordFrequencies.isEmpty || semanticClusters != nil
+    }
+
+    /// Re-runs analysis. Existing results stay visible until new ones are ready;
+    /// the heavy tokenizing / PCA / k-means work runs off the main actor.
     func refresh(quotations: [Quotation], stopwords: Set<String>) {
         analysisTask?.cancel()
         isAnalyzing = true
@@ -30,10 +36,13 @@ final class ExploreState {
 
         let active = quotations.filter { $0.deletedAt == nil }
         let minimumWordLength = minimumWordLength
+        // Snapshot SwiftData models into Sendable values on the main actor.
+        let texts = WordFrequencyAnalyzer.plainTexts(for: active)
+        let clusterInputs = SemanticClusterAnalyzer.inputs(for: active)
 
         analysisTask = Task { @MainActor in
-            defer { isAnalyzing = false }
-
+            // A cancelled task must not clear the flag owned by its replacement.
+            defer { if !Task.isCancelled { isAnalyzing = false } }
             guard !Task.isCancelled else { return }
 
             if active.isEmpty {
@@ -42,14 +51,15 @@ final class ExploreState {
                 return
             }
 
-            wordFrequencies = WordFrequencyAnalyzer.analyze(
-                quotations: active,
+            let frequencies = await Self.computeWordFrequencies(
+                texts: texts,
                 minimumLength: minimumWordLength,
-                maximumEntries: 40,
                 stopwords: stopwords
             )
+            guard !Task.isCancelled else { return }
+            wordFrequencies = frequencies
 
-            if wordFrequencies.isEmpty {
+            if frequencies.isEmpty {
                 statusMessage = "Not enough distinct words to visualize."
             }
 
@@ -57,21 +67,24 @@ final class ExploreState {
             guard !Task.isCancelled else { return }
 
             var indexEntries = entries
-            if matchingEntryCount(in: entries, for: active) < 2 {
+            if matchingEntryCount(in: entries, for: clusterInputs) < 2 {
                 await EmbeddingSearchIndex.shared.sync(
                     quotations: active,
                     persist: !LibraryModeController.isDemoModeActive
                 )
                 guard !Task.isCancelled else { return }
                 indexEntries = await EmbeddingSearchIndex.shared.allEntries()
+                guard !Task.isCancelled else { return }
             }
 
-            if active.count >= 2 {
-                semanticClusters = SemanticClusterAnalyzer.analyze(
-                    quotations: active,
-                    entries: indexEntries,
+            if clusterInputs.count >= 2 {
+                let clusters = await Self.computeSemanticClusters(
+                    inputs: clusterInputs,
+                    vectorsByEncodedID: SemanticClusterAnalyzer.vectorsByEncodedID(indexEntries),
                     stopwords: stopwords
                 )
+                guard !Task.isCancelled else { return }
+                semanticClusters = clusters
             } else {
                 semanticClusters = nil
                 if active.count == 1 {
@@ -81,6 +94,33 @@ final class ExploreState {
         }
     }
 
+    @concurrent
+    private nonisolated static func computeWordFrequencies(
+        texts: [String],
+        minimumLength: Int,
+        stopwords: Set<String>
+    ) async -> [WordFrequencyEntry] {
+        WordFrequencyAnalyzer.analyze(
+            texts: texts,
+            minimumLength: minimumLength,
+            maximumEntries: 40,
+            stopwords: stopwords
+        )
+    }
+
+    @concurrent
+    private nonisolated static func computeSemanticClusters(
+        inputs: [SemanticClusterInput],
+        vectorsByEncodedID: [String: [Double]],
+        stopwords: Set<String>
+    ) async -> SemanticClusterResult? {
+        SemanticClusterAnalyzer.analyze(
+            inputs: inputs,
+            vectorsByEncodedID: vectorsByEncodedID,
+            stopwords: stopwords
+        )
+    }
+
     func invalidate() {
         analysisTask?.cancel()
         clearResults()
@@ -88,14 +128,10 @@ final class ExploreState {
         statusMessage = nil
     }
 
-    private func matchingEntryCount(in entries: [EmbeddingIndexEntry], for quotations: [Quotation]) -> Int {
+    private func matchingEntryCount(in entries: [EmbeddingIndexEntry], for inputs: [SemanticClusterInput]) -> Int {
         let ids = Set(entries.map(\.encodedQuotationID))
-        return quotations.reduce(0) { count, quotation in
-            guard let encoded = QuotationDeepLink.encode(quotation.persistentModelID),
-                  ids.contains(encoded) else {
-                return count
-            }
-            return count + 1
+        return inputs.reduce(0) { count, input in
+            ids.contains(input.encodedQuotationID) ? count + 1 : count
         }
     }
 

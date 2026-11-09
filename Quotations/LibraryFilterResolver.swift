@@ -69,10 +69,22 @@ enum LibraryFilterResolver {
             .sorted(by: Source.compareByDateReadDescending)
     }
 
+    /// Live quotation counts keyed by source, from quotations already in memory. Avoids
+    /// faulting each `source.quotations` relationship (one store fetch per source).
+    static func quotationCountsBySourceId(_ quotations: [Quotation]) -> [PersistentIdentifier: Int] {
+        var counts: [PersistentIdentifier: Int] = [:]
+        for quotation in quotations where quotation.deletedAt == nil {
+            guard let sourceId = quotation.source?.persistentModelID else { continue }
+            counts[sourceId, default: 0] += 1
+        }
+        return counts
+    }
+
     static func stats(
         for filter: LibraryFilter,
         resolvedSources: [Source],
-        resolvedQuotations: [Quotation]
+        resolvedQuotations: [Quotation],
+        quotationCountsBySourceId: [PersistentIdentifier: Int]
     ) -> LibraryStats {
         if filter.showsQuotations {
             let sourceIds = Set(resolvedQuotations.compactMap { $0.source?.id })
@@ -84,7 +96,7 @@ enum LibraryFilterResolver {
             )
         } else {
             let quotationCount = resolvedSources.reduce(0) {
-                $0 + $1.quotations.filter { $0.deletedAt == nil }.count
+                $0 + (quotationCountsBySourceId[$1.persistentModelID] ?? 0)
             }
             let authorIds = Set(resolvedSources.compactMap { $0.author?.id })
             return LibraryStats(
